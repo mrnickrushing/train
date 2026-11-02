@@ -47,6 +47,71 @@ M = {
                              "swirls; the sun flares on its gold stripes; fast dramatic tracking shot."),
 }
 
+# Full-body characters (transparent background), shown beside panels and in story scenes.
+CHAR = ("Full-body portrait of {what}, standing in a relaxed confident pose, facing three-quarters toward the viewer, "
+        "head to boots visible, on a fully transparent background. Semi-realistic 3D rendered game character like a premium "
+        "mobile tycoon game, soft studio lighting, crisp detail. Nothing else in the frame. No text.")
+CHARACTERS = {
+    "char_foreman": "Hank, a weathered 1880s railroad foreman in his fifties with a big grey moustache, brown bowler hat, red "
+                    "neckerchief, rolled shirt sleeves, leather vest, canvas work trousers and boots, holding a coal shovel",
+    "char_engineer": "Clara Whitlock, a sharp 1880s territory surveyor-engineer woman in her thirties, auburn hair pinned up, "
+                     "white blouse with a brass brooch, brown tweed vest and long plaid skirt, holding rolled blue blueprints",
+    "char_investor": "Silas Pemberton, a portly 1880s railroad investor in his sixties, grey mutton-chop whiskers, black top "
+                     "hat, pinstripe waistcoat with a gold watch chain, dark frock coat, hands resting on a silver-topped cane",
+    "char_rival": "Cyrus Vane, a lean, smug rival railroad baron in his forties, slicked-back black hair and a thin black "
+                  "moustache, black flat-brimmed hat, charcoal three-piece suit with a crimson cravat and silver stickpin, "
+                  "black leather gloves, one hand on his hip, a cold confident smirk",
+}
+
+# Territory project finale backdrops (one per DepthContent project id).
+SCENE = ("Wide cinematic establishing shot for a mobile railroad tycoon game story scene: {what}. 1880s American frontier, "
+         "golden-hour light, semi-realistic painted 3D style, rich color, empty foreground space at the left and right "
+         "edges for characters. No people in the foreground, no text, no letters, no logos.")
+SCENES = {
+    "scene_telegraph": "a brand-new telegraph line of tall wooden poles marching across red badlands toward a distant wooden cavalry fort, a steam train passing beside it",
+    "scene_trestle": "a tall new timber railroad trestle crossing a winding river gorge, a steam train crossing it with a plume of steam",
+    "scene_mineshaft": "a big new timbered mine headframe over a deep shaft on a rocky hillside, ore carts and a rail spur, lamps glowing",
+    "scene_resupply": "a wooden cavalry fort in the snow at dusk receiving a supply train, warm lit windows, flags flying",
+    "scene_dam": "a massive new curved stone dam holding back a blue lake in a red rock canyon, a railroad bridge across the canyon below, the valley town lights coming on",
+    "scene_goldenspike": "two steam locomotives meeting nose to nose on a desert plain where the rails join, flags and bunting, a crowd's tents and wagons in the distance",
+}
+
+
+def portrait(i):
+    p = os.path.join(SRC, i + ".png")
+    if os.path.exists(p):
+        return print("have", p)
+    if i in CHARACTERS:
+        args = ["--aspect_ratio", "2:3", "--background", "transparent", "--prompt", CHAR.format(what=CHARACTERS[i])]
+    else:
+        args = ["--aspect_ratio", "16:9", "--background", "opaque", "--prompt", SCENE.format(what=SCENES[i])]
+    url = hf("generate", "create", "gpt_image_2_5", "--quality", "high", "--resolution", "2k", *args, "--wait")
+    fetch(url, p)
+    print("art", i, url)
+
+
+def install_story():
+    from PIL import Image
+    d = os.path.join(ROOT, "Assets", "Resources", "UI", "Story")
+    os.makedirs(d, exist_ok=True)
+    for i in list(CHARACTERS) + list(SCENES):
+        p = os.path.join(SRC, i + ".png")
+        if not os.path.exists(p):
+            continue
+        im = Image.open(p)
+        if i in CHARACTERS:
+            im = im.convert("RGBA")
+            box = im.getchannel("A").point(lambda a: 255 if a > 12 else 0).getbbox()
+            if box:
+                im = im.crop(box)
+            im.thumbnail((1024, 1024))
+            im.save(os.path.join(d, i + ".png"), optimize=True)
+        else:
+            im = im.convert("RGB")
+            im.thumbnail((1920, 1920))
+            im.save(os.path.join(d, i + ".jpg"), quality=86)
+    print("installed story art")
+
 
 def still(i):
     p = os.path.join(SRC, i + ".png")
@@ -116,6 +181,13 @@ if __name__ == "__main__":
     cmd, ids = sys.argv[1], sys.argv[2:] or list(M)
     if cmd == "install":
         install()
+        install_story()
+    elif cmd == "story":
+        for i in ids if sys.argv[2:] else list(CHARACTERS) + list(SCENES):
+            try:
+                portrait(i)
+            except Exception as e:
+                print("FAILED", i, e)
     else:
         for i in ids:
             try:

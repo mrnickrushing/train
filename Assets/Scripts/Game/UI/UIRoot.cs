@@ -72,6 +72,7 @@ namespace Ironhorse.Game
             _toasts = UIKit.Anchor(UIKit.Node("Toasts", cgo.transform), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-420, -360), new Vector2(420, -150));
             UIKit.VStack(_toasts.gameObject, 10, 0, TextAnchor.UpperCenter);
             Celebrations.Init(cgo.transform); // above windows, popups and toasts
+            gameObject.AddComponent<StoryDirector>();
         }
 
         void Start()
@@ -81,7 +82,11 @@ namespace Ironhorse.Game
             S.Notify += msg => Toast(msg, true);
             S.TrainArrived += t => AudioManager.Play(Sfx.Bell, 0.5f);
             S.ContractCompleted += OnContractCompleted;
-            S.ProjectCompleted += p => Celebrations.Instance.Play("project", "Project Complete!", p.Name + " is finished. The whole territory feels it.");
+            S.ProjectCompleted += p =>
+            {
+                StoryDirector.Instance.OnProject(p); // the characters' finale scene, then the cinematic
+                Celebrations.Instance.Play("project", "Project Complete!", p.Name + " is finished. The whole territory feels it.", force: true);
+            };
             S.LocomotiveAdded += t => Celebrations.Instance.Play("newloco", "New Locomotive!", GameDatabase.Locomotive(t.defId).Name + " joins your fleet.", force: true);
             S.TaskSetCompleted += ts => Celebrations.Instance.Confetti();
             RefreshHud();
@@ -473,6 +478,20 @@ namespace Ironhorse.Game
 
         public bool WindowOpen { get { return _window != null; } }
 
+        /// <summary>A full-body character standing at the right edge of the open sheet, in front of the frame.</summary>
+        void WindowFigure(string art)
+        {
+            var tex = Resources.Load<Texture2D>("UI/Story/" + art);
+            if (_window == null || tex == null) return;
+            var img = UIKit.Node("Figure", _window.transform.Find("Sheet")).AddComponent<Image>();
+            img.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0));
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            float h = 860;
+            UIKit.Place(img.gameObject, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-20, -60), new Vector2(h * tex.width / tex.height, h));
+            img.gameObject.AddComponent<WindowIntro>();
+        }
+
         public void SetHudVisible(bool on)
         {
             foreach (var layer in new[] { _safe, _markers })
@@ -520,13 +539,16 @@ namespace Ironhorse.Game
             var center = new Vector2(Screen.width * 0.5f, Screen.height * 0.45f);
             if (c.rewardCoins > 0) cel.FlyTo(center, (RectTransform)_coins.transform.parent, t => UIKit.CoinIcon(t, 48), 10);
             if (c.rewardNuggets > 0) cel.FlyTo(center, (RectTransform)_nuggets.transform.parent, t => UIKit.NuggetIcon(t, 48), 5);
-            cel.Play("contract", "Contract Fulfilled!", c.client + " paid " + Fmt.Num(c.rewardCoins) + " coins.");
+            cel.Play("contract", "Contract Fulfilled!", c.client + ": " + StoryDirector.ClientThanks(c.client));
+            Toast(c.client + ": " + StoryDirector.ClientThanks(c.client), true);
+            StoryDirector.Instance.OnContract();
         }
 
         void OnLevelUp(int level)
         {
             if (level == Balance.GoldenAgeLevel) Celebrations.Instance.Play("goldenage", "The Golden Age!", "Streamliners, steel and silver. A new era begins.", force: true);
             else Celebrations.Instance.Play("levelup", "Level " + level + "!", G.Session.State.townName + " is growing.", force: level <= 3);
+            StoryDirector.Instance.OnLevel(level);
             AudioManager.Play(Sfx.LevelUp);
             Fx.Burst(CameraRig.Instance.Focus + Vector3.up * 12, 80);
             var unlocks = new List<string>();

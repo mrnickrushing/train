@@ -20,7 +20,7 @@ namespace Ironhorse.Game
         /// <summary>A clip plays at most this often (seconds), except the first time it's earned.</summary>
         public const float RepeatCooldown = 600f;
 
-        struct Request { public string Video, Title, Subtitle; }
+        struct Request { public string Video, Title, Subtitle; public Func<IEnumerator> Custom; }
 
         readonly Queue<Request> _queue = new Queue<Request>();
         readonly Dictionary<string, float> _lastPlayed = new Dictionary<string, float>();
@@ -65,13 +65,20 @@ namespace Ironhorse.Game
             return true;
         }
 
+        /// <summary>Queues any full-screen moment (e.g. a story scene) in the same line as the cinematics.</summary>
+        public void Enqueue(Func<IEnumerator> moment)
+        {
+            _queue.Enqueue(new Request { Custom = moment });
+            if (!_playing) StartCoroutine(Run());
+        }
+
         IEnumerator Run()
         {
             _playing = true;
             while (_queue.Count > 0)
             {
                 var r = _queue.Dequeue();
-                yield return Show(r);
+                yield return r.Custom != null ? r.Custom() : Show(r);
             }
             _playing = false;
         }
