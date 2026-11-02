@@ -358,7 +358,8 @@ namespace Ironhorse.Game
         // ================================================================ windows
 
         /// <summary>Opens a modal parchment window. The builder runs again whenever game state changes.</summary>
-        public void ShowWindow(string title, Action<Transform> build, float width = 1180, float height = 820)
+        /// <param name="back">When set, a Back button returns to the window this one was opened from.</param>
+        public void ShowWindow(string title, Action<Transform> build, float width = 1180, float height = 820, Action back = null)
         {
             CloseWindow();
             AudioManager.Play(Sfx.Open);
@@ -390,6 +391,11 @@ namespace Ironhorse.Game
 
             var close = UIKit.Btn(sheet.transform, "X", Palette.Hex(0x2A1C12), CloseWindow, 40, 92, 92);
             UIKit.Place(close.gameObject, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-40, -24), new Vector2(92, 92));
+            if (back != null)
+            {
+                var b = UIKit.Btn(sheet.transform, "< Back", UIKit.WoodLight, () => back(), 30, 200, 92);
+                UIKit.Place(b.gameObject, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-150, -24), new Vector2(200, 92));
+            }
 
             var frame = UIKit.Panel(sheet.transform, UIKit.Parchment, "Frame", null, true);
             UIKit.Place(frame.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -50), new Vector2(width + 120, height - 40));

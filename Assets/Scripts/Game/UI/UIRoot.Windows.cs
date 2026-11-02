@@ -224,7 +224,7 @@ namespace Ironhorse.Game
                     UIKit.Btn(u.transform, "Upgrade", UIKit.Green, () => Result(S.UpgradeLocomotive(t.uid), Sfx.Build), 22, 180, 62);
                 }
                 else Line(content, "This locomotive is fully overhauled.", 22, UIKit.Green);
-            }, 1200, 900);
+            }, 1200, 900, OpenFleet);
         }
 
         /// <summary>Crew gauge, conveyor belt of job slots, and the controls to queue, collect, rush and extend.</summary>

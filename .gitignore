@@ -36,3 +36,6 @@ Tools/**/obj/
 # Local tooling / IDE
 *.slnx
 /ProjectSettings/Packages/com.unity.pipeline/
+
+# AI art working files (concepts, raw GLBs; large)
+/art-src/
