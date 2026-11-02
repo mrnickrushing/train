@@ -34,6 +34,7 @@ namespace Ironhorse.Game
         ScrollRect _windowScroll;
         readonly List<Action> _live = new List<Action>();
         bool _dirty;
+        int _lastFuel = -1;
         float _liveTimer;
 
         void Awake()
@@ -94,6 +95,9 @@ namespace Ironhorse.Game
             if (_liveTimer <= 0)
             {
                 _liveTimer = 0.25f;
+                // Fuel regenerates lazily (no Changed event), so refresh open windows when it ticks.
+                int fuel = S.Fuel;
+                if (fuel != _lastFuel) { if (_lastFuel >= 0 && WindowOpen) _dirty = true; _lastFuel = fuel; }
                 RefreshHud();
                 foreach (var a in _live.ToList()) a();
             }
@@ -418,6 +422,7 @@ namespace Ironhorse.Game
                 Destroy(c);
             }
             Fill(content);
+            if (_windowScroll == null) return; // the builder closed the window
             Canvas.ForceUpdateCanvases();
             _windowScroll.verticalNormalizedPosition = scroll;
         }

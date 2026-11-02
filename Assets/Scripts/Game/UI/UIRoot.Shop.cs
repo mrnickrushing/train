@@ -269,7 +269,12 @@ namespace Ironhorse.Game
 
         public void ShowOfferPopup(OfferDef o)
         {
-            ShowWindow("Special Offer", content => OfferCard(content, o), 1300, 460);
+            ShowWindow("Special Offer", content =>
+            {
+                // Revalidate on every rebuild: once bought (or expired) the offer must not stay purchasable.
+                if (!S.ActiveOffers().Any(x => x.Id == o.Id)) { CloseWindow(); return; }
+                OfferCard(content, o);
+            }, 1300, 460);
         }
 
         // ================================================================ Fuel
