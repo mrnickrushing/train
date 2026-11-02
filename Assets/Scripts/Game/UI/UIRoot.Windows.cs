@@ -52,25 +52,13 @@ namespace Ironhorse.Game
                 UIKit.Btn(row.transform, t.label, t.active ? UIKit.BrassDark : UIKit.WoodLight, () => { t.onClick(); RebuildWindow(); }, 22, 200, 54);
         }
 
+        /// <summary>The locomotive's rendered 3D model on a rarity-colored tile (1.5:1).</summary>
         static GameObject LocoSwatch(Transform parent, LocomotiveDef d, float size = 90)
         {
-            var bg = UIKit.Panel(parent, UIKit.RarityColor(d.Rarity), "Swatch", UIKit.Rounded);
-            UIKit.Size(bg.gameObject, size, size);
-            var body = UIKit.Panel(bg.transform, Palette.Hex(d.PrimaryRgb), "Body", UIKit.RoundedSmall);
-            UIKit.Place(body.gameObject, new Vector2(0.5f, 0.45f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(size * 0.7f, size * 0.36f));
-            var trim = UIKit.Panel(bg.transform, Palette.Hex(d.TrimRgb), "Trim", UIKit.RoundedSmall);
-            UIKit.Place(trim.gameObject, new Vector2(0.5f, 0.45f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(size * 0.7f, size * 0.06f));
-            bool steam = d.Style != LocoStyle.DieselStreamliner && d.Style != LocoStyle.DieselTwin;
-            if (steam)
-            {
-                var stack = UIKit.Panel(bg.transform, UIKit.Wood, "Stack", UIKit.RoundedSmall);
-                UIKit.Place(stack.gameObject, new Vector2(0.7f, 0.7f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(size * 0.1f, size * 0.18f));
-            }
-            for (int i = 0; i < 3; i++)
-            {
-                var w = UIKit.Panel(bg.transform, UIKit.Wood, "Wheel", UIKit.Circle);
-                UIKit.Place(w.gameObject, new Vector2(0.28f + i * 0.22f, 0.22f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(size * 0.16f, size * 0.16f));
-            }
+            var bg = UIKit.Panel(parent, UIKit.RarityColor(d.Rarity), "Swatch", UIKit.RoundedGrad);
+            UIKit.Size(bg.gameObject, size * 1.5f, size);
+            var img = ModelIcons.Image(bg.transform, ModelIcons.Locomotive(d), size * 1.5f, size * 0.94f);
+            UIKit.Place(img.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -size * 0.02f), new Vector2(size * 1.5f, size * 0.94f));
             return bg.gameObject;
         }
 
@@ -387,13 +375,10 @@ namespace Ironhorse.Game
 
         static void WagonSwatch(Transform parent, WagonDef wd)
         {
-            var bg = UIKit.Panel(parent, Palette.Hex(wd.ColorRgb), "Wagon", UIKit.RoundedSmall);
-            UIKit.Size(bg.gameObject, 76, 46);
-            for (int i = 0; i < 2; i++)
-            {
-                var w = UIKit.Panel(bg.transform, UIKit.Wood, "Wheel", UIKit.Circle);
-                UIKit.Place(w.gameObject, new Vector2(0.25f + i * 0.5f, 0), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(16, 16));
-            }
+            var bg = UIKit.Panel(parent, UIKit.ParchmentDark * 0.92f, "Wagon", UIKit.RoundedSmall);
+            UIKit.Size(bg.gameObject, 120, 76);
+            var img = ModelIcons.Image(bg.transform, ModelIcons.Wagon(wd), 120, 75);
+            UIKit.Stretch(img.gameObject);
         }
 
         // ================================================================ depot (shop)
