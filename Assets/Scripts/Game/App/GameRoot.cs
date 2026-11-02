@@ -213,17 +213,21 @@ namespace Ironhorse.Game
                     float r = 6 + (float)rng.NextDouble() * 7;
                     mb.Sphere(c, new Vector3(r, r * 0.6f, r * 0.8f), 8, p % 2 == 0 ? Palette.White : new Color(0.9f, 0.9f, 0.93f));
                 }
-                var go = mb.ToObject("Cloud", transform);
+                var go = mb.ToObject("Cloud", transform, false); // hard-edged cloud shadows read as puddles
                 go.GetComponent<MeshRenderer>().sharedMaterial = Materials.Cloud;
-                go.transform.position = new Vector3((float)rng.NextDouble() * 900 - 450, 95 + (float)rng.NextDouble() * 40, (float)rng.NextDouble() * 700 - 250);
+                go.transform.position = new Vector3((float)rng.NextDouble() * 900 - 450, 140 + (float)rng.NextDouble() * 40, (float)rng.NextDouble() * 700 - 250);
                 _clouds.Add(go.transform);
             }
         }
 
         void Update()
         {
+            // Only part of the far, zoomed-out panorama; up close they'd fill the screen like boulders.
+            var rig = CameraRig.Instance;
+            bool show = rig == null || rig.Distance > 190;
             foreach (var c in _clouds)
             {
+                c.gameObject.SetActive(show);
                 c.position += new Vector3(Fx.Wind.x, 0, Fx.Wind.z) * 1.6f * Time.deltaTime;
                 if (c.position.x > 480) c.position -= new Vector3(960, 0, 0);
                 if (c.position.z > 470) c.position -= new Vector3(0, 0, 740);

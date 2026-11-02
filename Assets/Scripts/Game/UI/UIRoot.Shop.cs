@@ -214,6 +214,7 @@ namespace Ironhorse.Game
                 }
                 var bl = UIKit.Label(seal.transform, o.Badge.Replace(" ", "\n"), 26, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
                 bl.font = UIKit.Display;
+                bl.fontStyle = FontStyle.Normal; // the face is already bold
                 UIKit.Stretch(bl.gameObject, 16);
                 bl.transform.localRotation = Quaternion.Euler(0, 0, 12);
                 bl.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.4f);

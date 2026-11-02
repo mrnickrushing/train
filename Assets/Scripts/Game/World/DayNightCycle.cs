@@ -32,7 +32,7 @@ namespace Ironhorse.Game
             _sun = go.AddComponent<Light>();
             _sun.type = LightType.Directional;
             _sun.shadows = LightShadows.Soft;
-            _sun.shadowStrength = 0.82f;
+            _sun.shadowStrength = 0.9f;
             _sun.shadowBias = 0.04f;
             _sun.shadowNormalBias = 0.35f;
             RenderSettings.sun = _sun;
@@ -41,7 +41,7 @@ namespace Ironhorse.Game
             RenderSettings.ambientMode = AmbientMode.Trilight;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogDensity = 0.0021f;
+            RenderSettings.fogDensity = 0.0014f;
             RenderSettings.defaultReflectionMode = DefaultReflectionMode.Custom;
 
             var p = new GameObject("Sky Reflection");
@@ -90,10 +90,10 @@ namespace Ironhorse.Game
             Quaternion lightRot = day > 0.02f ? Quaternion.Euler(Mathf.Max(e, 4f), azimuth, 0) : Quaternion.Euler(38, azimuth + 180, 0);
             _sun.transform.rotation = lightRot;
 
-            Color noon = new Color(1f, 0.96f, 0.88f), gold = new Color(1f, 0.62f, 0.36f), moon = new Color(0.55f, 0.65f, 0.95f);
+            Color noon = new Color(1f, 0.95f, 0.86f), gold = new Color(1f, 0.62f, 0.36f), moon = new Color(0.55f, 0.65f, 0.95f);
             Color lightCol = Color.Lerp(noon, gold, golden);
             _sun.color = day > 0.02f ? lightCol : moon;
-            _sun.intensity = day > 0.02f ? Mathf.Lerp(0.15f, 1.3f, day) : 0.28f;
+            _sun.intensity = day > 0.02f ? Mathf.Lerp(0.15f, 1.85f, day) : 0.28f;
 
             Color topDay = new Color(0.30f, 0.53f, 0.84f), topSet = new Color(0.33f, 0.36f, 0.62f), topNight = new Color(0.02f, 0.03f, 0.09f);
             Color horDay = new Color(0.80f, 0.86f, 0.90f), horSet = new Color(1f, 0.6f, 0.38f), horNight = new Color(0.07f, 0.08f, 0.16f);
@@ -110,9 +110,10 @@ namespace Ironhorse.Game
             Shader.SetGlobalFloat(NightGlow, Mathf.Lerp(0f, 2.2f, Night) + golden * 0.2f);
             Shader.SetGlobalColor(GlowColor, new Color(1f, 0.72f, 0.38f));
 
-            RenderSettings.ambientSkyColor = Color.Lerp(new Color(0.12f, 0.14f, 0.26f), Color.Lerp(top, Color.white, 0.35f), day) * 1.05f;
-            RenderSettings.ambientEquatorColor = Color.Lerp(new Color(0.09f, 0.09f, 0.16f), Color.Lerp(hor, new Color(0.75f, 0.68f, 0.58f), 0.5f), day);
-            RenderSettings.ambientGroundColor = Color.Lerp(new Color(0.05f, 0.05f, 0.07f), new Color(0.42f, 0.34f, 0.26f), day);
+            // Ambient kept low so the sun does the modeling: crisp, contrasty shadows like a sunny diorama.
+            RenderSettings.ambientSkyColor = Color.Lerp(new Color(0.12f, 0.14f, 0.26f), Color.Lerp(top, Color.white, 0.25f) * 0.72f, day);
+            RenderSettings.ambientEquatorColor = Color.Lerp(new Color(0.09f, 0.09f, 0.16f), Color.Lerp(hor, new Color(0.7f, 0.66f, 0.58f), 0.5f) * 0.6f, day);
+            RenderSettings.ambientGroundColor = Color.Lerp(new Color(0.05f, 0.05f, 0.07f), new Color(0.3f, 0.26f, 0.2f), day);
             RenderSettings.fogColor = Color.Lerp(hor, top, 0.15f);
         }
     }

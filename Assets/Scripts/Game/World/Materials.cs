@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Ironhorse.Game
@@ -8,7 +9,21 @@ namespace Ironhorse.Game
         static Material _world, _terrain, _water, _smoke, _sky, _cloud;
         static Texture2D _softCircle, _noise;
 
-        public static Material World { get { return _world ?? (_world = Make("Ironhorse/VertexLit", true)); } }
+        public static Material World
+        {
+            get
+            {
+                if (_world != null) return _world;
+                _world = Make("Ironhorse/VertexLit", true);
+                var detail = Resources.Load<Texture2DArray>("Textures/SurfaceDetail");
+                if (detail != null)
+                {
+                    Shader.SetGlobalTexture("_SurfaceDetail", detail);
+                    Shader.SetGlobalFloat("_SurfaceDetailOn", 1);
+                }
+                return _world;
+            }
+        }
 
         public static Material Terrain
         {
@@ -16,6 +31,16 @@ namespace Ironhorse.Game
             {
                 if (_terrain == null)
                 {
+                    var albedo = Resources.Load<Texture2DArray>("Textures/TerrainAlbedo");
+                    var normal = Resources.Load<Texture2DArray>("Textures/TerrainNormal");
+                    if (albedo != null && normal != null)
+                    {
+                        _terrain = Make("Ironhorse/Terrain", false);
+                        _terrain.SetTexture("_TerrainAlbedo", albedo);
+                        _terrain.SetTexture("_TerrainNormal", normal);
+                        _terrain.SetTexture("_MacroTex", Noise);
+                        return _terrain;
+                    }
                     _terrain = Make("Ironhorse/VertexLit", false);
                     _terrain.SetTexture("_MainTex", Noise);
                     _terrain.SetFloat("_DetailScale", 0.045f);
@@ -162,6 +187,60 @@ namespace Ironhorse.Game
                 h = (h ^ (h >> 13)) * 1274126177;
                 return ((h ^ (h >> 16)) & 0xFFFFFF) / (float)0xFFFFFF;
             }
+        }
+    }
+
+
+    /// <summary>Detail texture layers in Resources/Textures/SurfaceDetail (order = Tools/art/pack_textures.py SURFACE).</summary>
+    public enum SurfaceKind
+    {
+        Auto = -2, None = -1,
+        Brick, Siding, Shingles, RoofTiles, Tin, Stone, Concrete, PaintedMetal, Rust, Bark, WoodGrain, Planks, Gravel, Dirt,
+    }
+
+    /// <summary>Maps palette colors (and darker/lighter shades of them) to a detail texture.</summary>
+    public static class Surfaces
+    {
+        static readonly Dictionary<Color32, SurfaceKind> Cache = new Dictionary<Color32, SurfaceKind>();
+        static readonly KeyValuePair<Color, SurfaceKind>[] Table =
+        {
+            P(Palette.Brick, SurfaceKind.Brick), P(Palette.BrickDark, SurfaceKind.Brick),
+            P(Palette.Wood, SurfaceKind.WoodGrain), P(Palette.WoodDark, SurfaceKind.WoodGrain), P(Palette.WoodPale, SurfaceKind.Planks),
+            P(Palette.Weathered, SurfaceKind.Siding),
+            P(Palette.Stone, SurfaceKind.Stone), P(Palette.StoneDark, SurfaceKind.Stone),
+            P(Palette.RoofShingle, SurfaceKind.Shingles), P(Palette.RoofRed, SurfaceKind.RoofTiles), P(Palette.RoofGreen, SurfaceKind.RoofTiles),
+            P(Palette.RoofTin, SurfaceKind.Tin),
+            P(Palette.Iron, SurfaceKind.PaintedMetal), P(Palette.Black, SurfaceKind.PaintedMetal), P(Palette.Steel, SurfaceKind.Rust),
+            P(Palette.PaintRed, SurfaceKind.PaintedMetal), P(Palette.PaintBlue, SurfaceKind.PaintedMetal), P(Palette.PaintGreen, SurfaceKind.PaintedMetal),
+            P(Palette.Cream, SurfaceKind.Concrete), P(Palette.White, SurfaceKind.Concrete),
+            P(Palette.Bark, SurfaceKind.Bark), P(Palette.Ballast, SurfaceKind.Gravel), P(Palette.Road, SurfaceKind.Dirt), P(Palette.Dirt, SurfaceKind.Dirt),
+        };
+
+        static KeyValuePair<Color, SurfaceKind> P(Color c, SurfaceKind k) { return new KeyValuePair<Color, SurfaceKind>(c, k); }
+
+        public static SurfaceKind Classify(Color c)
+        {
+            var key = (Color32)c;
+            key.a = 255;
+            SurfaceKind kind;
+            if (Cache.TryGetValue(key, out kind)) return kind;
+            kind = SurfaceKind.None;
+            float best = 0.018f;
+            float sum = c.r + c.g + c.b;
+            if (sum > 0.03f)
+            {
+                foreach (var e in Table)
+                {
+                    var p = e.Key;
+                    float ps = p.r + p.g + p.b;
+                    float ratio = sum / ps;
+                    if (ratio < 0.55f || ratio > 1.3f) continue; // a shade of the same material, not a different color
+                    float d = Mathf.Abs(c.r / sum - p.r / ps) + Mathf.Abs(c.g / sum - p.g / ps) + Mathf.Abs(c.b / sum - p.b / ps);
+                    if (d < best) { best = d; kind = e.Value; }
+                }
+            }
+            Cache[key] = kind;
+            return kind;
         }
     }
 

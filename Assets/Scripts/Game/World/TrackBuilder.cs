@@ -71,7 +71,7 @@ namespace Ironhorse.Game
                     Vector3 r0 = Vector3.Cross(Vector3.up, f0).normalized, r1 = Vector3.Cross(Vector3.up, f1).normalized;
                     Vector3 c0 = new Vector3(p0.x, y, p0.z) + r0 * off, c1 = new Vector3(p1.x, y, p1.z) + r1 * off;
                     const float w = 0.09f, h = 0.16f;
-                    mb.Mat(0.75f, 0.85f);
+                    mb.Mat(0.52f, 0.8f); // polished, but not mirror-like: thin glossy strips shimmer and bloom at night
                     mb.Quad(c0 - r0 * w, c1 - r1 * w, c1 + r1 * w, c0 + r0 * w, RailHead); // head
                     mb.Mat(0.35f, 0.5f);
                     mb.Quad(c0 - r0 * w - Vector3.up * h, c1 - r1 * w - Vector3.up * h, c1 - r1 * w, c0 - r0 * w, RailColor);

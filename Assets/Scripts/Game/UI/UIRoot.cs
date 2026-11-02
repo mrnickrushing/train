@@ -117,6 +117,7 @@ namespace Ironhorse.Game
             badge.gameObject.AddComponent<Outline>().effectColor = UIKit.BrassDark;
             _level = UIKit.Label(badge.transform, "1", 46, UIKit.Wood, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             _level.font = UIKit.Display;
+            _level.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Stretch(_level.gameObject);
             var town = UIKit.Label(left.transform, S.State.townName.ToUpperInvariant(), 26, UIKit.Brass, TextAnchor.UpperLeft, true);
             UIKit.Anchor(town.gameObject, new Vector2(0, 0.5f), new Vector2(1, 1), new Vector2(108, 0), new Vector2(-14, -12));
@@ -148,6 +149,7 @@ namespace Ironhorse.Game
             icon(bg.transform);
             var t = UIKit.Label(bg.transform, "0", 34, UIKit.Cream, TextAnchor.MiddleLeft, false, FontStyle.Bold);
             t.font = UIKit.Display;
+            t.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Size(t.gameObject, -1, 50, 1);
             Clickable(bg.gameObject, onClick);
             return t;
@@ -212,6 +214,7 @@ namespace Ironhorse.Game
             UIKit.Place(plate.gameObject, new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(166, 40));
             var t = UIKit.Label(plate.transform, label.ToUpperInvariant(), 24, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             t.font = UIKit.Display;
+            t.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Stretch(t.gameObject);
             Clickable(holder, onClick);
             var badge = UIKit.Badge(circle.transform, "", UIKit.Red);
@@ -359,6 +362,7 @@ namespace Ironhorse.Game
         {
             CloseWindow();
             AudioManager.Play(Sfx.Open);
+            SetHudVisible(false); // the sheet has its own title bar; the HUD would show through the dim
             _windowTitle = title;
             _windowBuilder = build;
 
@@ -376,6 +380,7 @@ namespace Ironhorse.Game
 
             var title_ = UIKit.Label(sheet.transform, title.ToUpperInvariant(), 64, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
             title_.font = UIKit.Display;
+            title_.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Anchor(title_.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(70, -120), new Vector2(-200, -20));
             var sh = title_.gameObject.AddComponent<Shadow>();
             sh.effectColor = new Color(0, 0, 0, 0.6f);
@@ -447,12 +452,25 @@ namespace Ironhorse.Game
         {
             if (_window != null) Destroy(_window);
             _window = null;
+            SetHudVisible(true);
             _windowBuilder = null;
             _windowScroll = null;
             _live.Clear();
         }
 
         public bool WindowOpen { get { return _window != null; } }
+
+        void SetHudVisible(bool on)
+        {
+            foreach (var layer in new[] { _safe, _markers })
+            {
+                if (layer == null) continue;
+                var g = layer.GetComponent<CanvasGroup>();
+                if (g == null) g = layer.gameObject.AddComponent<CanvasGroup>(); // not ??: Unity's fake-null
+                g.alpha = on ? 1 : 0;
+                g.blocksRaycasts = on;
+            }
+        }
 
         /// <summary>Registers a per-tick updater for the open window (timers, progress bars).</summary>
         void Live(Action a) { _live.Add(a); }
@@ -498,7 +516,7 @@ namespace Ironhorse.Game
             UIKit.Stretch(dim.gameObject);
             var stack = UIKit.Node("Stack", dim.transform);
             UIKit.Place(stack, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000, 760));
-            UIKit.VStack(stack, 0, 0, TextAnchor.UpperCenter).childControlWidth = false;
+            UIKit.VStack(stack, 0, 0, TextAnchor.UpperCenter).childForceExpandWidth = false; // children keep their preferred widths (ribbon, card)
             stack.AddComponent<WindowIntro>();
             UIDeco.Ribbon(stack.transform, level == Balance.GoldenAgeLevel ? "The Golden Age!" : "Level Up!", Palette.Hex(0x7A2E1E), 760, 120);
             var card = UIKit.Panel(stack.transform, new Color(0.13f, 0.09f, 0.06f, 0.92f), "Card", null, true);

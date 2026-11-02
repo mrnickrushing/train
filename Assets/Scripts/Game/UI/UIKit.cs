@@ -41,12 +41,20 @@ namespace Ironhorse.Game
 
         // ---------------------------------------------------------------- fonts & sprites
 
-        static Font _body, _heading;
-        public static Font Body { get { return _body ?? (_body = MakeFont(new[] { "Avenir Next", "Avenir Next Condensed", "Segoe UI", "Helvetica Neue", "Arial" })); } }
-        public static Font Heading { get { return _heading ?? (_heading = MakeFont(new[] { "Rockwell", "American Typewriter", "Georgia", "Times New Roman" })); } }
-        static Font _display;
-        /// <summary>Condensed bold face for titles, buttons and big numbers (iOS: Avenir Next Condensed; Windows: Bahnschrift).</summary>
-        public static Font Display { get { return _display ?? (_display = MakeFont(new[] { "Avenir Next Condensed", "AvenirNextCondensed-Bold", "Bahnschrift", "Oswald", "Arial Narrow", "Helvetica Neue" })); } }
+        // Bundled OFL faces (Resources/Fonts, Barlow by Jeremy Tribby) so the UI looks the same on
+        // every device; OS fonts are only a fallback if the files are missing.
+        static Font _body, _bodyBold, _heading, _display;
+        public static Font Body { get { return _body ?? (_body = Load("BarlowSemiCondensed-Medium", "Avenir Next", "Segoe UI", "Helvetica Neue", "Arial")); } }
+        public static Font BodyBold { get { return _bodyBold ?? (_bodyBold = Load("BarlowSemiCondensed-SemiBold", "Avenir Next", "Segoe UI", "Helvetica Neue", "Arial")); } }
+        public static Font Heading { get { return _heading ?? (_heading = Load("BarlowCondensed-SemiBold", "Avenir Next Condensed", "Bahnschrift", "Arial Narrow")); } }
+        /// <summary>Condensed bold face for titles, buttons and big numbers.</summary>
+        public static Font Display { get { return _display ?? (_display = Load("BarlowCondensed-Bold", "Avenir Next Condensed", "AvenirNextCondensed-Bold", "Bahnschrift", "Arial Narrow")); } }
+
+        static Font Load(string resource, params string[] osFallback)
+        {
+            var f = Resources.Load<Font>("Fonts/" + resource);
+            return f != null ? f : MakeFont(osFallback);
+        }
 
         static Font MakeFont(string[] names)
         {
@@ -190,7 +198,9 @@ namespace Ironhorse.Game
         {
             var go = Node("Label", parent);
             var t = go.AddComponent<Text>();
-            t.font = heading ? Heading : Body;
+            bool bold = style == FontStyle.Bold;
+            t.font = heading ? Heading : bold ? BodyBold : Body; // real bold faces, not synthesized
+            if (bold || heading) style = FontStyle.Normal;
             t.text = text;
             t.fontSize = size;
             t.color = color;
@@ -226,6 +236,7 @@ namespace Ironhorse.Game
             b.interactable = enabled;
             var t = Label(img.transform, text.ToUpperInvariant(), Mathf.RoundToInt(fontSize * 1.08f), enabled ? Color.white : new Color(0.95f, 0.93f, 0.9f, 0.9f), TextAnchor.MiddleCenter, false, FontStyle.Bold);
             t.font = Display;
+            t.fontStyle = FontStyle.Normal; // the face is already bold
             t.resizeTextForBestFit = true;
             t.resizeTextMinSize = 12;
             t.resizeTextMaxSize = t.fontSize;
@@ -367,6 +378,7 @@ namespace Ironhorse.Game
             UIKit.Anchor(trim2.gameObject, new Vector2(0, 0), new Vector2(1, 0), new Vector2(18, 10), new Vector2(-18, 14));
             var t = UIKit.Label(band.transform, text.ToUpperInvariant(), Mathf.RoundToInt(height * 0.5f), Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             t.font = UIKit.Display;
+            t.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Stretch(t.gameObject, 12);
             var sh = t.gameObject.AddComponent<Shadow>();
             sh.effectColor = new Color(0, 0, 0, 0.45f);
@@ -382,6 +394,7 @@ namespace Ironhorse.Game
             UIKit.Size(l.gameObject, -1, 3, 1);
             var t = UIKit.Label(row.transform, caption, 22, color, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             t.font = UIKit.Display;
+            t.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Size(t.gameObject, caption.Length * 13 + 20, 30);
             var r = UIKit.Panel(row.transform, new Color(color.r, color.g, color.b, 0.45f), "Line", UIKit.RoundedSmall);
             UIKit.Size(r.gameObject, -1, 3, 1);
@@ -408,6 +421,7 @@ namespace Ironhorse.Game
             icon(ih.transform);
             var t = UIKit.Label(col.transform, amount, 22, UIKit.Ink, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             t.font = UIKit.Display;
+            t.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Size(t.gameObject, -1, 30);
         }
 
@@ -421,6 +435,7 @@ namespace Ironhorse.Game
             o.effectDistance = new Vector2(2, -2);
             var t = UIKit.Label(img.transform, "XP", Mathf.RoundToInt(size * 0.46f), Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             t.font = UIKit.Display;
+            t.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Stretch(t.gameObject);
             t.gameObject.AddComponent<Outline>().effectColor = Palette.Hex(0xA8571A);
             return img.gameObject;
@@ -453,9 +468,11 @@ namespace Ironhorse.Game
             UIKit.Size(chip.gameObject, 260, 64);
             UIKit.HStack(chip.gameObject, 10, 8, TextAnchor.MiddleCenter);
             var a = UIKit.Label(chip.transform, "LVL", 30, UIKit.Wood, TextAnchor.MiddleCenter, false, FontStyle.Bold);
-            a.font = UIKit.Display; UIKit.Size(a.gameObject, 70, 50);
+            a.font = UIKit.Display;
+            a.fontStyle = FontStyle.Normal; // the face is already bold UIKit.Size(a.gameObject, 70, 50);
             var b = UIKit.Label(chip.transform, from + " → " + to, 36, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
-            b.font = UIKit.Display; UIKit.Size(b.gameObject, 150, 50);
+            b.font = UIKit.Display;
+            b.fontStyle = FontStyle.Normal; // the face is already bold UIKit.Size(b.gameObject, 150, 50);
             b.gameObject.AddComponent<Outline>().effectColor = UIKit.BrassDark;
         }
     }

@@ -7,7 +7,7 @@ namespace Ironhorse.Game
     public static class Scenery
     {
         static System.Random _rng;
-        static float R() { return (float)_rng.NextDouble(); }
+        static float R() { if (_rng == null) _rng = new System.Random(7); return (float)_rng.NextDouble(); }
         static float R(float a, float b) { return a + (b - a) * R(); }
 
         public static void Build(Transform root)
@@ -128,7 +128,7 @@ namespace Ironhorse.Game
                 return b;
             }
 
-            for (int i = 0; i < 5200; i++)
+            for (int i = 0; i < 9000; i++)
             {
                 float x = R(ValleyTerrain.MinX + 10, ValleyTerrain.MaxX - 10), z = R(ValleyTerrain.MinZ + 10, ValleyTerrain.MaxZ - 10);
                 float wild = ValleyTerrain.Wildness(x, z);
@@ -138,15 +138,26 @@ namespace Ironhorse.Game
                 float h = ValleyTerrain.Height(x, z);
                 float slope = Mathf.Abs(ValleyTerrain.Height(x + 2, z) - h) + Mathf.Abs(ValleyTerrain.Height(x, z + 2) - h);
                 if (slope > 3.2f || h > 75) continue;
-                float north = Mathf.InverseLerp(-120, 180, z);
+                float north = Mathf.InverseLerp(-230, 60, z);
                 float clump = Mathf.PerlinNoise(x * 0.02f + 100, z * 0.02f);
                 var p = new Vector3(x, h - 0.1f, z);
                 bool nearRiver = water > 0.02f || Mathf.Sqrt(WorldLayout.River.SqrDistanceXZ(x, z)) < 22;
 
+                // Stands of pines frame the valley floor (just outside the town, rails and loop).
+                if (wild > 0.1f && wild < 0.6f && north > 0.3f && clump > 0.5f && R() < 0.8f)
+                {
+                    Pine(Chunk(p), p, R(0.75f, 1.35f));
+                    continue;
+                }
                 if (wild < 0.12f)
                 {
-                    // Valley floor: keep it open, just a few shrubs well away from tracks and town.
-                    if (wild > 0.04f && R() < 0.25f) Sage(Chunk(p), p, R(0.6f, 1.1f));
+                    // Valley floor: mostly open; a few shade trees and shrubs well away from tracks and town.
+                    if (wild > 0.012f && clump > 0.5f && R() < 0.55f)
+                    {
+                        if (north > 0.45f && R() < 0.7f) Pine(Chunk(p), p, R(0.7f, 1.1f));
+                        else Cottonwood(Chunk(p), p, R(0.8f, 1.2f));
+                    }
+                    else if (wild > 0.04f && R() < 0.25f) Sage(Chunk(p), p, R(0.6f, 1.1f));
                     continue;
                 }
                 if (nearRiver && R() < 0.6f) { Cottonwood(Chunk(p), p, R(0.9f, 1.4f)); continue; }
@@ -172,15 +183,50 @@ namespace Ironhorse.Game
             }
         }
 
+        /// <summary>Conifer: stacked star-shaped tiers (jagged silhouette), dark inside, sunlit tips.</summary>
         public static void Pine(MeshBuilder mb, Vector3 p, float s)
         {
             mb.Matte();
-            float hue = R(-0.04f, 0.04f);
-            Color c1 = Shift(Palette.Pine, hue), c2 = Shift(Palette.PineDark, hue);
-            mb.Cylinder(p, p + Vector3.up * 2.2f * s, 0.28f * s, 0.2f * s, 5, Palette.Bark, false);
-            mb.Cylinder(p + Vector3.up * 1.4f * s, p + Vector3.up * 5.2f * s, 2.3f * s, 0, 7, c2, true);
-            mb.Cylinder(p + Vector3.up * 3.3f * s, p + Vector3.up * 7.0f * s, 1.8f * s, 0, 7, c1, true);
-            mb.Cylinder(p + Vector3.up * 5.1f * s, p + Vector3.up * 8.6f * s, 1.25f * s, 0, 7, Color.Lerp(c1, Palette.Grass, 0.15f), true);
+            float hue = R(-0.03f, 0.03f);
+            Color dark = Shift(Palette.PineDark, hue - 0.03f), mid = Shift(Palette.Pine, hue), tip = Shift(Color.Lerp(Palette.Pine, Palette.Grass, 0.25f), hue);
+            mb.Cylinder(p, p + Vector3.up * 2.0f * s, 0.26f * s, 0.18f * s, 5, Palette.Bark, false);
+            float height = R(8.5f, 11f) * s;
+            int tiers = 5;
+            float twist = R(0, 360);
+            for (int t = 0; t < tiers; t++)
+            {
+                float f = t / (float)(tiers - 1);
+                float y0 = Mathf.Lerp(1.3f * s, height * 0.62f, f);
+                float y1 = y0 + Mathf.Lerp(3.4f, 2.6f, f) * s;
+                float r = Mathf.Lerp(2.5f, 0.9f, f) * s * R(0.9f, 1.1f);
+                SpikyCone(mb, p + Vector3.up * y0, y1 - y0, r, 9, twist + t * 23, Color.Lerp(dark, mid, f * 0.6f), Color.Lerp(mid, tip, f));
+            }
+            SpikyCone(mb, p + Vector3.up * (height * 0.62f + 1.6f * s), height * 0.38f, 0.55f * s, 6, twist, mid, tip);
+        }
+
+        /// <summary>Cone whose rim alternates long and short points; normals lean outward so it shades softly.</summary>
+        static void SpikyCone(MeshBuilder mb, Vector3 b, float h, float r, int points, float rotDeg, Color under, Color top)
+        {
+            int n = points * 2;
+            var apex = b + Vector3.up * h;
+            float droop = h * 0.18f;
+            var rim = new Vector3[n];
+            for (int i = 0; i < n; i++)
+            {
+                float a = (rotDeg + i * 360f / n) * Mathf.Deg2Rad;
+                bool spike = i % 2 == 0;
+                float rr = spike ? r * R(0.95f, 1.15f) : r * 0.62f;
+                rim[i] = b + new Vector3(Mathf.Cos(a) * rr, spike ? -droop : droop * 0.4f, Mathf.Sin(a) * rr);
+            }
+            for (int i = 0; i < n; i++)
+            {
+                var a = rim[i]; var c = rim[(i + 1) % n];
+                var outA = (a - b); outA.y = 0; outA.Normalize();
+                var outC = (c - b); outC.y = 0; outC.Normalize();
+                var na = (outA + Vector3.up * 0.9f).normalized; var nc = (outC + Vector3.up * 0.9f).normalized;
+                mb.QuadSmooth(a, apex, apex, c, na, Vector3.up, Vector3.up, nc, i % 2 == 0 ? top : Color.Lerp(top, under, 0.5f), top, top, i % 2 == 1 ? top : Color.Lerp(top, under, 0.5f));
+                mb.Tri(a, c, b + Vector3.up * droop * 0.3f, under); // underside, in shadow
+            }
         }
 
         public static void Cottonwood(MeshBuilder mb, Vector3 p, float s)
@@ -239,19 +285,20 @@ namespace Ironhorse.Game
         {
             var mb = new MeshBuilder();
             mb.Matte();
+            mb.Surf = SurfaceKind.Gravel; // packed gravel streets
             float x0 = WorldLayout.PlotOriginX - WorldLayout.PlotPitchX / 2, x1 = WorldLayout.PlotOriginX + (WorldLayout.PlotCols - 0.5f) * WorldLayout.PlotPitchX;
             float z0 = WorldLayout.PlotOriginZ - WorldLayout.PlotPitchZ / 2, z1 = WorldLayout.PlotOriginZ + (WorldLayout.PlotRows - 0.5f) * WorldLayout.PlotPitchZ;
-            Color road = Palette.Road;
+            Color road = MeshBuilder.Darken(Palette.Road, 0.82f);
             for (int r = 0; r <= WorldLayout.PlotRows; r++)
             {
                 float z = z0 + r * WorldLayout.PlotPitchZ;
-                float w = r == 0 ? 7f : 3.6f; // Main Street is wide
+                float w = r == 0 ? 7f : 2.8f; // Main Street is wide; side streets are narrow tracks
                 RoadStrip(mb, new Vector3(x0 - 2, 0, z), new Vector3(x1 + 2, 0, z), w, road);
             }
             for (int c = 0; c <= WorldLayout.PlotCols; c++)
             {
                 float x = x0 + c * WorldLayout.PlotPitchX;
-                RoadStrip(mb, new Vector3(x, 0, z0), new Vector3(x, 0, z1), 3.6f, road);
+                RoadStrip(mb, new Vector3(x, 0, z0), new Vector3(x, 0, z1), 2.8f, road);
             }
             // Station plaza between Main Street and the depot.
             mb.Box(new Vector3(0, 0.04f, -14.5f), new Vector3(36, 0.08f, 6), MeshBuilder.Darken(road, 0.95f));
