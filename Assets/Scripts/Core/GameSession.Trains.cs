@@ -11,6 +11,7 @@ namespace Ironhorse.Core
         public int Amount;
         public double Seconds;
         public int Xp;
+        public int Fuel;
     }
 
     public sealed partial class GameSession
@@ -63,10 +64,12 @@ namespace Ironhorse.Core
             }
             p.Amount = (int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level) * d.Yield * (1 + CivicBonus(CivicEffect.Yield)));
             p.Xp = Balance.XpForCargo(res, p.Amount);
+            p.Fuel = FuelCost(t, d);
 
             if (!IsDestinationUnlocked(d)) p.Reason = "Unlocks at level " + d.UnlockLevel;
             else if (!t.IsIdle) p.Reason = "Train is busy";
             else if (capacity == 0) p.Reason = "Needs a " + CargoWagonName(res.Cargo);
+            else if (Fuel < p.Fuel) p.Reason = "Needs " + p.Fuel + " fuel (have " + Fuel + ")";
             else p.Possible = true;
             return p;
         }
@@ -99,6 +102,8 @@ namespace Ironhorse.Core
             if (t == null || d == null) return ActionResult.Fail("Unknown train or destination");
             var p = PreviewDispatch(t, d);
             if (!p.Possible) return ActionResult.Fail(p.Reason);
+            if (!TrySpendFuel(p.Fuel)) return ActionResult.Fail("Not enough fuel");
+            AddPassXp(Balance.PassXpDispatch);
 
             t.destinationId = d.Id;
             t.departedAt = Now;

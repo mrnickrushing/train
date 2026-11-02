@@ -55,6 +55,7 @@ namespace Ironhorse.Core
             var b = new BuildingState { uid = NewUid(), defId = d.Id, plot = plot, builtAt = Now, readyAt = ready, lastCollectAt = ready };
             State.buildings.Add(b);
             AddXp(10 + d.UnlockLevel * 8);
+            AddPassXp(Balance.PassXpConstruct);
             RaiseChanged();
             return ActionResult.Success("Construction of " + d.Name + " started");
         }
@@ -231,6 +232,7 @@ namespace Ironhorse.Core
             State.stats.produced.Change(d.Recipe.Output.id, amount);
             var res = GameDatabase.Resource(d.Recipe.Output.id);
             AddXp(Balance.XpForCargo(res, amount));
+            AddPassXp(Balance.PassXpProduction * b.productionBatches);
             b.productionEndsAt = 0;
             b.productionBatches = 0;
             RaiseChanged();

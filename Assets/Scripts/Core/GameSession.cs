@@ -110,6 +110,7 @@ namespace Ironhorse.Core
             State.trains.RemoveAll(t => GameDatabase.Locomotive(t.defId) == null);
             State.wagons.RemoveAll(w => GameDatabase.Wagon(w.defId) == null);
             State.buildings.RemoveAll(b => GameDatabase.Building(b.defId) == null);
+            RepairMonetization();
         }
 
         // ---------------------------------------------------------------- Tick
@@ -144,6 +145,9 @@ namespace Ironhorse.Core
                 }
             }
             if (FillContracts(force: false)) changed = true;
+            int season = State.passSeason;
+            RollSeason();
+            if (season != State.passSeason) changed = true;
             if (changed) RaiseChanged();
         }
 
@@ -204,6 +208,8 @@ namespace Ironhorse.Core
             {
                 State.xp -= Balance.XpForNextLevel(State.level);
                 State.level++;
+                // Level-up perk: the tender is refilled.
+                if (State.fuel < MaxFuel) { State.fuel = MaxFuel; State.fuelAt = Now; }
                 State.nuggets += Balance.LevelUpNuggets(State.level);
                 EarnCoins(Balance.LevelUpCoins(State.level));
                 LeveledUp?.Invoke(State.level);
