@@ -161,6 +161,7 @@ namespace Ironhorse.Game
 
         static void PeopleIcon(Transform t)
         {
+            if (UIKit.Icon(t, "people", 56) != null) return;
             var holder = UIKit.Node("People", t);
             UIKit.Size(holder, 50, 50);
             var head = UIKit.Panel(holder.transform, UIKit.Parchment, "Head", UIKit.Circle);
@@ -171,6 +172,7 @@ namespace Ironhorse.Game
 
         static void CrateIcon(Transform t)
         {
+            if (UIKit.Icon(t, "crate", 54) != null) return;
             var img = UIKit.Panel(t, Palette.WoodPale, "Crate", UIKit.RoundedSmall);
             UIKit.Size(img.gameObject, 46, 46);
             var x1 = UIKit.Panel(img.transform, Palette.Wood, "X", UIKit.RoundedSmall);

@@ -58,7 +58,7 @@ namespace Ironhorse.Game
             {
                 m = new Material(template) { name = id };
                 m.SetTexture("_BaseMap", albedo);
-                m.SetColor("_BaseColor", Color.white);
+                m.SetColor("_BaseColor", new Color(1.14f, 1.1f, 1.04f)); // AI albedo maps run a bit dark next to the sunlit world
                 var ms = Resources.Load<Texture2D>("Models/" + key + "_ms");
                 if (ms != null)
                 {

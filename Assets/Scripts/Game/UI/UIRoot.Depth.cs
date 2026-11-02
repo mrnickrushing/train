@@ -46,6 +46,20 @@ namespace Ironhorse.Game
         /// <summary>Old Hank, the Dry Creek stationmaster, drawn from UI shapes until real art arrives.</summary>
         static void ForemanPortrait(Transform parent, float size)
         {
+            var sp = UIKit.IconSprite("foreman");
+            if (sp != null)
+            {
+                // Painted portrait, cropped into the round badge.
+                var mask = UIKit.Panel(parent, Palette.Hex(0x3C6E91), "Hank", UIKit.Circle);
+                UIKit.Size(mask.gameObject, size, size);
+                mask.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+                var pic = UIKit.Node("Face", mask.transform).AddComponent<Image>();
+                pic.sprite = sp;
+                pic.preserveAspect = true;
+                pic.raycastTarget = false;
+                UIKit.Stretch(pic.gameObject, -size * 0.04f);
+                return;
+            }
             var h = UIKit.Node("Hank", parent);
             UIKit.Size(h, size, size);
             Color skin = Palette.Hex(0xE0B48A), coat = Palette.Hex(0x2F4A6B), hat = Palette.Hex(0x3A2A20), mustache = Palette.Hex(0xD8D2C8);
