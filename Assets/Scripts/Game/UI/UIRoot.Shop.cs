@@ -168,7 +168,7 @@ namespace Ironhorse.Game
         {
             var label = b.GetComponentInChildren<Text>();
             label.text = "";
-            var row = UIKit.Node("Price", b.transform);
+            var row = UIKit.Node("Price", label.transform.parent);
             UIKit.Stretch(row, 6);
             UIKit.HStack(row, 8, 0, TextAnchor.MiddleCenter);
             UIKit.NuggetIcon(row.transform, 34);
@@ -203,10 +203,20 @@ namespace Ironhorse.Game
             }
             if (!string.IsNullOrEmpty(o.Badge))
             {
-                var badge = UIKit.Panel(tags.transform, UIKit.Gold, "Value", UIKit.Rounded);
-                UIKit.Size(badge.gameObject, 190, 40);
-                var bl = UIKit.Label(badge.transform, o.Badge, 20, UIKit.Wood, TextAnchor.MiddleCenter, true, FontStyle.Bold);
-                UIKit.Stretch(bl.gameObject);
+                // Rotated "seal" in the card's top-right corner, layered squares make a starburst.
+                var seal = UIKit.Node("Seal", card.transform);
+                seal.AddComponent<LayoutElement>().ignoreLayout = true;
+                UIKit.Place(seal, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-70, -40), new Vector2(150, 150));
+                for (int k = 0; k < 3; k++)
+                {
+                    var sq = UIKit.Panel(seal.transform, Palette.Hex(0xC8462E), "Burst", UIKit.RoundedSmall);
+                    UIKit.Place(sq.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(118, 118)).localRotation = Quaternion.Euler(0, 0, k * 30);
+                }
+                var bl = UIKit.Label(seal.transform, o.Badge.Replace(" ", "\n"), 26, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                bl.font = UIKit.Display;
+                UIKit.Stretch(bl.gameObject, 16);
+                bl.transform.localRotation = Quaternion.Euler(0, 0, 12);
+                bl.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.4f);
             }
             Line(col.transform, o.Title.ToUpperInvariant(), 32, UIKit.Ink, true);
             Line(col.transform, o.Subtitle, 20, UIKit.InkSoft);

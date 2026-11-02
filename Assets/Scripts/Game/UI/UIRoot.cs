@@ -115,7 +115,8 @@ namespace Ironhorse.Game
             var badge = UIKit.Panel(left.transform, UIKit.Brass, "Badge", UIKit.Circle);
             UIKit.Place(badge.gameObject, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(10, 0), new Vector2(86, 86));
             badge.gameObject.AddComponent<Outline>().effectColor = UIKit.BrassDark;
-            _level = UIKit.Label(badge.transform, "1", 40, UIKit.Wood, TextAnchor.MiddleCenter, true, FontStyle.Bold);
+            _level = UIKit.Label(badge.transform, "1", 46, UIKit.Wood, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            _level.font = UIKit.Display;
             UIKit.Stretch(_level.gameObject);
             var town = UIKit.Label(left.transform, S.State.townName.ToUpperInvariant(), 26, UIKit.Brass, TextAnchor.UpperLeft, true);
             UIKit.Anchor(town.gameObject, new Vector2(0, 0.5f), new Vector2(1, 1), new Vector2(108, 0), new Vector2(-14, -12));
@@ -145,7 +146,8 @@ namespace Ironhorse.Game
             UIKit.Size(bg.gameObject, width, 64);
             UIKit.HStack(bg.gameObject, 10, 8, TextAnchor.MiddleLeft);
             icon(bg.transform);
-            var t = UIKit.Label(bg.transform, "0", 30, UIKit.Cream, TextAnchor.MiddleLeft, true, FontStyle.Bold);
+            var t = UIKit.Label(bg.transform, "0", 34, UIKit.Cream, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+            t.font = UIKit.Display;
             UIKit.Size(t.gameObject, -1, 50, 1);
             Clickable(bg.gameObject, onClick);
             return t;
@@ -208,7 +210,8 @@ namespace Ironhorse.Game
             glyph(gl.transform);
             var plate = UIKit.Panel(holder.transform, UIKit.Wood, "Plate", UIKit.RoundedSmall, true);
             UIKit.Place(plate.gameObject, new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(166, 40));
-            var t = UIKit.Label(plate.transform, label, 23, UIKit.Cream, TextAnchor.MiddleCenter, true);
+            var t = UIKit.Label(plate.transform, label.ToUpperInvariant(), 24, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            t.font = UIKit.Display;
             UIKit.Stretch(t.gameObject);
             Clickable(holder, onClick);
             var badge = UIKit.Badge(circle.transform, "", UIKit.Red);
@@ -359,29 +362,40 @@ namespace Ironhorse.Game
             _windowTitle = title;
             _windowBuilder = build;
 
-            var dim = UIKit.Panel(_windowLayer, UIKit.Dim, "Dim");
+            // Full-screen sheet over the dimmed world: big title top-left, square close button top-right.
+            var dim = UIKit.Panel(_windowLayer, new Color(0.06f, 0.04f, 0.03f, 0.74f), "Dim");
             dim.sprite = null;
             UIKit.Stretch(dim.gameObject);
             _window = dim.gameObject;
             Clickable(_window, CloseWindow);
             _window.GetComponent<ButtonFx>().enabled = false;
 
-            var frame = UIKit.Panel(_window.transform, UIKit.Wood, "Frame", null, true);
-            UIKit.Place(frame.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -10), new Vector2(width, height));
+            var sheet = UIKit.Node("Sheet", _window.transform);
+            UIKit.Stretch(sheet);
+            sheet.AddComponent<SafeArea>();
+
+            var title_ = UIKit.Label(sheet.transform, title.ToUpperInvariant(), 64, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+            title_.font = UIKit.Display;
+            UIKit.Anchor(title_.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(70, -120), new Vector2(-200, -20));
+            var sh = title_.gameObject.AddComponent<Shadow>();
+            sh.effectColor = new Color(0, 0, 0, 0.6f);
+            sh.effectDistance = new Vector2(0, -4);
+            var underline = UIKit.Panel(sheet.transform, UIKit.Brass, "Underline", UIKit.RoundedSmall);
+            UIKit.Place(underline.gameObject, new Vector2(0, 1), new Vector2(0, 0.5f), new Vector2(72, -118), new Vector2(Mathf.Min(560, title.Length * 30 + 40), 6));
+
+            var close = UIKit.Btn(sheet.transform, "X", Palette.Hex(0x2A1C12), CloseWindow, 40, 92, 92);
+            UIKit.Place(close.gameObject, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-40, -24), new Vector2(92, 92));
+
+            var frame = UIKit.Panel(sheet.transform, UIKit.Parchment, "Frame", null, true);
+            UIKit.Place(frame.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -50), new Vector2(width + 120, height - 40));
             frame.gameObject.AddComponent<Button>().transition = Selectable.Transition.None; // swallow clicks
             frame.gameObject.AddComponent<WindowIntro>();
+            var edge = frame.gameObject.AddComponent<Outline>();
+            edge.effectColor = new Color(UIKit.Brass.r, UIKit.Brass.g, UIKit.Brass.b, 0.85f);
+            edge.effectDistance = new Vector2(3, -3);
 
             var paper = UIKit.Panel(frame.transform, UIKit.Parchment, "Paper");
-            UIKit.Anchor(paper.gameObject, Vector2.zero, Vector2.one, new Vector2(14, 14), new Vector2(-14, -86));
-
-            var title_ = UIKit.Label(frame.transform, title.ToUpperInvariant(), 38, UIKit.Brass, TextAnchor.MiddleCenter, true, FontStyle.Bold);
-            UIKit.Anchor(title_.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(90, -82), new Vector2(-90, -6));
-            var sh = title_.gameObject.AddComponent<Shadow>();
-            sh.effectColor = new Color(0, 0, 0, 0.5f);
-            sh.effectDistance = new Vector2(0, -3);
-
-            var close = UIKit.Btn(frame.transform, "X", UIKit.Red, CloseWindow, 30, 64, 64);
-            UIKit.Place(close.gameObject, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-12, -10), new Vector2(64, 64));
+            UIKit.Anchor(paper.gameObject, Vector2.zero, Vector2.one, new Vector2(10, 10), new Vector2(-10, -10));
 
             // Scrollable content
             var scrollGo = UIKit.Node("Scroll", paper.transform);
@@ -448,7 +462,8 @@ namespace Ironhorse.Game
         public void Toast(string message, bool good)
         {
             if (string.IsNullOrEmpty(message)) return;
-            var t = UIKit.Panel(_toasts, good ? new Color(0.17f, 0.11f, 0.06f, 0.94f) : new Color(0.55f, 0.16f, 0.1f, 0.95f), "Toast", null, true);
+            var t = UIKit.Panel(_toasts, good ? new Color(0.13f, 0.09f, 0.06f, 0.94f) : new Color(0.55f, 0.16f, 0.1f, 0.95f), "Toast", UIKit.RoundedGrad, true);
+            t.gameObject.AddComponent<Outline>().effectColor = good ? new Color(UIKit.Brass.r, UIKit.Brass.g, UIKit.Brass.b, 0.8f) : new Color(1, 0.6f, 0.5f, 0.7f);
             UIKit.HStack(t.gameObject, 0, 16, TextAnchor.MiddleCenter);
             var fit = t.gameObject.AddComponent<ContentSizeFitter>();
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -481,28 +496,38 @@ namespace Ironhorse.Game
             var dim = UIKit.Panel(_popupLayer, UIKit.Dim, "LevelUp");
             dim.sprite = null;
             UIKit.Stretch(dim.gameObject);
-            var card = UIKit.Panel(dim.transform, UIKit.Parchment, "Card", null, true);
-            UIKit.Place(card.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760, 640));
+            var stack = UIKit.Node("Stack", dim.transform);
+            UIKit.Place(stack, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000, 760));
+            UIKit.VStack(stack, 0, 0, TextAnchor.UpperCenter).childControlWidth = false;
+            stack.AddComponent<WindowIntro>();
+            UIDeco.Ribbon(stack.transform, level == Balance.GoldenAgeLevel ? "The Golden Age!" : "Level Up!", Palette.Hex(0x7A2E1E), 760, 120);
+            var card = UIKit.Panel(stack.transform, new Color(0.13f, 0.09f, 0.06f, 0.92f), "Card", null, true);
+            UIKit.Size(card.gameObject, 820, 560);
             card.gameObject.AddComponent<Outline>().effectColor = UIKit.Brass;
-            card.gameObject.AddComponent<WindowIntro>();
             var v = UIKit.Node("V", card.transform);
             UIKit.Stretch(v, 30);
+            UIKit.RT(v).offsetMax = new Vector2(-30, -20);
             UIKit.VStack(v, 12, 0, TextAnchor.UpperCenter);
-            UIKit.Size(UIKit.Label(v.transform, "LEVEL UP!", 64, UIKit.BrassDark, TextAnchor.MiddleCenter, true, FontStyle.Bold).gameObject, -1, 80);
-            UIKit.Size(UIKit.Label(v.transform, "Your railroad reaches level " + level, 30, UIKit.Ink, TextAnchor.MiddleCenter, true).gameObject, -1, 44);
-            var rewards = UIKit.Row(v.transform, 56, 24, TextAnchor.MiddleCenter);
-            UIKit.CoinIcon(rewards.transform, 46);
-            UIKit.Label(rewards.transform, "+" + Fmt.Num(Balance.LevelUpCoins(level)), 32, UIKit.Ink, TextAnchor.MiddleLeft, true);
-            UIKit.NuggetIcon(rewards.transform, 46);
-            UIKit.Label(rewards.transform, "+" + Balance.LevelUpNuggets(level), 32, UIKit.Ink, TextAnchor.MiddleLeft, true);
+            var chipRow = UIKit.Row(v.transform, 70, 0, TextAnchor.MiddleCenter);
+            UIDeco.LevelChip(chipRow.transform, level - 1, level);
+            UIDeco.Divider(v.transform, "Rewards", UIKit.Cream);
+            var rewardsPanel = UIKit.Panel(v.transform, UIKit.Parchment, "Rewards", UIKit.Rounded);
+            UIKit.Size(rewardsPanel.gameObject, -1, 110);
+            UIKit.VStack(rewardsPanel.gameObject, 0, 8, TextAnchor.MiddleCenter);
+            UIDeco.Rewards(rewardsPanel.transform, S, Balance.LevelUpCoins(level), 0, Balance.LevelUpNuggets(level));
             if (unlocks.Count > 0)
             {
-                UIKit.Size(UIKit.Label(v.transform, "NEW THIS LEVEL", 22, UIKit.InkSoft, TextAnchor.MiddleCenter, true).gameObject, -1, 30);
-                foreach (var u in unlocks.Take(6)) UIKit.Size(UIKit.Label(v.transform, u, 24, UIKit.Ink, TextAnchor.MiddleCenter).gameObject, -1, 32);
+                UIDeco.Divider(v.transform, "New this level", UIKit.Cream);
+                foreach (var u in unlocks.Take(5))
+                {
+                    var l = UIKit.Label(v.transform, u, 24, UIKit.Cream, TextAnchor.MiddleCenter);
+                    UIKit.Size(l.gameObject, -1, 30);
+                }
             }
-            UIKit.Spacer(v.transform, -1, 10);
+            UIKit.Spacer(v.transform, -1, 6);
             var go = dim.gameObject;
-            UIKit.Btn(v.transform, "Onward!", UIKit.Green, () => Destroy(go), 30, 300, 74);
+            var claimRow = UIKit.Row(v.transform, 90, 0, TextAnchor.MiddleCenter);
+            UIKit.Btn(claimRow.transform, "Claim", UIKit.Blue, () => Destroy(go), 34, 320, 84);
         }
 
         // ================================================================ world markers
