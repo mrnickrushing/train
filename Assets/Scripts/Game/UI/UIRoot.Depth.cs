@@ -159,18 +159,21 @@ namespace Ironhorse.Game
         {
             if (d.Blueprints <= 0) return;
             int have = S.BlueprintsOf(d.Id);
-            var row = UIKit.Row(col, 34, 10);
+            var row = UIKit.Row(col, 40, 0, TextAnchor.MiddleCenter);
+            if (S.CanAssemble(d))
+            {
+                // Ready: the whole row becomes the Assemble button, so it fits narrow depot cards.
+                string id = d.Id;
+                var b = UIKit.Btn(row.transform, "Assemble (" + have + "/" + d.Blueprints + ")", UIKit.Green, () => Result(S.AssembleLocomotive(id), Sfx.Bell), 20, -1, 40);
+                UIKit.Size(b.gameObject, -1, 40, 1);
+                return;
+            }
             var tag = UIKit.Panel(row.transform, UIKit.Blue, "Blueprints", UIKit.RoundedSmall);
-            UIKit.Size(tag.gameObject, 300, 30);
+            UIKit.Size(tag.gameObject, -1, 32, 1);
             var bar = UIKit.Panel(tag.transform, Palette.Hex(0x7FB0D8), "Fill", UIKit.RoundedSmall);
             UIKit.Anchor(bar.gameObject, Vector2.zero, new Vector2(Mathf.Clamp01(have / (float)d.Blueprints), 1), Vector2.zero, Vector2.zero);
             var l = UIKit.Label(tag.transform, "Blueprints " + have + "/" + d.Blueprints, 18, UIKit.Cream, TextAnchor.MiddleCenter, true, FontStyle.Bold);
             UIKit.Stretch(l.gameObject);
-            if (S.CanAssemble(d))
-            {
-                string id = d.Id;
-                UIKit.Btn(row.transform, "Assemble!", UIKit.Green, () => Result(S.AssembleLocomotive(id), Sfx.Bell), 18, 160, 34);
-            }
         }
     }
 }
