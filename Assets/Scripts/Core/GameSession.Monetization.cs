@@ -294,6 +294,7 @@ namespace Ironhorse.Core
             foreach (var r in g.Resources) State.inventory.Change(r.id, r.amount); // gifts may exceed warehouse space
             if (g.PassPremium) { RollSeason(); State.passPremium = true; }
             if (g.FuelTank && !State.ownedProducts.Contains(Catalog.FuelTank)) State.ownedProducts.Add(Catalog.FuelTank);
+            if (g.BlueprintLoco != null && g.Blueprints > 0) State.blueprints.Change(g.BlueprintLoco, g.Blueprints);
             string extra = "";
             if (g.LocomotiveId != null)
             {

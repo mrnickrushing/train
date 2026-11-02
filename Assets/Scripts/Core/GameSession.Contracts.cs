@@ -23,7 +23,7 @@ namespace Ironhorse.Core
         {
             var list = new List<string>();
             foreach (var d in GameDatabase.Destinations)
-                if (IsDestinationUnlocked(d) && !list.Contains(d.ResourceId)) list.Add(d.ResourceId);
+                if (IsDestinationUnlocked(d) && !d.IsTown && !list.Contains(d.ResourceId)) list.Add(d.ResourceId);
             foreach (var b in State.buildings)
             {
                 var d = GameDatabase.Building(b.defId);
@@ -73,6 +73,11 @@ namespace Ironhorse.Core
             c.rewardCoins = (int)Math.Round(value * 1.8 + 40);
             c.rewardXp = Math.Max(5, (int)Math.Round(value * 0.45));
             c.rewardNuggets = rng.NextDouble() < 0.15 ? 1 + rng.Next(3) : 0;
+            if (rng.NextDouble() < Balance.ContractPartsChance)
+            {
+                string[] parts = State.level < 4 ? new[] { "rivets" } : State.level < 8 ? new[] { "rivets", "bearings" } : new[] { "bearings", "rods", "gauges" };
+                c.rewardParts.Add(new ResourceAmount(parts[rng.Next(parts.Length)], 2 + rng.Next(2 + State.level / 2)));
+            }
             return c;
         }
 
@@ -90,6 +95,7 @@ namespace Ironhorse.Core
             Pay(0, c.requirements);
             EarnCoins(c.rewardCoins);
             State.nuggets += c.rewardNuggets;
+            if (c.rewardParts != null) foreach (var p in c.rewardParts) State.inventory.Change(p.id, p.amount);
             AddXp(c.rewardXp);
             State.contracts.Remove(c);
             State.stats.contractsCompleted++;

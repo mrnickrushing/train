@@ -61,12 +61,31 @@ namespace Ironhorse.Core
             return (int)(basePrice * 0.35 * level);
         }
 
+        /// <summary>Workshop parts needed for the next overhaul.</summary>
         public static ResourceAmount[] LocoUpgradeResources(int level)
         {
-            if (level < 3) return new[] { new ResourceAmount("planks", 6 * level) };
-            if (level < 6) return new[] { new ResourceAmount("steel", 5 * level) };
-            return new[] { new ResourceAmount("steel", 6 * level), new ResourceAmount("tools", 2 * level) };
+            if (level < 3) return new[] { new ResourceAmount("rivets", 6 * level) };
+            if (level < 6) return new[] { new ResourceAmount("rivets", 4 * level), new ResourceAmount("bearings", 3 * level) };
+            return new[] { new ResourceAmount("bearings", 3 * level), new ResourceAmount("rods", 2 * level), new ResourceAmount("gauges", level) };
         }
+
+        // ---------------------------------------------------------------- Crew & conveyors
+
+        public const int BaseCrew = 3;
+        public const int SettlersPerCrew = 60;
+        public const int MaxHiredCrew = 10;
+        public static int HireCrewNuggets(int hired) { return 50 + 30 * hired; }
+        public const int MaxExtraSlots = 3;
+        public static int ExtraSlotNuggets(int bought) { return 100 * (bought + 1); }
+
+        // ---------------------------------------------------------------- Passengers
+
+        /// <summary>Coins per passenger before the town's fare multiplier and income bonuses.</summary>
+        public const double FarePerPassenger = 7;
+        /// <summary>Seats you can fill per trip: your town sends out this share of its population.</summary>
+        public static int PassengerDemand(int population) { return Math.Max(12, population / 2); }
+
+        public const double ContractPartsChance = 0.35;
 
         /// <summary>Cargo multiplier from locomotive level (+12% per level).</summary>
         public static float LocoCapacityMultiplier(int level) { return 1f + 0.12f * (level - 1); }

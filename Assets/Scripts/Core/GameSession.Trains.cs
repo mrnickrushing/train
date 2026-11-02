@@ -63,6 +63,7 @@ namespace Ironhorse.Core
                 if (wd.Cargo == res.Cargo) capacity += wd.Capacity;
             }
             p.Amount = (int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level) * d.Yield * (1 + CivicBonus(CivicEffect.Yield)));
+            if (d.IsTown) p.Amount = Math.Min((int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level)), Balance.PassengerDemand(Population));
             p.Xp = Balance.XpForCargo(res, p.Amount);
             p.Fuel = FuelCost(t, d);
 
@@ -125,6 +126,9 @@ namespace Ironhorse.Core
             if (t.IsIdle) return ActionResult.Fail("Nothing to unload");
             if (!HasArrived(t)) return ActionResult.Fail("Still on the line");
 
+            var cargoDef = GameDatabase.Resource(t.cargoId);
+            if (cargoDef.IsPassenger) return UnloadPassengers(t);
+
             int moved = Math.Min(t.cargoAmount, WarehouseFree);
             if (moved <= 0 && t.cargoAmount > 0) return ActionResult.Fail("Warehouse is full! Upgrade it or use goods.");
 
@@ -144,6 +148,27 @@ namespace Ironhorse.Core
             else msg += " (warehouse full, " + t.cargoAmount + " left aboard)";
             RaiseChanged();
             return ActionResult.Success(msg);
+        }
+
+        public int FareFor(TrainState t)
+        {
+            var d = GameDatabase.Destination(t.destinationId);
+            float mult = d != null ? d.Yield : 1;
+            return (int)Math.Round(t.cargoAmount * Balance.FarePerPassenger * mult * (1 + CivicBonus(CivicEffect.Income)));
+        }
+
+        ActionResult UnloadPassengers(TrainState t)
+        {
+            int fare = FareFor(t);
+            int pax = t.cargoAmount;
+            EarnCoins(fare);
+            AddXp(Balance.XpForCargo(GameDatabase.Resource("passengers"), pax));
+            State.stats.passengers += pax;
+            t.destinationId = "";
+            t.cargoId = "";
+            t.cargoAmount = 0;
+            RaiseChanged();
+            return ActionResult.Success(pax + " passengers paid " + fare + " coins in fares");
         }
 
         public int TrainRushCost(TrainState t) { return Balance.RushCost(Remaining(t)); }

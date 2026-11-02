@@ -337,7 +337,7 @@ namespace Ironhorse.Tests
                 {
                     if (_s.IsProductionDone(b)) _s.CollectProduction(b.uid);
                     int n = _s.AffordableBatches(b);
-                    if (n > 0 && b.productionEndsAt <= 0) _s.StartProduction(b.uid, n);
+                    if (n > 0 && b.queue.Count == 0) _s.StartProduction(b.uid, n);
                 }
                 if (_s.CountBuilt("sawmill") == 0 && _s.CanConstruct("sawmill").Ok) _s.Construct("sawmill", _s.FreePlots()[0]);
                 if (_s.CanConstruct("cabin").Ok && _s.Coins > 1500) _s.Construct("cabin", _s.FreePlots()[0]);

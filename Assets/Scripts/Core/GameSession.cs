@@ -61,7 +61,7 @@ namespace Ironhorse.Core
             foreach (var b in State.buildings)
             {
                 if (Now >= b.readyAt) _constructionSeen.Add(b.uid);
-                if (b.productionEndsAt > 0 && Now >= b.productionEndsAt) _productionSeen.Add(b.uid);
+                if (IsProductionDone(b)) _productionSeen.Add(b.uid);
             }
             FillContracts(force: State.contracts.Count == 0 && State.nextContractAt <= 0);
         }
@@ -84,6 +84,7 @@ namespace Ironhorse.Core
             s.buildings.Add(new BuildingState { uid = s.nextUid++, defId = "cabin", plot = 0, builtAt = now, readyAt = now, lastCollectAt = now });
             s.buildings.Add(new BuildingState { uid = s.nextUid++, defId = "cabin", plot = 1, builtAt = now, readyAt = now, lastCollectAt = now });
             s.inventory.Change("timber", 10);
+            s.inventory.Change("rivets", 12);
             return s;
         }
 
@@ -111,6 +112,7 @@ namespace Ironhorse.Core
             State.wagons.RemoveAll(w => GameDatabase.Wagon(w.defId) == null);
             State.buildings.RemoveAll(b => GameDatabase.Building(b.defId) == null);
             RepairMonetization();
+            RepairDepth();
         }
 
         // ---------------------------------------------------------------- Tick
@@ -138,7 +140,7 @@ namespace Ironhorse.Core
                     BuildingFinished?.Invoke(b);
                     changed = true;
                 }
-                if (b.productionEndsAt > 0 && now >= b.productionEndsAt && _productionSeen.Add(b.uid))
+                if (IsProductionDone(b) && _productionSeen.Add(b.uid))
                 {
                     ProductionFinished?.Invoke(b);
                     changed = true;
@@ -162,7 +164,16 @@ namespace Ironhorse.Core
 
         public int Amount(string resourceId) { return State.inventory.Get(resourceId); }
         public int WarehouseCapacity { get { return Balance.WarehouseCapacity(State.warehouseLevel); } }
-        public int WarehouseUsed { get { return State.inventory.Total(); } }
+        /// <summary>Workshop parts don't take warehouse space.</summary>
+        public int WarehouseUsed
+        {
+            get
+            {
+                int t = 0;
+                foreach (var r in State.inventory) { var d = GameDatabase.Resource(r.id); if (d == null || !d.IsPart) t += r.amount; }
+                return t;
+            }
+        }
         public int WarehouseFree { get { return Math.Max(0, WarehouseCapacity - WarehouseUsed); } }
 
         public bool CanAfford(int coins, IEnumerable<ResourceAmount> resources, int nuggets = 0)
@@ -234,7 +245,7 @@ namespace Ironhorse.Core
                 var d = GameDatabase.Building(b.defId);
                 if (d.Effect == fx) total += d.EffectValue * (fx == CivicEffect.ContractSlot || fx == CivicEffect.CoinCap ? 1 : Balance.BuildingLevelMultiplier(b.level));
             }
-            return total;
+            return total + ProjectPerk(fx);
         }
 
         public int Population

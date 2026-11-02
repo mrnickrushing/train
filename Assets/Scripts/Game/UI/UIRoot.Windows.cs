@@ -37,6 +37,8 @@ namespace Ironhorse.Game
             return t;
         }
 
+        static string Plural(string noun) { return noun.EndsWith("ch") ? noun + "es" : noun + "s"; }
+
         static void Heading(Transform parent, string text)
         {
             var t = UIKit.Label(parent, text.ToUpperInvariant(), 24, UIKit.BrassDark, TextAnchor.MiddleLeft, true, FontStyle.Bold);
@@ -183,7 +185,8 @@ namespace Ironhorse.Game
                         UIKit.ResIcon(c.transform, dest.ResourceId, 64);
                         var dc = Col(c.transform);
                         Line(dc.transform, dest.Name, 24, locked ? UIKit.InkSoft : UIKit.Ink, true);
-                        Line(dc.transform, locked ? "Unlocks at level " + dest.UnlockLevel : res.Name + " · needs " + GameSession.CargoWagonName(res.Cargo) + "s · " + Fmt.Time(p.Seconds) + " · " + p.Fuel + " fuel", 20, UIKit.InkSoft);
+                        string what = dest.IsTown ? "Passenger town · up to " + Balance.PassengerDemand(S.Population) + " riders from your town · fare x" + dest.Yield.ToString("0.0") : res.Name;
+                        Line(dc.transform, locked ? "Unlocks at level " + dest.UnlockLevel : what + " · needs " + Plural(GameSession.CargoWagonName(res.Cargo)) + " · " + Fmt.Time(p.Seconds) + " · " + p.Fuel + " fuel", 20, UIKit.InkSoft);
                         if (!locked)
                         {
                             string id = dest.Id;
@@ -236,6 +239,98 @@ namespace Ironhorse.Game
             }, 1200, 900);
         }
 
+        /// <summary>Crew gauge, conveyor belt of job slots, and the controls to queue, collect, rush and extend.</summary>
+        void ConveyorPanel(Transform content, BuildingState b, int uid)
+        {
+            var r = GameDatabase.Building(b.defId).Recipe;
+            var outRes = GameDatabase.Resource(r.Output.id);
+
+            var crewRow = Card(content, 80);
+            CrewIcon(crewRow.transform);
+            var crewText = Line(crewRow.transform, "Crew " + S.CrewFree + "/" + S.CrewTotal + " free · each job needs 1 hand until you collect it", 22);
+            crewText.GetComponent<LayoutElement>().flexibleWidth = 1;
+            if (S.State.hiredCrew < Balance.MaxHiredCrew)
+            {
+                var hire = UIKit.Btn(crewRow.transform, "", Purple, () => Result(S.HireCrew(), Sfx.Build), 22, 220, 60, S.Nuggets >= S.HireCrewCost);
+                PriceLabelWithNugget(hire, S.HireCrewCost);
+                var hl = UIKit.Label(hire.transform, "HIRE", 14, UIKit.Cream, TextAnchor.UpperCenter, true);
+                UIKit.Anchor(hl.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -16), new Vector2(0, 2));
+            }
+
+            // The conveyor belt: one box per slot.
+            var belt = UIKit.Panel(content, Palette.Hex(0x2E2A28), "Conveyor", null, true);
+            UIKit.Size(belt.gameObject, -1, 170);
+            UIKit.HStack(belt.gameObject, 14, 16, TextAnchor.MiddleLeft);
+            int slots = UIRootSlotsShown(b);
+            for (int i = 0; i < slots; i++)
+            {
+                bool filled = i < b.queue.Count;
+                var box = UIKit.Panel(belt.transform, filled ? UIKit.ParchmentDark : new Color(1, 1, 1, 0.08f), "Slot", UIKit.Rounded);
+                UIKit.Size(box.gameObject, 130, 130);
+                UIKit.VStack(box.gameObject, 2, 8, TextAnchor.MiddleCenter);
+                if (filled)
+                {
+                    var job = b.queue[i];
+                    UIKit.ResIcon(box.transform, r.Output.id, 64);
+                    var lbl = UIKit.Label(box.transform, "", 18, UIKit.Ink, TextAnchor.MiddleCenter, true);
+                    UIKit.Size(lbl.gameObject, -1, 24);
+                    var bar = UIKit.Bar(box.transform, UIKit.Green, 10);
+                    Action live = () =>
+                    {
+                        double left = job.endsAt - S.Now;
+                        bool queued = S.Now < job.startsAt;
+                        lbl.text = left <= 0 ? "Done!" : queued ? "Queued" : Fmt.Time(left);
+                        double total = job.endsAt - job.startsAt;
+                        UIKit.SetBar(bar, left <= 0 ? 1 : queued || total <= 0 ? 0 : (float)((S.Now - job.startsAt) / total));
+                    };
+                    live(); Live(live);
+                }
+                else if (i < S.QueueSlots(b))
+                {
+                    var plus = UIKit.Label(box.transform, "+", 54, new Color(1, 1, 1, 0.5f), TextAnchor.MiddleCenter, true);
+                    UIKit.Size(plus.gameObject, -1, 80);
+                    Clickable(box.gameObject, () => Result(S.Enqueue(uid), Sfx.Build));
+                }
+                else
+                {
+                    // A locked slot you can buy.
+                    box.color = Purple;
+                    var add = UIKit.Label(box.transform, "ADD SLOT", 18, UIKit.Cream, TextAnchor.MiddleCenter, true, FontStyle.Bold);
+                    UIKit.Size(add.gameObject, -1, 30);
+                    var price = UIKit.Node("Price", box.transform);
+                    UIKit.HStack(price, 6, 0, TextAnchor.MiddleCenter);
+                    UIKit.Size(price, -1, 40);
+                    UIKit.NuggetIcon(price.transform, 30);
+                    UIKit.Label(price.transform, S.ExtraSlotCost(b).ToString(), 22, UIKit.Cream, TextAnchor.MiddleLeft, true);
+                    Clickable(box.gameObject, () => Result(S.BuySlot(uid), Sfx.Build));
+                }
+            }
+
+            var row = UIKit.Row(content, 76, 14, TextAnchor.MiddleCenter);
+            int afford = S.AffordableBatches(b);
+            UIKit.Btn(row.transform, "Queue 1 · " + Fmt.Time(S.ProductionSeconds(b, 1)), UIKit.Green, () => Result(S.Enqueue(uid), Sfx.Build), 22, 260, 68, afford > 0);
+            if (afford > 1) UIKit.Btn(row.transform, "Fill conveyor (" + afford + ")", UIKit.Green, () => Result(S.StartProduction(uid, afford), Sfx.Build), 22, 280, 68);
+            int done = S.FinishedJobs(b);
+            if (done > 0) UIKit.Btn(row.transform, "Collect " + r.Output.amount * done + " " + outRes.Name, UIKit.BrassDark, () => Result(S.CollectProduction(uid)), 22, 320, 68);
+            if (S.IsProducing(b)) UIKit.Btn(row.transform, "Rush all " + S.RushProductionCost(b), UIKit.Blue, () => Result(S.RushProduction(uid), Sfx.Click), 22, 220, 68);
+            if (afford == 0 && b.queue.Count < S.QueueSlots(b))
+                Line(content, S.CrewFree == 0 ? "All hands are busy. Collect finished goods or hire more crew." : "Not enough materials. Dispatch trains to gather them.", 20, UIKit.Red);
+        }
+
+        int UIRootSlotsShown(BuildingState b) { return S.QueueSlots(b) + (b.extraSlots < Balance.MaxExtraSlots ? 1 : 0); }
+
+        static void CrewIcon(Transform t)
+        {
+            var h = UIKit.Node("Crew", t);
+            UIKit.Size(h, 56, 56);
+            var helmet = UIKit.Panel(h.transform, UIKit.Gold, "Hat", UIKit.Circle);
+            UIKit.Place(helmet.gameObject, new Vector2(0.5f, 0.78f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(30, 18));
+            var head = UIKit.Panel(h.transform, Palette.Hex(0xE0B48A), "Head", UIKit.Circle);
+            UIKit.Place(head.gameObject, new Vector2(0.5f, 0.6f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(22, 22));
+            var body = UIKit.Panel(h.transform, UIKit.Blue, "Body", UIKit.RoundedSmall);
+            UIKit.Place(body.gameObject, new Vector2(0.5f, 0.2f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(38, 24));
+        }
+
         static void WagonSwatch(Transform parent, WagonDef wd)
         {
             var bg = UIKit.Panel(parent, Palette.Hex(wd.ColorRgb), "Wagon", UIKit.RoundedSmall);
@@ -272,6 +367,7 @@ namespace Ironhorse.Game
                         Line(col.transform, d.Name, 26, UIKit.Ink, true);
                         Line(col.transform, d.Rarity + " · " + d.Era + " · Pulls " + d.Power + " · Speed " + d.Speed, 20, UIKit.RarityColor(d.Rarity));
                         Line(col.transform, d.Blurb, 18, UIKit.InkSoft);
+                        BlueprintRow(col.transform, d);
                         if (locked) Line(c.transform, "Level " + d.UnlockLevel, 24, UIKit.InkSoft, true).GetComponent<LayoutElement>().preferredWidth = 150;
                         else
                         {
@@ -315,7 +411,13 @@ namespace Ironhorse.Game
         {
             ShowWindow("Contract Board", content =>
             {
-                Line(content, "Townsfolk and outfits post orders here. Deliver goods for coins, XP and sometimes gold nuggets.", 20, UIKit.InkSoft);
+                Tabs(content, new (string, bool, Action)[]
+                {
+                    ("Orders", _ordersTab == "orders", () => _ordersTab = "orders"),
+                    ("Projects", _ordersTab == "projects", () => _ordersTab = "projects"),
+                });
+                if (_ordersTab == "projects") { ProjectsTab(content); return; }
+                Line(content, "Townsfolk and outfits post orders here. Deliver goods for coins, XP, workshop parts and sometimes gold nuggets.", 20, UIKit.InkSoft);
                 foreach (var c in S.State.contracts.ToList())
                 {
                     bool can = S.CanDeliver(c);
@@ -330,6 +432,7 @@ namespace Ironhorse.Game
                     UIKit.CoinIcon(rew.transform, 30); UIKit.Label(rew.transform, Fmt.Num(c.rewardCoins), 22, UIKit.Ink, TextAnchor.MiddleLeft, true);
                     UIKit.Label(rew.transform, "+" + c.rewardXp + " XP", 22, UIKit.Blue, TextAnchor.MiddleLeft, true);
                     if (c.rewardNuggets > 0) { UIKit.NuggetIcon(rew.transform, 30); UIKit.Label(rew.transform, "+" + c.rewardNuggets, 22, UIKit.Ink, TextAnchor.MiddleLeft, true); }
+                    if (c.rewardParts != null) foreach (var p in c.rewardParts) UIKit.Amount(rew.transform, p.id, "+" + p.amount, UIKit.Ink, 30, 22);
                     var bc = Col(card.transform, -1, 200);
                     int uid = c.uid;
                     UIKit.Btn(bc.transform, "Deliver", UIKit.Green, () => Result(S.DeliverContract(uid), Sfx.Deliver), 24, -1, 60, can);
@@ -465,31 +568,7 @@ namespace Ironhorse.Game
                         foreach (var i in r.Inputs) UIKit.Amount(recipe.transform, i.id, i.amount + " (have " + S.Amount(i.id) + ")", S.Amount(i.id) >= i.amount ? UIKit.Ink : UIKit.Red, 44, 22);
                         UIKit.Label(recipe.transform, "→", 36, UIKit.Ink, TextAnchor.MiddleCenter, true);
                         UIKit.Amount(recipe.transform, r.Output.id, r.Output.amount + " " + GameDatabase.Resource(r.Output.id).Name, UIKit.Ink, 44, 22);
-                        if (S.IsProducing(b))
-                        {
-                            var c = Card(content, 90);
-                            var t = Line(c.transform, "", 24, UIKit.Ink, true);
-                            UIKit.Size(t.gameObject, -1, 40, 1);
-                            var bar = UIKit.Bar(c.transform, UIKit.Green, 20);
-                            UIKit.Size(bar.transform.parent.gameObject, 260, 20);
-                            Action live = () => { var bb = S.Building(uid); if (bb == null || bb.productionEndsAt <= 0) return; t.text = "Working on " + bb.productionBatches + " batch(es) · " + Fmt.Time(bb.productionEndsAt - S.Now); UIKit.SetBar(bar, S.ProductionProgress(bb)); };
-                            live(); Live(live);
-                            UIKit.Btn(c.transform, "Rush " + Balance.RushCost(b.productionEndsAt - S.Now), UIKit.Blue, () => Result(S.RushProduction(uid), Sfx.Click), 22, 170, 60);
-                        }
-                        else if (S.IsProductionDone(b))
-                            UIKit.Btn(content, "Collect " + r.Output.amount * b.productionBatches + " " + GameDatabase.Resource(r.Output.id).Name, UIKit.Green, () => Result(S.CollectProduction(uid)), 28, -1, 74);
-                        else
-                        {
-                            Heading(content, "Start production (up to " + S.MaxBatches(b) + " batches)");
-                            var row = UIKit.Row(content, 70, 12, TextAnchor.MiddleCenter);
-                            int afford = S.AffordableBatches(b);
-                            for (int n = 1; n <= S.MaxBatches(b); n++)
-                            {
-                                int batches = n;
-                                UIKit.Btn(row.transform, n + "× · " + Fmt.Time(S.ProductionSeconds(b, n)), UIKit.Green, () => Result(S.StartProduction(uid, batches), Sfx.Build), 20, 200, 62, n <= afford);
-                            }
-                            if (afford == 0) Line(content, "Not enough materials — dispatch trains to gather them.", 20, UIKit.Red);
-                        }
+                        ConveyorPanel(content, b, uid);
                         break;
                     }
                     default:
@@ -528,7 +607,15 @@ namespace Ironhorse.Game
                     UIKit.Btn(uc.transform, "Expand (+150)", UIKit.Green, () => Result(S.UpgradeWarehouse(), Sfx.Build), 22, -1, 54);
                 }
                 if (S.State.inventory.Count == 0) Line(content, "Empty! Send trains out to the territory to haul goods home.", 22, UIKit.InkSoft);
-                foreach (var r in S.State.inventory.OrderBy(r => GameDatabase.Resource(r.id).Manufactured).ThenBy(r => r.id))
+                var parts = S.State.inventory.Where(r => GameDatabase.Resource(r.id).IsPart).ToList();
+                if (parts.Count > 0)
+                {
+                    Heading(content, "Workshop parts (no warehouse space needed)");
+                    var pr = UIKit.Row(content, 60, 24);
+                    foreach (var p in parts) UIKit.Amount(pr.transform, p.id, GameDatabase.Resource(p.id).Name + " " + p.amount, UIKit.Ink, 46, 22);
+                    Heading(content, "Goods");
+                }
+                foreach (var r in S.State.inventory.Where(r => !GameDatabase.Resource(r.id).IsPart).OrderBy(r => GameDatabase.Resource(r.id).Manufactured).ThenBy(r => r.id))
                 {
                     var res = GameDatabase.Resource(r.id);
                     var c = Card(content, 80);
