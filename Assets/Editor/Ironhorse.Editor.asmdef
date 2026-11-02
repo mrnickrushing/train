@@ -1,0 +1,19 @@
+{
+    "name": "Ironhorse.Editor",
+    "rootNamespace": "Ironhorse.EditorTools",
+    "references": [
+        "Ironhorse.Core",
+        "Ironhorse.Game"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

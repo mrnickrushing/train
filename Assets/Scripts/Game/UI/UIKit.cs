@@ -1,0 +1,358 @@
+using System;
+using Ironhorse.Core;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+namespace Ironhorse.Game
+{
+    /// <summary>Theme and widget factory for the code-built uGUI interface.</summary>
+    public static class UIKit
+    {
+        // ---------------------------------------------------------------- theme
+        public static readonly Color Wood = Palette.Hex(0x3B2618);
+        public static readonly Color WoodMid = Palette.Hex(0x5A3A24);
+        public static readonly Color WoodLight = Palette.Hex(0x7A5234);
+        public static readonly Color Parchment = Palette.Hex(0xF3E6C8);
+        public static readonly Color ParchmentDark = Palette.Hex(0xE2CFA6);
+        public static readonly Color Ink = Palette.Hex(0x3A2616);
+        public static readonly Color InkSoft = Palette.Hex(0x7A6048);
+        public static readonly Color Brass = Palette.Hex(0xD9A93F);
+        public static readonly Color BrassDark = Palette.Hex(0x9C7426);
+        public static readonly Color Red = Palette.Hex(0xB5442E);
+        public static readonly Color Green = Palette.Hex(0x4E8A3A);
+        public static readonly Color Blue = Palette.Hex(0x3C6E8F);
+        public static readonly Color Gold = Palette.Hex(0xF2C14E);
+        public static readonly Color Cream = Palette.Hex(0xFFF6E0);
+        public static readonly Color Disabled = Palette.Hex(0x9A8E80);
+        public static readonly Color Dim = new Color(0.08f, 0.05f, 0.03f, 0.62f);
+
+        public static Color RarityColor(Rarity r)
+        {
+            switch (r)
+            {
+                case Rarity.Uncommon: return Palette.Hex(0x4E8A3A);
+                case Rarity.Rare: return Palette.Hex(0x3C6E8F);
+                case Rarity.Epic: return Palette.Hex(0x7E4BA6);
+                case Rarity.Legendary: return Palette.Hex(0xD08A1E);
+            }
+            return Palette.Hex(0x7A6A5A);
+        }
+
+        // ---------------------------------------------------------------- fonts & sprites
+
+        static Font _body, _heading;
+        public static Font Body { get { return _body ?? (_body = MakeFont(new[] { "Avenir Next", "Avenir Next Condensed", "Segoe UI", "Helvetica Neue", "Arial" })); } }
+        public static Font Heading { get { return _heading ?? (_heading = MakeFont(new[] { "Rockwell", "American Typewriter", "Georgia", "Times New Roman" })); } }
+
+        static Font MakeFont(string[] names)
+        {
+            Font f = null;
+            try { f = Font.CreateDynamicFontFromOSFont(names, 32); } catch { }
+            if (f == null)
+            {
+                try { f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); } catch { }
+            }
+            if (f == null) f = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            return f;
+        }
+
+        static Sprite _rounded, _circle, _roundedSmall;
+        public static Sprite Rounded { get { return _rounded ?? (_rounded = MakeRounded(96, 30)); } }
+        public static Sprite RoundedSmall { get { return _roundedSmall ?? (_roundedSmall = MakeRounded(48, 14)); } }
+        public static Sprite Circle { get { return _circle ?? (_circle = MakeRounded(128, 64, false)); } }
+
+        static Sprite MakeRounded(int size, int radius, bool sliced = true)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float cx = Mathf.Clamp(x + 0.5f, radius, size - radius), cy = Mathf.Clamp(y + 0.5f, radius, size - radius);
+                    float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(cx, cy));
+                    float a = Mathf.Clamp01(radius - d + 0.5f);
+                    px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                }
+            tex.SetPixels32(px);
+            tex.Apply();
+            var border = sliced ? new Vector4(radius, radius, radius, radius) : Vector4.zero;
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, border);
+        }
+
+        // ---------------------------------------------------------------- layout helpers
+
+        public static RectTransform RT(GameObject go) { var r = go.GetComponent<RectTransform>(); return r != null ? r : go.AddComponent<RectTransform>(); }
+
+        public static GameObject Node(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            return go;
+        }
+
+        public static RectTransform Anchor(GameObject go, Vector2 min, Vector2 max, Vector2 offMin, Vector2 offMax)
+        {
+            var r = RT(go);
+            r.anchorMin = min; r.anchorMax = max; r.offsetMin = offMin; r.offsetMax = offMax;
+            return r;
+        }
+
+        public static RectTransform Stretch(GameObject go, float pad = 0) { return Anchor(go, Vector2.zero, Vector2.one, new Vector2(pad, pad), new Vector2(-pad, -pad)); }
+
+        public static RectTransform Place(GameObject go, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size)
+        {
+            var r = RT(go);
+            r.anchorMin = r.anchorMax = anchor;
+            r.pivot = pivot;
+            r.anchoredPosition = pos;
+            r.sizeDelta = size;
+            return r;
+        }
+
+        public static LayoutElement Size(GameObject go, float w = -1, float h = -1, float flexW = -1, float flexH = -1)
+        {
+            var le = go.GetComponent<LayoutElement>();
+            if (le == null) le = go.AddComponent<LayoutElement>();
+            if (w >= 0) { le.preferredWidth = w; le.minWidth = w; }
+            if (h >= 0) { le.preferredHeight = h; le.minHeight = h; }
+            if (flexW >= 0) le.flexibleWidth = flexW;
+            if (flexH >= 0) le.flexibleHeight = flexH;
+            return le;
+        }
+
+        public static VerticalLayoutGroup VStack(GameObject go, float spacing = 12, int pad = 0, TextAnchor align = TextAnchor.UpperCenter, bool fit = false)
+        {
+            var v = go.AddComponent<VerticalLayoutGroup>();
+            v.spacing = spacing;
+            v.padding = new RectOffset(pad, pad, pad, pad);
+            v.childAlignment = align;
+            v.childControlWidth = true; v.childControlHeight = true;
+            v.childForceExpandWidth = true; v.childForceExpandHeight = false;
+            if (fit) { var f = go.AddComponent<ContentSizeFitter>(); f.verticalFit = ContentSizeFitter.FitMode.PreferredSize; }
+            return v;
+        }
+
+        public static HorizontalLayoutGroup HStack(GameObject go, float spacing = 12, int pad = 0, TextAnchor align = TextAnchor.MiddleLeft)
+        {
+            var h = go.AddComponent<HorizontalLayoutGroup>();
+            h.spacing = spacing;
+            h.padding = new RectOffset(pad, pad, pad, pad);
+            h.childAlignment = align;
+            h.childControlWidth = true; h.childControlHeight = true;
+            h.childForceExpandWidth = false; h.childForceExpandHeight = false;
+            return h;
+        }
+
+        public static GameObject Row(Transform parent, float height, float spacing = 12, TextAnchor align = TextAnchor.MiddleLeft)
+        {
+            var go = Node("Row", parent);
+            HStack(go, spacing, 0, align);
+            Size(go, -1, height);
+            return go;
+        }
+
+        public static GameObject Spacer(Transform parent, float w = -1, float h = -1)
+        {
+            var go = Node("Spacer", parent);
+            Size(go, w, h, w < 0 ? 1 : -1, -1);
+            return go;
+        }
+
+        // ---------------------------------------------------------------- widgets
+
+        public static Image Panel(Transform parent, Color c, string name = "Panel", Sprite sprite = null, bool shadow = false)
+        {
+            var go = Node(name, parent);
+            var img = go.AddComponent<Image>();
+            img.sprite = sprite ?? Rounded;
+            img.type = Image.Type.Sliced;
+            img.color = c;
+            if (shadow)
+            {
+                var s = go.AddComponent<Shadow>();
+                s.effectColor = new Color(0, 0, 0, 0.35f);
+                s.effectDistance = new Vector2(0, -6);
+            }
+            return img;
+        }
+
+        public static Text Label(Transform parent, string text, int size, Color color, TextAnchor align = TextAnchor.MiddleLeft, bool heading = false, FontStyle style = FontStyle.Normal)
+        {
+            var go = Node("Label", parent);
+            var t = go.AddComponent<Text>();
+            t.font = heading ? Heading : Body;
+            t.text = text;
+            t.fontSize = size;
+            t.color = color;
+            t.alignment = align;
+            t.fontStyle = style;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.raycastTarget = false;
+            t.supportRichText = true;
+            return t;
+        }
+
+        public static Button Btn(Transform parent, string text, Color bg, Action onClick, int fontSize = 26, float w = -1, float h = 64, bool enabled = true)
+        {
+            var img = Panel(parent, enabled ? bg : Disabled, "Button " + text, null, true);
+            var go = img.gameObject;
+            Size(go, w, h);
+            var b = go.AddComponent<Button>();
+            b.targetGraphic = img;
+            var colors = b.colors;
+            colors.highlightedColor = new Color(1.06f, 1.06f, 1.06f);
+            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f);
+            colors.disabledColor = Color.white;
+            b.colors = colors;
+            b.interactable = enabled;
+            var t = Label(go.transform, text, fontSize, enabled ? Cream : new Color(0.95f, 0.93f, 0.9f, 0.9f), TextAnchor.MiddleCenter, true);
+            Stretch(t.gameObject, 8);
+            var sh = t.gameObject.AddComponent<Shadow>();
+            sh.effectColor = new Color(0, 0, 0, 0.35f);
+            sh.effectDistance = new Vector2(0, -2);
+            go.AddComponent<ButtonFx>();
+            if (onClick != null) b.onClick.AddListener(() => { AudioManager.Play(Sfx.Click); onClick(); });
+            return b;
+        }
+
+        /// <summary>Two-image progress bar; returns the fill image (set its RT anchorMax.x via SetBar).</summary>
+        public static Image Bar(Transform parent, Color fill, float height = 16, Color? back = null)
+        {
+            var bg = Panel(parent, back ?? new Color(0, 0, 0, 0.25f), "Bar", RoundedSmall);
+            Size(bg.gameObject, -1, height, 1);
+            var f = Panel(bg.transform, fill, "Fill", RoundedSmall);
+            Anchor(f.gameObject, Vector2.zero, new Vector2(0, 1), Vector2.zero, Vector2.zero);
+            return f;
+        }
+
+        public static void SetBar(Image fill, float t)
+        {
+            var r = fill.rectTransform;
+            r.anchorMax = new Vector2(Mathf.Clamp01(t), 1);
+            fill.enabled = t > 0.001f;
+        }
+
+        /// <summary>Round resource icon with its glyph, optionally with an amount label.</summary>
+        public static GameObject ResIcon(Transform parent, string resId, float size = 44)
+        {
+            var res = GameDatabase.Resource(resId);
+            var img = Panel(parent, Palette.Hex(res.ColorRgb), "Icon " + resId, Circle);
+            Size(img.gameObject, size, size);
+            var ring = img.gameObject.AddComponent<Outline>();
+            ring.effectColor = new Color(0, 0, 0, 0.45f);
+            ring.effectDistance = new Vector2(2, -2);
+            var lum = 0.3f * img.color.r + 0.59f * img.color.g + 0.11f * img.color.b;
+            var t = Label(img.transform, res.Glyph, Mathf.RoundToInt(size * 0.42f), lum > 0.55f ? Ink : Cream, TextAnchor.MiddleCenter, true, FontStyle.Bold);
+            Stretch(t.gameObject);
+            return img.gameObject;
+        }
+
+        public static GameObject Amount(Transform parent, string resId, string text, Color textColor, float iconSize = 40, int fontSize = 24)
+        {
+            var row = Node("Amount", parent);
+            HStack(row, 6);
+            ResIcon(row.transform, resId, iconSize);
+            var l = Label(row.transform, text, fontSize, textColor);
+            Size(l.gameObject, -1, iconSize);
+            var fit = row.AddComponent<ContentSizeFitter>();
+            fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            return row;
+        }
+
+        public static GameObject CoinIcon(Transform parent, float size = 40)
+        {
+            var img = Panel(parent, Gold, "Coin", Circle);
+            Size(img.gameObject, size, size);
+            var inner = Panel(img.transform, BrassDark, "Inner", Circle);
+            Stretch(inner.gameObject, size * 0.18f);
+            var inner2 = Panel(inner.transform, Gold, "Inner2", Circle);
+            Stretch(inner2.gameObject, size * 0.06f);
+            var t = Label(inner2.transform, "$", Mathf.RoundToInt(size * 0.42f), BrassDark, TextAnchor.MiddleCenter, true, FontStyle.Bold);
+            Stretch(t.gameObject);
+            return img.gameObject;
+        }
+
+        public static GameObject NuggetIcon(Transform parent, float size = 40)
+        {
+            var holder = Node("Nugget", parent);
+            Size(holder, size, size);
+            var img = Panel(holder.transform, Palette.Hex(0xFFD34D), "Gem", RoundedSmall);
+            var r = Place(img.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(size * 0.66f, size * 0.66f));
+            r.localRotation = Quaternion.Euler(0, 0, 45);
+            var o = img.gameObject.AddComponent<Outline>();
+            o.effectColor = BrassDark;
+            o.effectDistance = new Vector2(2, -2);
+            var shine = Panel(img.transform, new Color(1, 1, 1, 0.6f), "Shine", Circle);
+            Place(shine.gameObject, new Vector2(0.3f, 0.7f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(size * 0.18f, size * 0.18f));
+            return holder;
+        }
+
+        /// <summary>Renders a cost line: coins + resources, red where unaffordable.</summary>
+        public static GameObject Cost(Transform parent, GameSession s, int coins, ResourceAmount[] res, int nuggets = 0, int fontSize = 22)
+        {
+            var row = Node("Cost", parent);
+            HStack(row, 14);
+            Size(row, -1, 40);
+            if (coins > 0)
+            {
+                var c = Node("Coins", row.transform); HStack(c, 6);
+                CoinIcon(c.transform, 30);
+                Label(c.transform, Fmt.Num(coins), fontSize, s.Coins >= coins ? Ink : Red);
+            }
+            if (nuggets > 0)
+            {
+                var n = Node("Nuggets", row.transform); HStack(n, 6);
+                NuggetIcon(n.transform, 30);
+                Label(n.transform, Fmt.Num(nuggets), fontSize, s.Nuggets >= nuggets ? Ink : Red);
+            }
+            if (res != null)
+                foreach (var r in res)
+                    Amount(row.transform, r.id, s.Amount(r.id) + "/" + r.amount, s.Amount(r.id) >= r.amount ? Ink : Red, 30, fontSize);
+            return row;
+        }
+
+        public static Text Badge(Transform parent, string text, Color c)
+        {
+            var img = Panel(parent, c, "Badge", Circle);
+            Place(img.gameObject, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-10, -10), new Vector2(38, 38));
+            var t = Label(img.transform, text, 20, Cream, TextAnchor.MiddleCenter, true, FontStyle.Bold);
+            Stretch(t.gameObject);
+            return t;
+        }
+    }
+
+    /// <summary>Squash-and-stretch press feedback for buttons.</summary>
+    public sealed class ButtonFx : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
+    {
+        float _target = 1, _scale = 1;
+        public void OnPointerDown(PointerEventData e) { _target = 0.93f; }
+        public void OnPointerUp(PointerEventData e) { _target = 1; }
+        public void OnPointerExit(PointerEventData e) { _target = 1; }
+        void Update()
+        {
+            _scale = Mathf.Lerp(_scale, _target, 1 - Mathf.Exp(-Time.unscaledDeltaTime * 20));
+            transform.localScale = new Vector3(_scale, _scale, 1);
+        }
+    }
+
+    public static class Fmt
+    {
+        public static string Num(long n)
+        {
+            if (n >= 10_000_000) return (n / 1_000_000.0).ToString("0.#") + "M";
+            if (n >= 100_000) return (n / 1000.0).ToString("0") + "K";
+            return n.ToString("#,0");
+        }
+
+        public static string Time(double seconds)
+        {
+            if (seconds <= 0) return "Ready";
+            var s = (int)Math.Ceiling(seconds);
+            if (s >= 3600) return (s / 3600) + "h " + (s % 3600 / 60).ToString("00") + "m";
+            if (s >= 60) return (s / 60) + "m " + (s % 60).ToString("00") + "s";
+            return s + "s";
+        }
+    }
+}
