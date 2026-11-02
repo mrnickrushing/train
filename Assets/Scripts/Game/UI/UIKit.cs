@@ -298,7 +298,7 @@ namespace Ironhorse.Game
         public static GameObject ResIcon(Transform parent, string resId, float size = 44)
         {
             var painted = Icon(parent, resId, size * 1.15f);
-            if (painted != null) return painted;
+            if (painted != null) { painted.AddComponent<ResourceInfoTap>().ResourceId = resId; return painted; }
             var res = GameDatabase.Resource(resId);
             var img = Panel(parent, Palette.Hex(res.ColorRgb), "Icon " + resId, Circle);
             Size(img.gameObject, size, size);
@@ -308,6 +308,7 @@ namespace Ironhorse.Game
             var lum = 0.3f * img.color.r + 0.59f * img.color.g + 0.11f * img.color.b;
             var t = Label(img.transform, res.Glyph, Mathf.RoundToInt(size * 0.42f), lum > 0.55f ? Ink : Cream, TextAnchor.MiddleCenter, true, FontStyle.Bold);
             Stretch(t.gameObject);
+            img.gameObject.AddComponent<ResourceInfoTap>().ResourceId = resId;
             return img.gameObject;
         }
 
