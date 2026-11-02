@@ -93,6 +93,20 @@ bldg("fountain", "an original town square fountain: a round stone basin with a t
 bldg("station", "an original long frontier railway depot station, about four and a half times as long as it is deep: a central two-storey block with a clock tower and a pointed copper-green roof, two long single-storey wings with red hip roofs, cream board-and-batten walls with brown trim, a wooden platform canopy with brackets along the front, ticket windows, benches, luggage carts", base="a stone platform edge", footprint=36.0, wide=True)
 bldg("freightshed", "an original wooden railway freight shed, about twice as long as deep: red-painted plank walls, a raised wooden loading dock with sliding doors along the front, a corrugated tin roof with a deep overhang, crates and barrels on the dock", footprint=14.0, wide=True)
 
+# Vegetation (instanced thousands of times: tiny triangle budgets)
+TREE = ("Game asset reference render of {what}, the whole plant visible from the ground to the top, standing alone, "
+        "slightly elevated three-quarter view, isolated on a plain flat white background, nothing cropped, no ground "
+        "patch. Semi-realistic stylized like a premium mobile tycoon game: clear chunky foliage masses, rich natural color, "
+        "soft studio light. No text.")
+for _i, _w in {
+    "pine": "a tall dense ponderosa pine tree with layered drooping dark green branches and a straight reddish-brown trunk",
+    "pine2": "a slender young Douglas fir with a narrow pointed crown of blue-green needles",
+    "cottonwood": "a big rounded cottonwood tree with a thick gnarled trunk and bright yellow-green leafy crown",
+    "saguaro": "a tall saguaro cactus with two upturned arms and ribbed green skin",
+    "sage": "a low rounded silvery sagebrush shrub",
+}.items():
+    A[_i] = dict(cat="Trees", footprint=1.0, prompt=TREE.format(what=_w), tree=True)
+
 
 def hf(*args):
     print("+ higgsfield", " ".join(a if len(a) < 60 else a[:57] + "..." for a in args))
@@ -139,7 +153,11 @@ def do_import(i):
     a = A[i]
     g = os.path.join(SRC, i + ".glb")
     cmd = ["blender", "-b", "--factory-startup", "-P", os.path.join(ROOT, "Tools", "blender", "import_ai.py"), "--", g, a["cat"], i]
-    if a["cat"] == "Buildings":
+    if a.get("tree"):
+        h = {"pine": 11, "pine2": 9, "cottonwood": 9, "saguaro": 6, "sage": 1.4}[i]
+        faces = {"pine": 3000, "pine2": 2500, "cottonwood": 3500, "saguaro": 900, "sage": 700}[i]
+        cmd += ["--height", str(h), "--front", "none", "--faces", str(faces), "--tex", "512"]
+    elif a["cat"] == "Buildings":
         small = a["footprint"] < 4
         cmd += ["--footprint", str(a["footprint"]), "--faces", "6000" if small else "20000", "--tex", "512" if small else "1024"]
         if "height" in a:
