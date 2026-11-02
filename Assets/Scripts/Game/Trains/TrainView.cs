@@ -13,6 +13,9 @@ namespace Ironhorse.Game
         public readonly List<(Transform t, float r)> Wheels = new List<(Transform, float)>();
         public readonly List<(Transform t, RodSpec spec)> Rods = new List<(Transform, RodSpec)>();
         public GameObject Cargo;
+        /// <summary>A "Cargo" child inside drop-in art, toggled instead of the procedural load.</summary>
+        public GameObject ArtCargo;
+        public bool IsArt;
         public WagonDef Wagon;
         public CarModel Model;
     }
@@ -36,19 +39,43 @@ namespace Ironhorse.Game
             foreach (Transform c in transform) Destroy(c.gameObject);
             Cars.Clear();
             var lm = TrainFactory.Locomotive(loco, level);
-            AddCar(lm, null, "Loco");
             IsSteam = loco.Style != LocoStyle.DieselStreamliner && loco.Style != LocoStyle.DieselTwin;
+            var art = AddCar(lm, null, "Loco", ModelRegistry.Locomotives, loco.Id);
             var lead = Cars[0].Root;
-            if (lm.Stack.HasValue) Smoke = Fx.Create(FxKind.Steam, lead, lm.Stack.Value);
-            else if (lm.Exhaust.HasValue) Smoke = Fx.Create(FxKind.Exhaust, lead, lm.Exhaust.Value);
-            foreach (var w in wagons) AddCar(TrainFactory.Wagon(w), w, w.Name);
+            var artSmoke = art != null ? ModelRegistry.Anchors(art, "Smoke") : null;
+            if (artSmoke != null && artSmoke.Count > 0) Smoke = Fx.Create(IsSteam ? FxKind.Steam : FxKind.Exhaust, artSmoke[0], Vector3.zero);
+            else if (art == null && lm.Stack.HasValue) Smoke = Fx.Create(FxKind.Steam, lead, lm.Stack.Value);
+            else if (art == null && lm.Exhaust.HasValue) Smoke = Fx.Create(FxKind.Exhaust, lead, lm.Exhaust.Value);
+            foreach (var w in wagons) AddCar(TrainFactory.Wagon(w), w, w.Name, ModelRegistry.Wagons, w.Id);
             var col = lead.gameObject.AddComponent<BoxCollider>();
             col.center = new Vector3(0, 2.5f, 0);
-            col.size = new Vector3(4.5f, 6f, lm.Length + 2);
+            col.size = new Vector3(4.5f, 6f, Cars[0].Length + 2);
         }
 
-        void AddCar(CarModel model, WagonDef wagon, string name)
+        /// <summary>Adds a car; uses drop-in art when a prefab exists (returned), else the procedural model.</summary>
+        GameObject AddCar(CarModel model, WagonDef wagon, string name, string category, string id)
         {
+            var artGo = ModelRegistry.Spawn(category, id, transform);
+            if (artGo != null)
+            {
+                // Wrap the art so the car root sits at the art's center, facing +Z.
+                var holder = new GameObject(name);
+                holder.transform.SetParent(transform, false);
+                var b = ModelRegistry.RendererBounds(artGo);
+                artGo.transform.SetParent(holder.transform, true);
+                artGo.transform.localPosition -= new Vector3(b.center.x, 0, b.center.z);
+                var art = new CarRuntime { Root = holder.transform, Length = Mathf.Max(2f, b.size.z), Wagon = wagon, Model = model, IsArt = true };
+                foreach (var w in ModelRegistry.Anchors(artGo, "Wheel"))
+                {
+                    var wb = ModelRegistry.RendererBounds(w.gameObject);
+                    art.Wheels.Add((w, Mathf.Max(0.2f, wb.size.y / 2)));
+                }
+                var cargo = ModelRegistry.Anchors(artGo, "Cargo");
+                if (cargo.Count > 0) { art.ArtCargo = cargo[0].gameObject; art.ArtCargo.SetActive(false); }
+                Cars.Add(art);
+                return artGo;
+            }
+
             var go = model.Body.ToObject(name, transform);
             var rt = new CarRuntime { Root = go.transform, Length = model.Length, Wagon = wagon, Model = model };
             foreach (var w in model.Wheels)
@@ -64,6 +91,7 @@ namespace Ironhorse.Game
                 rt.Rods.Add((ro.transform, r));
             }
             Cars.Add(rt);
+            return null;
         }
 
         public float ConsistLength { get { float l = 0; foreach (var c in Cars) l += c.Length + TrainFactory.Gap; return l; } }
@@ -89,7 +117,13 @@ namespace Ironhorse.Game
             _wheelAngle += ds;
             foreach (var car in Cars)
             {
-                foreach (var w in car.Wheels) w.t.localRotation = Quaternion.Euler(_wheelAngle / w.r * Mathf.Rad2Deg, 0, 0);
+                foreach (var w in car.Wheels)
+                {
+                    if (car.IsArt)
+                        w.t.Rotate(Vector3.right, ds / w.r * Mathf.Rad2Deg, Space.Self); // art wheels keep their own base rotation
+                    else
+                        w.t.localRotation = Quaternion.Euler(_wheelAngle / w.r * Mathf.Rad2Deg, 0, 0);
+                }
                 foreach (var r in car.Rods)
                 {
                     float a = _wheelAngle / r.spec.Center.y;
@@ -212,7 +246,9 @@ namespace Ironhorse.Game
             foreach (var car in Cars)
             {
                 if (car.Cargo != null) { Destroy(car.Cargo); car.Cargo = null; }
-                if (res == null || car.Wagon == null || car.Wagon.Cargo != res.Cargo) continue;
+                bool match = res != null && car.Wagon != null && car.Wagon.Cargo == res.Cargo;
+                if (car.ArtCargo != null) { car.ArtCargo.SetActive(match); continue; }
+                if (!match) continue;
                 var mb = TrainFactory.Cargo(car.Model, car.Wagon, res);
                 if (mb == null) continue;
                 car.Cargo = mb.ToObject("Cargo", car.Root);

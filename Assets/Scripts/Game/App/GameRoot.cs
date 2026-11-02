@@ -103,6 +103,7 @@ namespace Ironhorse.Game
             ValleyTerrain.Build(world);
             ValleyTerrain.BuildWater(world);
             Scenery.Build(world);
+            Yard.Build(world);
             var loop = new MeshBuilder();
             TrackBuilder.Build(loop, WorldLayout.ScenicLoop, 0, -1, trestleOverWater: true);
             loop.ToObject("Scenic Loop", world);
@@ -110,6 +111,8 @@ namespace Ironhorse.Game
 
             Child<DayNightCycle>("Day & Night");
             Child<CameraRig>("Camera");
+            Child<PostFx>("Post FX");
+            Child<Life>("Townsfolk");
             Child<AudioManager>("Audio");
             Child<TrainManager>("Trains");
             Child<TownView>("Town");
