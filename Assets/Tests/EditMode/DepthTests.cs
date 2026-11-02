@@ -252,5 +252,41 @@ namespace Ironhorse.Tests
                 Assert.IsNotNull(set.Reward);
             }
         }
+
+        [Test]
+        public void TaskSet_ProjectDeliveries_FallsBackWhenProjectsFinished()
+        {
+            foreach (var pr in _s.State.projects) pr.done = true;
+            // Jump to the handcrafted set that asks for project deliveries.
+            _s.State.taskSet = 3;
+            _s.State.taskBaselines.Clear();
+            var s2 = new GameSession(_s.State, _clock);
+            Assert.IsFalse(s2.CurrentTaskSet.Tasks.Any(t => t.Kind == TaskKind.ProjectDeliveries));
+            Assert.IsTrue(s2.CurrentTaskSet.Tasks.Any(t => t.Kind == TaskKind.CollectAny));
+        }
+
+        [Test]
+        public void TaskSet_ProjectDeliveries_KeptWhileProjectsRemain()
+        {
+            _s.State.taskSet = 3;
+            _s.State.taskBaselines.Clear();
+            var s2 = new GameSession(_s.State, _clock);
+            Assert.IsTrue(s2.CurrentTaskSet.Tasks.Any(t => t.Kind == TaskKind.ProjectDeliveries));
+        }
+
+        [Test]
+        public void Blueprints_EveryAssemblableLocomotiveIsReachableThroughPlay()
+        {
+            foreach (var loco in GameDatabase.Locomotives.Where(l => l.Blueprints > 0))
+            {
+                int total = DepthContent.Projects.Where(p => p.Reward.BlueprintLoco == loco.Id).Sum(p => p.Reward.Blueprints);
+                for (int i = 0; i < 60; i++)
+                {
+                    var r = DepthContent.TaskSet(i).Reward;
+                    if (r.BlueprintLoco == loco.Id) total += r.Blueprints;
+                }
+                Assert.GreaterOrEqual(total, loco.Blueprints, loco.Id + " blueprints obtainable in 60 foreman sets + projects");
+            }
+        }
     }
 }

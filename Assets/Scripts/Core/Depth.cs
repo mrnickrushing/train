@@ -98,7 +98,7 @@ namespace Ironhorse.Core
                 Title = new[] { "Keep 'em Rolling", "Bring the Goods Home", "A Bigger Railroad", "Polish the Brass" }[cycle % 4] + " " + ToRoman(cycle / 4 + 1),
                 Quote = "The territory never sleeps, and neither does this railroad.",
                 Tasks = tasks,
-                Reward = new Grant { Nuggets = 15 + k * 2, Coins = 1500 + 400 * k, Resources = new[] { PartFor(cycle, 8 + k) }, BlueprintLoco = cycle % 3 == 2 ? "sundown" : null, Blueprints = cycle % 3 == 2 ? 1 : 0 },
+                Reward = new Grant { Nuggets = 15 + k * 2, Coins = 1500 + 400 * k, Resources = new[] { PartFor(cycle, 8 + k) }, BlueprintLoco = BlueprintFor(cycle), Blueprints = BlueprintFor(cycle) != null ? 2 : 0 },
             };
         }
 
@@ -125,6 +125,21 @@ namespace Ironhorse.Core
                     new[] { T(TaskKind.Dispatch, 20), T(TaskKind.CollectAny, 600), T(TaskKind.TotalPower, 14) },
                     new Grant { Coins = 6000, Nuggets = 25, Resources = new[] { new ResourceAmount("gauges", 8) }, BlueprintLoco = "silverarrow", Blueprints = 2 }),
             };
+        }
+
+        /// <summary>Every other repeatable set grants blueprints, rotating through all assemblable locomotives.</summary>
+        static string BlueprintFor(int cycle)
+        {
+            if (cycle % 2 == 0) return null;
+            var locos = new[] { "sundown", "silverarrow", "thunderhead" };
+            return locos[(cycle / 2) % locos.Length];
+        }
+
+        /// <summary>A repeatable stand-in when a task can no longer be completed (e.g. all projects are finished).</summary>
+        public static TaskDef Fallback(TaskDef t)
+        {
+            if (t.Kind == TaskKind.ProjectDeliveries) return new TaskDef { Kind = TaskKind.CollectAny, Count = t.Count * 4 };
+            return t;
         }
 
         static ResourceAmount PartFor(int cycle, int amount)

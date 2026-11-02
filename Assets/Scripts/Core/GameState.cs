@@ -51,6 +51,8 @@ namespace Ironhorse.Core
         public List<ProjectProgress> projects = new List<ProjectProgress>();
         public int taskSet;
         public List<int> taskBaselines = new List<int>();
+        /// <summary>Per task in the current set: true when it was swapped for a repeatable fallback at set start.</summary>
+        public List<bool> taskFallback = new List<bool>();
 
         public Stats stats = new Stats();
         public Settings settings = new Settings();

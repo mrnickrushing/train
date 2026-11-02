@@ -14,12 +14,13 @@ namespace Ironhorse.Core
             if (State.blueprints == null) State.blueprints = new List<ResourceAmount>();
             if (State.projects == null) State.projects = new List<ProjectProgress>();
             if (State.taskBaselines == null) State.taskBaselines = new List<int>();
+            if (State.taskFallback == null) State.taskFallback = new List<bool>();
             foreach (var c in State.contracts) if (c.rewardParts == null) c.rewardParts = new List<ResourceAmount>();
             MigrateProduction();
             foreach (var p in DepthContent.Projects)
                 if (!State.projects.Any(x => x.id == p.Id)) State.projects.Add(new ProjectProgress { id = p.Id });
             State.projects.RemoveAll(x => DepthContent.Project(x.id) == null);
-            if (State.taskBaselines.Count != 3) ResetTaskBaselines();
+            if (State.taskBaselines.Count != 3 || State.taskFallback.Count != 3) ResetTaskBaselines();
         }
 
         // ================================================================ Territory projects
@@ -100,7 +101,34 @@ namespace Ironhorse.Core
 
         // ================================================================ Foreman's orders
 
-        public TaskSetDef CurrentTaskSet { get { return DepthContent.TaskSet(State.taskSet); } }
+        /// <summary>The current set, with any task that was impossible at set start swapped for a repeatable one.</summary>
+        public TaskSetDef CurrentTaskSet
+        {
+            get
+            {
+                var raw = DepthContent.TaskSet(State.taskSet);
+                if (State.taskFallback == null || !State.taskFallback.Any(f => f)) return raw;
+                var tasks = raw.Tasks.Select((t, i) => i < State.taskFallback.Count && State.taskFallback[i] ? DepthContent.Fallback(t) : t).ToArray();
+                return new TaskSetDef { Index = raw.Index, Title = raw.Title, Quote = raw.Quote, Tasks = tasks, Reward = raw.Reward };
+            }
+        }
+
+        /// <summary>Goods still needed by every unfinished project (locked ones unlock with level, so they count).</summary>
+        public int RemainingProjectGoods
+        {
+            get
+            {
+                int n = 0;
+                foreach (var def in DepthContent.Projects)
+                {
+                    var pr = Progress(def.Id);
+                    if (pr.done) continue;
+                    for (int s = pr.stage; s < def.Stages.Length; s++) n += def.Stages[s].Amount;
+                    n -= pr.delivered;
+                }
+                return n;
+            }
+        }
 
         int TaskMetric(TaskKind k)
         {
@@ -123,6 +151,10 @@ namespace Ironhorse.Core
 
         void ResetTaskBaselines()
         {
+            // Decide fallbacks once, at set start, so a set never changes its tasks halfway through.
+            State.taskFallback.Clear();
+            foreach (var t in DepthContent.TaskSet(State.taskSet).Tasks)
+                State.taskFallback.Add(t.Kind == TaskKind.ProjectDeliveries && RemainingProjectGoods < t.Count);
             State.taskBaselines.Clear();
             foreach (var t in CurrentTaskSet.Tasks) State.taskBaselines.Add(t.IsAbsolute ? 0 : TaskMetric(t.Kind));
         }
