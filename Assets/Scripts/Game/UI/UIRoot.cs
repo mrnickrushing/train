@@ -64,6 +64,7 @@ namespace Ironhorse.Game
             BuildHud();
             BuildBottomBar();
             BuildGoal();
+            BuildChapterHud();
             BuildBanner();
             BuildMoneyHud();
             BuildDepthHud();
@@ -82,6 +83,7 @@ namespace Ironhorse.Game
             S.Notify += msg => Toast(msg, true);
             S.TrainArrived += t => AudioManager.Play(Sfx.Bell, 0.5f);
             S.ContractCompleted += OnContractCompleted;
+            S.ChapterCompleted += OnChapterCompleted;
             S.ProjectCompleted += p =>
             {
                 StoryDirector.Instance.OnProject(p); // the characters' finale scene, then the cinematic
@@ -336,6 +338,7 @@ namespace Ironhorse.Game
             if (_level == null) return;
             RefreshMoneyHud();
             RefreshDepthHud();
+            RefreshChapterHud();
             _level.text = S.Level.ToString();
             UIKit.SetBar(_xpFill, S.LevelProgress);
             _xpText.text = Fmt.Num(S.State.xp) + " / " + Fmt.Num(Balance.XpForNextLevel(S.Level)) + " XP";
@@ -589,6 +592,12 @@ namespace Ironhorse.Game
                     var l = UIKit.Label(v.transform, u, 24, UIKit.Cream, TextAnchor.MiddleCenter);
                     UIKit.Size(l.gameObject, -1, 30);
                 }
+            }
+            var nextUp = S.NextUnlocks();
+            if (nextUp.Count > 0)
+            {
+                var nl = UIKit.Label(v.transform, "Coming up at level " + nextUp[0].Level + ": " + string.Join(", ", nextUp.Take(3).Select(u => u.Name)), 22, UIKit.Gold, TextAnchor.MiddleCenter);
+                UIKit.Size(nl.gameObject, -1, 34);
             }
             UIKit.Spacer(v.transform, -1, 6);
             var go = dim.gameObject;
