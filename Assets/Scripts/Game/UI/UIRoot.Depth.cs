@@ -139,6 +139,7 @@ namespace Ironhorse.Game
                 UIKit.ResIcon(top.transform, stage.ResourceId, 46);
                 var dl = UIKit.Label(top.transform, "DELIVER " + stage.Amount, 30, UIKit.Ink, TextAnchor.MiddleLeft, false, FontStyle.Bold);
                 dl.font = UIKit.Display;
+                dl.fontStyle = FontStyle.Normal; // the face is already bold
                 var barRow = UIKit.Node("Progress", slip);
                 UIKit.Size(barRow, -1, 26);
                 UIKit.HStack(barRow, 0);

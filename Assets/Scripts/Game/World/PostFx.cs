@@ -44,9 +44,9 @@ namespace Ironhorse.Game
             tone.mode.Override(TonemappingMode.Neutral);
 
             _color = profile.Add<ColorAdjustments>(true);
-            _color.postExposure.Override(0.15f);
-            _color.contrast.Override(10f);
-            _color.saturation.Override(14f);
+            _color.postExposure.Override(0f);
+            _color.contrast.Override(22f);
+            _color.saturation.Override(18f);
 
             var wb = profile.Add<WhiteBalance>(true);
             wb.temperature.Override(7f);
@@ -71,13 +71,13 @@ namespace Ironhorse.Game
             if (_dof == null || rig == null) return;
             // Keep the focus point sharp; blur the distant horizon for the miniature look.
             float d = rig.Distance;
-            _dof.gaussianStart.Override(d * 1.35f);
+            _dof.gaussianStart.Override(d * 1.9f);
             _dof.gaussianEnd.Override(d * 3.2f + 60f);
             // Nights get a touch cooler and darker; bloom picks up the lamps.
             var dn = DayNightCycle.Instance;
             if (dn != null)
             {
-                _color.postExposure.Override(Mathf.Lerp(0.15f, -0.1f, dn.Night));
+                _color.postExposure.Override(Mathf.Lerp(0f, -0.2f, dn.Night));
                 _bloom.intensity.Override(Mathf.Lerp(0.55f, 1.2f, dn.Night));
             }
         }

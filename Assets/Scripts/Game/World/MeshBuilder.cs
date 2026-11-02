@@ -14,7 +14,7 @@ namespace Ironhorse.Game
         public readonly List<Vector3> Verts = new List<Vector3>(4096);
         public readonly List<Vector3> Normals = new List<Vector3>(4096);
         public readonly List<Color32> Colors = new List<Color32>(4096);
-        public readonly List<Vector2> Surface = new List<Vector2>(4096); // x = smoothness, y = metallic
+        public readonly List<Vector3> Surface = new List<Vector3>(4096); // x = smoothness, y = metallic, z = SurfaceKind + 1 (0 = plain)
         public readonly List<int> Tris = new List<int>(8192);
 
         Matrix4x4 _m = Matrix4x4.identity;
@@ -23,6 +23,8 @@ namespace Ironhorse.Game
         public float Smoothness = 0.15f;
         public float Metallic = 0f;
         public bool Glow;
+        /// <summary>Detail texture for subsequent primitives; Auto picks it from the color's palette entry.</summary>
+        public SurfaceKind Surf = SurfaceKind.Auto;
 
         public int VertexCount { get { return Verts.Count; } }
 
@@ -59,7 +61,8 @@ namespace Ironhorse.Game
             Verts.Add(_m.MultiplyPoint3x4(p));
             Normals.Add(_m.MultiplyVector(n).normalized);
             Colors.Add(C(c));
-            Surface.Add(new Vector2(Smoothness, Metallic));
+            var kind = Surf == SurfaceKind.Auto ? Surfaces.Classify(c) : Surf;
+            Surface.Add(new Vector3(Smoothness, Metallic, kind == SurfaceKind.None || Glow ? 0 : (int)kind + 1));
             return Verts.Count - 1;
         }
 

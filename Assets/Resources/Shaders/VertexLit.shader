@@ -2,6 +2,7 @@
 //   vertex color rgb : albedo
 //   vertex color a   : 1 = normal surface, 0 = emissive at night (windows, lamps)
 //   uv2.x / uv2.y    : smoothness / metallic
+//   uv2.z            : surface detail layer + 1 (0 = plain), see SurfaceKind in Materials.cs
 Shader "Ironhorse/VertexLit"
 {
     Properties
@@ -27,6 +28,11 @@ Shader "Ironhorse/VertexLit"
         CBUFFER_END
         float _NightGlow;
         float4 _GlowColor;
+        float _SurfaceDetailOn; // global, 1 once the detail array is bound
+        TEXTURE2D_ARRAY(_SurfaceDetail); SAMPLER(sampler_SurfaceDetail);
+        // Per layer: meters covered by one texture tile, and how strongly the detail shows.
+        static const float kDetailTile[14] = { 1.6, 2.4, 2.0, 2.2, 2.0, 2.4, 3.0, 2.0, 2.0, 1.6, 1.4, 2.0, 1.5, 3.0 };
+        static const float kDetailStrength[14] = { 0.85, 0.7, 0.75, 0.75, 0.6, 0.75, 0.45, 0.35, 0.55, 0.8, 0.5, 0.6, 0.9, 0.7 };
         ENDHLSL
 
         Pass
@@ -50,7 +56,7 @@ Shader "Ironhorse/VertexLit"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float4 color : COLOR;
-                float2 uv1 : TEXCOORD1;
+                float3 uv1 : TEXCOORD1;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -59,8 +65,10 @@ Shader "Ironhorse/VertexLit"
                 float4 positionCS : SV_POSITION;
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
-                float2 sm : TEXCOORD2;
+                float3 sm : TEXCOORD2;
                 float fogCoord : TEXCOORD3;
+                float3 positionOS : TEXCOORD4;
+                float3 normalOS : TEXCOORD5;
                 float4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -76,6 +84,8 @@ Shader "Ironhorse/VertexLit"
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.color = v.color;
                 o.sm = v.uv1;
+                o.positionOS = v.positionOS.xyz;
+                o.normalOS = v.normalOS;
                 o.fogCoord = ComputeFogFactor(p.positionCS.z);
                 return o;
             }
@@ -93,10 +103,33 @@ Shader "Ironhorse/VertexLit"
                     albedo *= lerp(1, d * 1.6 + 0.2, _DetailStrength);
                 }
                 float glow = 1 - i.color.a;
+                float3 normalWS = normalize(i.normalWS);
+                float occlusion = 1;
+
+                // Surface detail: one fetch, projected along the face's dominant object-space axis
+                // (the procedural geometry is made of boxes, so faces are mostly axis-aligned).
+                int layer = (int)(i.sm.z + 0.5) - 1;
+                float3 dpdx = ddx(i.positionOS), dpdy = ddy(i.positionOS); // outside the branch: gradients must be uniform
+                UNITY_BRANCH if (layer >= 0 && _SurfaceDetailOn > 0.5)
+                {
+                    float3 an = abs(i.normalOS);
+                    float2 uv, gx, gy; float3 tOS, bOS;
+                    if (an.y >= an.x && an.y >= an.z) { uv = i.positionOS.xz; gx = dpdx.xz; gy = dpdy.xz; tOS = float3(1, 0, 0); bOS = float3(0, 0, 1); }
+                    else if (an.x >= an.z) { uv = i.positionOS.zy; gx = dpdx.zy; gy = dpdy.zy; tOS = float3(0, 0, 1); bOS = float3(0, 1, 0); }
+                    else { uv = i.positionOS.xy; gx = dpdx.xy; gy = dpdy.xy; tOS = float3(1, 0, 0); bOS = float3(0, 1, 0); }
+                    float tile = kDetailTile[layer];
+                    float4 d = SAMPLE_TEXTURE2D_ARRAY_GRAD(_SurfaceDetail, sampler_SurfaceDetail, uv / tile, layer, gx / tile, gy / tile);
+                    float k = kDetailStrength[layer];
+                    albedo *= lerp(1, d.r * 2, k);
+                    occlusion = lerp(1, d.b, k);
+                    float2 nxy = (float2(d.a, d.g) * 2 - 1) * k;
+                    float3 tWS = TransformObjectToWorldDir(tOS), bWS = TransformObjectToWorldDir(bOS);
+                    normalWS = normalize(normalWS + nxy.x * tWS + nxy.y * bWS);
+                }
 
                 InputData inputData = (InputData)0;
                 inputData.positionWS = i.positionWS;
-                inputData.normalWS = normalize(i.normalWS);
+                inputData.normalWS = normalWS;
                 inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(i.positionWS);
                 inputData.shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 inputData.fogCoord = i.fogCoord;
@@ -108,7 +141,7 @@ Shader "Ironhorse/VertexLit"
                 s.albedo = albedo * (1 - glow * 0.6);
                 s.metallic = i.sm.y;
                 s.smoothness = i.sm.x;
-                s.occlusion = 1;
+                s.occlusion = occlusion;
                 s.alpha = 1;
                 s.emission = glow * _NightGlow * _GlowColor.rgb * (0.6 + albedo);
 

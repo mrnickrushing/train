@@ -122,7 +122,7 @@ namespace Ironhorse.Game
     public sealed class PlotMarker : MonoBehaviour, ISelectable
     {
         public int Index;
-        GameObject _owned, _sale, _highlight;
+        GameObject _owned, _sale, _highlight, _wild;
         Renderer _hlRenderer;
 
         public static PlotMarker Create(int index, Transform parent)
@@ -169,6 +169,22 @@ namespace Ironhorse.Game
             _highlight = hl.ToObject("Highlight", transform, false);
             _hlRenderer = _highlight.GetComponent<Renderer>();
 
+            // Land not yet bought is still wild: a few trees and shrubs to clear.
+            var w = new MeshBuilder();
+            var rng = new System.Random(Index * 7919 + 13);
+            System.Func<float, float, float> rr = (a, b) => a + (float)rng.NextDouble() * (b - a);
+            int trees = 1 + rng.Next(3);
+            for (int i = 0; i < trees; i++)
+            {
+                var p = new Vector3(rr(-h + 1.5f, h - 1.5f), 0, rr(-h + 1.5f, h - 1.5f));
+                if (rng.NextDouble() < 0.6) Scenery.Pine(w, p, rr(0.55f, 0.85f));
+                else Scenery.Cottonwood(w, p, rr(0.6f, 0.85f));
+            }
+            for (int i = 0; i < 3 + rng.Next(3); i++)
+                Scenery.Sage(w, new Vector3(rr(-h, h), 0, rr(-h, h)), rr(0.5f, 0.9f));
+            if (rng.NextDouble() < 0.5) Scenery.Rock(w, new Vector3(rr(-h, h), 0, rr(-h, h)), rr(0.4f, 0.8f));
+            _wild = w.ToObject("Wild", transform);
+
             var col = gameObject.AddComponent<BoxCollider>();
             col.center = new Vector3(0, 0.5f, 0);
             col.size = new Vector3(WorldLayout.PlotSize, 1, WorldLayout.PlotSize);
@@ -177,6 +193,7 @@ namespace Ironhorse.Game
         public void Refresh(bool owned, bool forSale, bool occupied, bool placing)
         {
             _owned.SetActive(owned && !occupied);
+            _wild.SetActive(!owned && !occupied);
             _sale.SetActive(forSale);
             _highlight.SetActive(placing && owned && !occupied);
             GetComponent<Collider>().enabled = !occupied && (owned || forSale);

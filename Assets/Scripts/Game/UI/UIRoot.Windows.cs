@@ -343,6 +343,7 @@ namespace Ironhorse.Game
             UIKit.Size(plate.gameObject, -1, 60);
             var name = UIKit.Label(plate.transform, d.Name.ToUpperInvariant(), 26, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             name.font = UIKit.Display;
+            name.fontStyle = FontStyle.Normal; // the face is already bold
             name.resizeTextForBestFit = true; name.resizeTextMinSize = 14; name.resizeTextMaxSize = 26;
             UIKit.Stretch(name.gameObject, 8);
             var chips = UIKit.Row(card.transform, 44, 8, TextAnchor.MiddleCenter);
@@ -356,6 +357,7 @@ namespace Ironhorse.Game
             {
                 var l = UIKit.Label(card.transform, "UNLOCKS AT LEVEL " + d.UnlockLevel, 24, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
                 l.font = UIKit.Display;
+                l.fontStyle = FontStyle.Normal; // the face is already bold
                 UIKit.Size(l.gameObject, -1, 60);
                 card.color = MeshBuilder.Lerp(card.color, UIKit.Disabled, 0.6f);
                 return;
@@ -370,6 +372,7 @@ namespace Ironhorse.Game
             if (d.PriceNuggets > 0) UIKit.NuggetIcon(row.transform, 34); else UIKit.CoinIcon(row.transform, 34);
             var price = UIKit.Label(row.transform, Fmt.Num(d.PriceNuggets > 0 ? d.PriceNuggets : d.PriceCoins), 28, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
             price.font = UIKit.Display;
+            price.fontStyle = FontStyle.Normal; // the face is already bold
         }
 
         static void StatChip(Transform parent, string text)
@@ -378,6 +381,7 @@ namespace Ironhorse.Game
             UIKit.Size(chip.gameObject, 108, 38);
             var t = UIKit.Label(chip.transform, text, 18, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             t.font = UIKit.Display;
+            t.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Stretch(t.gameObject, 4);
         }
 
@@ -484,6 +488,7 @@ namespace Ironhorse.Game
             UIKit.VStack(card.gameObject, 8, 14, TextAnchor.UpperCenter);
             var head = UIKit.Label(card.transform, c.client, 26, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
             head.font = UIKit.Display;
+            head.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Size(head.gameObject, -1, 34);
             head.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.4f);
 
@@ -494,12 +499,14 @@ namespace Ironhorse.Game
             var slip = UIDeco.Slip(card.transform, 300);
             var deliver = UIKit.Label(slip, "DELIVER", 22, UIKit.InkSoft, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             deliver.font = UIKit.Display;
+            deliver.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Size(deliver.gameObject, -1, 26);
             foreach (var r in c.requirements)
             {
                 int have = S.Amount(r.id);
                 var amt = UIKit.Label(slip, r.amount + " " + GameDatabase.Resource(r.id).Name, 28, UIKit.Ink, TextAnchor.MiddleCenter, false, FontStyle.Bold);
                 amt.font = UIKit.Display;
+                amt.fontStyle = FontStyle.Normal; // the face is already bold
                 UIKit.Size(amt.gameObject, -1, 32);
                 var bar = UIKit.Bar(slip, have >= r.amount ? UIKit.Green : Palette.Hex(0xC9862E), 14, new Color(0.25f, 0.18f, 0.12f, 0.5f));
                 UIKit.SetBar(bar, have / (float)r.amount);

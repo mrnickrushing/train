@@ -64,7 +64,7 @@ namespace Ironhorse.Game
 
         public static Color ColorAt(float x, float z, float h, float slope)
         {
-            float north = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-140, 160, z));
+            float north = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-250, 40, z));
             float n1 = Mathf.PerlinNoise(x * 0.035f + 3, z * 0.035f - 9);
             float n2 = Mathf.PerlinNoise(x * 0.11f, z * 0.11f);
             Color desert = Color.Lerp(Palette.Sand, Palette.GrassDry, n1 * 0.8f);
@@ -77,7 +77,7 @@ namespace Ironhorse.Game
             if (x > r.xMin - 6 && x < r.xMax + 6 && z > r.yMin + 40 && z < r.yMax + 6)
             {
                 float edge = Mathf.Min(Mathf.Min(x - (r.xMin - 6), (r.xMax + 6) - x), Mathf.Min(z - (r.yMin + 40), (r.yMax + 6) - z));
-                c = Color.Lerp(c, Color.Lerp(Palette.Dirt, Palette.GrassDry, n2 * 0.5f), Mathf.Clamp01(edge / 10f) * 0.85f);
+                c = Color.Lerp(c, Color.Lerp(Palette.Dirt, Palette.GrassDry, n2 * 0.5f), Mathf.Clamp01(edge / 10f) * 0.4f);
             }
 
             // Rock on slopes and heights, with horizontal strata bands.
@@ -93,6 +93,51 @@ namespace Ironhorse.Game
             return c;
         }
 
+        /// <summary>Texture layer weights (grass, dry grass, dirt, sand, rock, gravel) for Ironhorse/Terrain.
+        /// They follow the same rules as <see cref="ColorAt"/>; whatever is left of 1 shows the vertex color (snow, banks).</summary>
+        public static void WeightsAt(float x, float z, float h, float slope, float[] w)
+        {
+            float north = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-250, 40, z));
+            float n1 = Mathf.PerlinNoise(x * 0.035f + 3, z * 0.035f - 9);
+            float n2 = Mathf.PerlinNoise(x * 0.11f, z * 0.11f);
+            float g = 1 - Mathf.SmoothStep(0.55f, 0.85f, n1) * 0.7f; // mostly lush, dry patches here and there
+            w[0] = g * north;                                   // grass
+            w[1] = (1 - g) * north + n1 * 0.8f * (1 - north);   // dry grass
+            w[2] = 0;                                           // dirt
+            w[3] = (1 - n1 * 0.8f) * (1 - north);               // sand
+            w[4] = 0; w[5] = 0;                                 // rock, gravel
+
+            var r = WorldLayout.TownRect;
+            if (x > r.xMin - 6 && x < r.xMax + 6 && z > r.yMin + 40 && z < r.yMax + 6)
+            {
+                float edge = Mathf.Min(Mathf.Min(x - (r.xMin - 6), (r.xMax + 6) - x), Mathf.Min(z - (r.yMin + 40), (r.yMax + 6) - z));
+                Mix(w, 2, Mathf.Clamp01(edge / 10f) * (0.25f + n2 * 0.3f)); // worn patches, grass still shows
+            }
+            foreach (var yard in new[] { WorldLayout.YardRect, WorldLayout.RoundhouseRect })
+            {
+                float ex = Mathf.Max(yard.xMin - x, 0, x - yard.xMax), ez = Mathf.Max(yard.yMin - z, 0, z - yard.yMax);
+                float d = Mathf.Sqrt(ex * ex + ez * ez);
+                if (d < 8) Mix(w, 5, (1 - d / 8f) * 0.75f);
+            }
+            float rockiness = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.28f, 0.6f, slope)) + Mathf.SmoothStep(0, 1, Mathf.InverseLerp(18, 40, h)) * 0.7f;
+            Mix(w, 4, Mathf.Clamp01(rockiness));
+            if (h > 70) Mix(w, -1, Mathf.SmoothStep(0, 1, Mathf.InverseLerp(70, 90, h)) * (1 - slope));
+            if (h < 0.2f)
+            {
+                float bank = Mathf.Clamp01(-h * 0.8f + 0.2f);
+                Mix(w, 3, bank * 0.5f);
+                Mix(w, 2, bank * 0.5f);
+            }
+        }
+
+        /// <summary>Blends layer <paramref name="layer"/> in with amount t (layer -1 = the untextured remainder).</summary>
+        static void Mix(float[] w, int layer, float t)
+        {
+            t = Mathf.Clamp01(t);
+            for (int i = 0; i < w.Length; i++) w[i] *= 1 - t;
+            if (layer >= 0) w[layer] += t;
+        }
+
         public static GameObject Build(Transform parent)
         {
             int n = Cells + 1;
@@ -105,6 +150,10 @@ namespace Ironhorse.Game
             var verts = new Vector3[n * n];
             var normals = new Vector3[n * n];
             var colors = new Color32[n * n];
+            var w01 = new Vector2[n * n];
+            var w23 = new Vector2[n * n];
+            var w45 = new Vector2[n * n];
+            var w = new float[6];
             for (int j = 0; j < n; j++)
                 for (int i = 0; i < n; i++)
                 {
@@ -115,7 +164,10 @@ namespace Ironhorse.Game
                     var nrm = new Vector3(hl - hr, 2 * sx, hd - hu).normalized;
                     verts[k] = new Vector3(x, heights[k], z);
                     normals[k] = nrm;
-                    var c = (Color32)ColorAt(x, z, heights[k], 1 - nrm.y * nrm.y > 0 ? Mathf.Sqrt(1 - nrm.y * nrm.y) : 0);
+                    float slope = 1 - nrm.y * nrm.y > 0 ? Mathf.Sqrt(1 - nrm.y * nrm.y) : 0;
+                    var c = (Color32)ColorAt(x, z, heights[k], slope);
+                    WeightsAt(x, z, heights[k], slope, w);
+                    w01[k] = new Vector2(w[0], w[1]); w23[k] = new Vector2(w[2], w[3]); w45[k] = new Vector2(w[4], w[5]);
                     c.a = 255;
                     colors[k] = c;
                 }
@@ -135,7 +187,10 @@ namespace Ironhorse.Game
             mesh.vertices = verts;
             mesh.normals = normals;
             mesh.colors32 = colors;
+            mesh.uv = w01;
             mesh.uv2 = surf;
+            mesh.uv3 = w23;
+            mesh.uv4 = w45;
             mesh.triangles = tris;
             mesh.RecalculateBounds();
 
