@@ -109,5 +109,14 @@ namespace Ironhorse.Game
         }
 
         public static Rect TownRect { get { return new Rect(-60, -72, 120, 165); } }
+
+        /// <summary>Freight yard with sidings and gantry cranes, east of town.</summary>
+        public static Rect YardRect { get { return new Rect(58, -24, 120, 42); } }
+        public static float SidingZ(int i) { return -18f + 5.5f * i; }
+        public const int Sidings = 5;
+
+        /// <summary>Roundhouse and turntable, west of town between the lake and the main line.</summary>
+        public static readonly Vector3 TurntableCenter = new Vector3(-142, 0, -4);
+        public static Rect RoundhouseRect { get { return new Rect(-182, -32, 64, 54); } }
     }
 }

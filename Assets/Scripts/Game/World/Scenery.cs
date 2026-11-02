@@ -282,7 +282,8 @@ namespace Ironhorse.Game
             Vector3? prev = null;
             for (float x = -WorldLayout.TunnelX + 12; x <= WorldLayout.TunnelX - 12; x += 24)
             {
-                bool inTown = Mathf.Abs(x) < 64;
+                // Run the line south of the tracks wherever town, yard or roundhouse occupy the north side.
+                bool inTown = Mathf.Abs(x) < 64 || (x > 50 && x < 186) || (x > -186 && x < -112);
                 float pz = inTown ? WorldLayout.PlatformZ(5) - 8 : z;
                 var top = new Vector3(x, 7.2f, pz);
                 mb.Matte();

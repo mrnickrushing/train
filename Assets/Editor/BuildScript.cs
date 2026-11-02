@@ -21,6 +21,9 @@ namespace Ironhorse.EditorTools
         {
             ProjectSetup.EnsureScene();
             ProjectSetup.ApplyPlayerSettings();
+#if IRONHORSE_URP
+            UrpSetup.Run();
+#endif
             AppIcon.Generate();
 
             var buildNumber = Environment.GetEnvironmentVariable("BUILD_NUMBER");

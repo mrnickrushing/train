@@ -19,6 +19,7 @@ steel and tools, fill orders on the contract board, and build out your town.
 | **Trains** | 8 locomotive types: a saddle-tank switcher, 4-4-0, 2-6-0, 4-6-0, 2-8-2, an art-deco streamlined 4-6-4 and two streamlined diesels. Spoked drivers spin and side rods animate; smoke scales with speed; trains leave through the east tunnel and return through the west. 10 wagon types show visible loads: log stacks, ore heaps, cattle |
 | **Town** | 22 building types on 36 lots: cabins to a grand hotel, a sawmill with a spinning blade, a smelter with a tall stack, a windmill grist mill, refinery, water tower, saloon, schoolhouse, bank, clock tower, gardens, fountain. Scaffolding and build-up animation, chimney smoke, production animations |
 | **Systems** | Dispatch, cargo classes, warehouse limits, production chains, rent, civic bonuses, contracts, a goal chain, XP/levels with unlocks, land purchase, locomotive and building upgrades, rush timers with gold nuggets, offline progress, autosave |
+| **Graphics** | URP renderer with bloom, ambient occlusion, warm color grading, vignette and tilt-shift depth of field (built-in renderer kept as a fallback); a high map-like camera; a freight yard with parked wagon strings and gantry cranes; a roundhouse with a working turntable; townsfolk and horse-drawn wagons; drop-in slots for real 3D models (see [docs/ART_PIPELINE.md](docs/ART_PIPELINE.md) and [docs/ART_SHOPPING_LIST.md](docs/ART_SHOPPING_LIST.md)) |
 | **Atmosphere** | Day/night cycle with golden hour, stars, glowing windows and a sky-reflection probe; soft shadows; animated water; synthesized audio (chuffs, whistles, coins, birds, crickets) and a plucked-guitar music loop |
 | **Depth** | Crew-run factories with conveyor queues (buy slots and hire hands), 6 multi-stage territory projects with permanent bonuses, passenger service to 3 towns, the Foreman's endless task sets, workshop parts for overhauls, and blueprints to assemble top-tier locomotives |
 | **Monetization** | Coal & Water fuel, gold-nugget packs, starter pack, weekly featured bundles, a permanent fuel-tank upgrade, a 30-tier Rail Season Pass, rewarded ads, and RevenueCat-ready purchases. See [docs/MONETIZATION.md](docs/MONETIZATION.md) |
@@ -32,8 +33,9 @@ steel and tools, fill orders on the contract board, and build out your town.
 2. In Unity Hub choose **Add → Add project from disk** and pick this folder.
    If Hub asks to change the editor version, any 6000.0.x works.
 3. On first open, the `Ironhorse → Set Up Project` step runs automatically. It creates
-   `Assets/Scenes/Main.unity`, adds it to Build Settings, sets iOS player settings and generates
-   a placeholder app icon.
+   `Assets/Scenes/Main.unity`, adds it to Build Settings, sets iOS player settings, configures
+   **URP graphics** (`Assets/Settings/IronhorseURP.asset`) and generates a placeholder app icon.
+   If the graphics look flat (no bloom or soft shadows), run **Ironhorse → Set Up URP Graphics** once.
 4. Open `Assets/Scenes/Main.unity` and press **Play**. The whole world builds itself.
 
 Controls in the editor: left-drag to pan, right-drag to rotate, scroll to zoom, click to select.

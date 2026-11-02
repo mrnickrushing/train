@@ -18,7 +18,7 @@ namespace Ironhorse.EditorTools
         public const string ScenePath = "Assets/Scenes/Main.unity";
         public const string BundleId = "com.rushingtech.ironhorsefrontier";
         public const string ProductName = "Ironhorse Frontier";
-        const string DoneKey = "Ironhorse.ProjectSetup.v1";
+        const string DoneKey = "Ironhorse.ProjectSetup.v2"; // bump to re-run setup after upgrades
 
         static ProjectSetup()
         {
@@ -36,6 +36,9 @@ namespace Ironhorse.EditorTools
         {
             EnsureScene();
             ApplyPlayerSettings();
+#if IRONHORSE_URP
+            UrpSetup.Run();
+#endif
             AppIcon.Generate();
             AssetDatabase.SaveAssets();
             Debug.Log("[Ironhorse] Project set up. Open " + ScenePath + " and press Play.");
@@ -65,8 +68,8 @@ namespace Ironhorse.EditorTools
             PlayerSettings.productName = ProductName;
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, BundleId);
             PlayerSettings.bundleVersion = "0.1.0";
-            // Vertex colors are authored in sRGB; gamma space keeps them exactly as designed.
-            PlayerSettings.colorSpace = ColorSpace.Gamma;
+            // Linear lighting for URP; the world shader converts sRGB vertex colors itself.
+            PlayerSettings.colorSpace = ColorSpace.Linear;
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToLandscapeLeft = true;
             PlayerSettings.allowedAutorotateToLandscapeRight = true;

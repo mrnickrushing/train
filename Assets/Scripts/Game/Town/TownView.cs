@@ -38,7 +38,24 @@ namespace Ironhorse.Game
 
             var model = BuildingFactory.Build(_def.Style, b.level, b.uid);
             Height = model.Height;
-            _body = model.Body.ToObject(_def.Name, transform);
+            var art = ModelRegistry.Spawn(ModelRegistry.Buildings, _def.Id, transform);
+            if (art != null)
+            {
+                // Drop-in art: anchors named Smoke*/Spin* drive effects and animation.
+                _body = art;
+                Height = Mathf.Max(3f, ModelRegistry.RendererBounds(art).size.y);
+                foreach (var t in ModelRegistry.Anchors(art, "Spin"))
+                {
+                    var sp = t.gameObject.AddComponent<Spinner>();
+                    sp.Speed = new Vector3(0, 0, 90);
+                    _workSpinners.Add(sp);
+                }
+                foreach (var t in ModelRegistry.Anchors(art, "Smoke"))
+                    _smoke.Add(Fx.Create(_def.Style == BuildingStyle.Fountain ? FxKind.Spray : FxKind.Chimney, t, Vector3.zero));
+                model.Spins.Clear();
+                model.Smoke.Clear();
+            }
+            else _body = model.Body.ToObject(_def.Name, transform);
             foreach (var sp in model.Spins)
             {
                 var go = sp.Mesh.ToObject("Spin", _body.transform);

@@ -18,6 +18,11 @@ namespace Ironhorse.Game
             var r = WorldLayout.TownRect;
             float dx = Mathf.Max(r.xMin - x, 0, x - r.xMax), dz = Mathf.Max(r.yMin - z, 0, z - r.yMax);
             float d = Mathf.Sqrt(dx * dx + dz * dz);
+            foreach (var extra in new[] { WorldLayout.YardRect, WorldLayout.RoundhouseRect })
+            {
+                float ex0 = Mathf.Max(extra.xMin - x, 0, x - extra.xMax), ez0 = Mathf.Max(extra.yMin - z, 0, z - extra.yMax);
+                d = Mathf.Min(d, Mathf.Sqrt(ex0 * ex0 + ez0 * ez0));
+            }
             // Rail corridor along the main line.
             float main = Mathf.Abs(z - WorldLayout.MainZ) - 22f;
             if (Mathf.Abs(x) < WorldLayout.PathEndX) d = Mathf.Min(d, Mathf.Max(0, main));

@@ -18,11 +18,11 @@ namespace Ironhorse.Game
         public Camera Cam { get; private set; }
 
         public Vector3 Focus = new Vector3(0, 0, -12);
-        public float Distance = 95f;
+        public float Distance = 120f;
         public float Yaw = 20f;
-        public float Pitch = 48f;
+        public float Pitch = 54f;
         public float MinDistance = 28f, MaxDistance = 260f;
-        public Rect Bounds = new Rect(-230, -170, 460, 420);
+        public Rect Bounds = new Rect(-240, -170, 480, 420);
 
         /// <summary>Raised on a tap that did not hit a selectable (world position on ground).</summary>
         public System.Action<Vector3> GroundTapped;
@@ -41,7 +41,7 @@ namespace Ironhorse.Game
         {
             Instance = this;
             Cam = gameObject.AddComponent<Camera>();
-            Cam.fieldOfView = 34;
+            Cam.fieldOfView = 30;
             Cam.nearClipPlane = 1f;
             Cam.farClipPlane = 1400;
             Cam.clearFlags = CameraClearFlags.Skybox;
@@ -93,7 +93,8 @@ namespace Ironhorse.Game
             Distance = Mathf.Lerp(Distance, _distTarget, k);
             Yaw = Mathf.LerpAngle(Yaw, _yawTarget, k);
             // Tilt flatter when zoomed in for a more cinematic view.
-            Pitch = Mathf.Lerp(30f, 56f, Mathf.InverseLerp(MinDistance, MaxDistance * 0.7f, Distance));
+            // A high, map-like angle (like a model railway seen from above), flattening a little when zoomed right in.
+            Pitch = Mathf.Lerp(40f, 62f, Mathf.InverseLerp(MinDistance, MaxDistance * 0.6f, Distance));
 
             var rot = Quaternion.Euler(Pitch, Yaw, 0);
             transform.position = Focus + rot * new Vector3(0, 0, -Distance);

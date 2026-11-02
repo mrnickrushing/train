@@ -3,7 +3,10 @@
     "rootNamespace": "Ironhorse.EditorTools",
     "references": [
         "Ironhorse.Core",
-        "Ironhorse.Game"
+        "Ironhorse.Game",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Editor"
     ],
     "includePlatforms": [
         "Editor"
@@ -14,6 +17,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "14.0.0",
+            "define": "IRONHORSE_URP"
+        }
+    ],
     "noEngineReferences": false
 }
