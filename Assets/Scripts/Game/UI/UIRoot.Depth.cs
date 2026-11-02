@@ -120,7 +120,8 @@ namespace Ironhorse.Game
                 var rew = Card(content, 90);
                 Line(rew.transform, set.Reward + " · +" + (60 + 30 * set.Index) + " XP", 22).GetComponent<LayoutElement>().flexibleWidth = 1;
                 UIKit.Btn(rew.transform, "Claim", UIKit.Green, () => Result(S.ClaimTaskSet(), Sfx.LevelUp), 26, 200, 66, S.CanClaimTaskSet);
-            }, 1200, 820);
+            }, 1060, 820);
+            WindowFigure("char_foreman");
         }
 
         // ================================================================ Territory projects (Orders window tab)

@@ -11,6 +11,8 @@ namespace Ironhorse.Core
     {
         public int version = 1;
         public string townName = "Dry Creek";
+        /// <summary>Story beats already shown (see StoryContent), so each plays once per save.</summary>
+        public List<string> storySeen = new List<string>();
         public int coins;
         public int nuggets;
         public int xp;
