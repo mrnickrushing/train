@@ -302,7 +302,9 @@ namespace Ironhorse.Core
                 if (State.trains.Count < FleetCapacity)
                 {
                     int platform = Enumerable.Range(0, Balance.Platforms).First(p => State.trains.All(t => t.platform != p));
-                    State.trains.Add(new TrainState { uid = NewUid(), defId = d.Id, platform = platform });
+                    var granted = new TrainState { uid = NewUid(), defId = d.Id, platform = platform };
+                    State.trains.Add(granted);
+                    RaiseLocomotiveAdded(granted);
                 }
                 else
                 {

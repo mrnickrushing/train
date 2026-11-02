@@ -21,7 +21,7 @@ namespace Ironhorse.Game
         public float Distance = 95f;
         public float Yaw = 20f;
         public float Pitch = 54f;
-        public float MinDistance = 28f, MaxDistance = 260f;
+        public float MinDistance = 24f, MaxDistance = 330f;
         public Rect Bounds = new Rect(-240, -170, 480, 420);
 
         /// <summary>Raised on a tap that did not hit a selectable (world position on ground).</summary>
@@ -35,6 +35,8 @@ namespace Ironhorse.Game
         Vector3 _lastWorldDrag;
         Vector3 _velocity;
         float _lastPinch, _lastTwist;
+        float _lastTapTime = -1;
+        Vector2 _lastTapPos;
         Transform _follow;
 
         void Awake()
@@ -60,6 +62,17 @@ namespace Ironhorse.Game
         }
 
         public void Follow(Transform t, float distance = 70) { _follow = t; _distTarget = distance; }
+
+        /// <summary>Zoom by a factor (&lt; 1 zooms in), e.g. from the on-screen +/- buttons.</summary>
+        public void ZoomBy(float factor) { _distTarget = Mathf.Clamp(_distTarget * factor, MinDistance, MaxDistance); }
+
+        /// <summary>Jumps between the whole-valley overview and the close town view.</summary>
+        public void ToggleOverview()
+        {
+            _follow = null;
+            if (_distTarget < MaxDistance * 0.75f) { _distTarget = MaxDistance; _focusTarget = new Vector3(0, 0, 30); }
+            else { _distTarget = 95f; _focusTarget = new Vector3(0, 0, -12); }
+        }
 
         public bool IsPointerOverUI(int pointerId = -1)
         {
@@ -128,7 +141,7 @@ namespace Ironhorse.Game
             }
             if (Input.GetMouseButton(1)) _yawTarget += Input.GetAxis("Mouse X") * 4f;
             float wheel = Input.mouseScrollDelta.y;
-            if (Mathf.Abs(wheel) > 0.01f && !IsPointerOverUI()) _distTarget *= Mathf.Pow(0.88f, wheel);
+            if (Mathf.Abs(wheel) > 0.01f && !IsPointerOverUI()) _distTarget *= Mathf.Pow(0.8f, wheel);
         }
 
         // ---------------------------------------------------------------- touch
@@ -154,7 +167,12 @@ namespace Ironhorse.Game
                 }
                 else if (t.phase == TouchPhase.Ended)
                 {
-                    if (!_pressOverUI && !_dragging && Time.unscaledTime - _pressTime < 0.5f) Tap(t.position);
+                    if (!_pressOverUI && !_dragging && Time.unscaledTime - _pressTime < 0.5f)
+                    {
+                        // Double-tap toggles the whole-valley overview; a single tap selects.
+                        if (Time.unscaledTime - _lastTapTime < 0.3f && (t.position - _lastTapPos).magnitude < 80f) { ToggleOverview(); _lastTapTime = -1; }
+                        else { Tap(t.position); _lastTapTime = Time.unscaledTime; _lastTapPos = t.position; }
+                    }
                     _dragging = false;
                 }
             }
@@ -173,7 +191,7 @@ namespace Ironhorse.Game
                 }
                 else
                 {
-                    if (_lastPinch > 1 && pinch > 1) _distTarget *= _lastPinch / pinch;
+                    if (_lastPinch > 1 && pinch > 1) _distTarget *= Mathf.Pow(_lastPinch / pinch, 1.6f); // a bit faster than 1:1 to cross the valley quickly
                     _yawTarget -= Mathf.DeltaAngle(_lastTwist, twist);
                     _lastPinch = pinch;
                     _lastTwist = twist;

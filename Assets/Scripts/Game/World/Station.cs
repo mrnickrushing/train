@@ -33,8 +33,13 @@ namespace Ironhorse.Game
             Canopy(mb, island1, half - 10);
             Canopy(mb, island2, half - 10);
 
-            Depot(mb);
-            FreightShed(mb, new Vector3(-36, 0, -16));
+            // Drop-in art (Resources/Models/Buildings/station, freightshed) replaces the procedural versions.
+            var depotArt = ModelRegistry.Spawn(ModelRegistry.Buildings, "station", root);
+            if (depotArt != null) depotArt.transform.position = DepotPosition;
+            else Depot(mb);
+            var shedArt = ModelRegistry.Spawn(ModelRegistry.Buildings, "freightshed", root);
+            if (shedArt != null) shedArt.transform.position = new Vector3(-36, 0, -16);
+            else FreightShed(mb, new Vector3(-36, 0, -16));
             WaterCrane(mb, new Vector3(47, 0, (WorldLayout.PlatformZ(0) + WorldLayout.PlatformZ(1)) / 2));
             WaterCrane(mb, new Vector3(47, 0, (WorldLayout.PlatformZ(4) + WorldLayout.PlatformZ(5)) / 2));
             CoalStage(mb, new Vector3(-58, 0, WorldLayout.PlatformZ(5) - 9));
@@ -161,6 +166,7 @@ namespace Ironhorse.Game
             mb.Box(p + Vector3.up * 3.7f, new Vector3(0.4f, 0.1f, 0.4f), Palette.Iron);
             mb.Lit();
             mb.Box(p + Vector3.up * 4.0f, new Vector3(0.32f, 0.5f, 0.32f), Palette.Window);
+            NightLights.AddPoint(p + Vector3.up * 3.9f);
             mb.Mat(0.4f, 0.4f);
             mb.Cylinder(p + Vector3.up * 4.25f, p + Vector3.up * 4.55f, 0.28f, 0f, 6, Palette.Iron);
             mb.Matte();

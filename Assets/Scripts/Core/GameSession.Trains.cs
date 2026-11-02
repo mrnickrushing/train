@@ -203,6 +203,7 @@ namespace Ironhorse.Core
             int platform = Enumerable.Range(0, Balance.Platforms).First(p => State.trains.All(t => t.platform != p));
             var train = new TrainState { uid = NewUid(), defId = d.Id, platform = platform };
             State.trains.Add(train);
+            RaiseLocomotiveAdded(train);
             RaiseChanged();
             return ActionResult.Success(d.Name + " joins your fleet!");
         }

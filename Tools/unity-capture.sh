@@ -10,6 +10,7 @@ W=1800; H=830   # iPhone landscape aspect (2.17:1); must fit inside the maximize
 
 unity status --until-ready --project-path "$ROOT" >/dev/null 2>&1 || true  # e.g. after a recompile/domain reload
 "${U[@]}" editor set_auto_tick --enable true >/dev/null
+"${U[@]}" script eval --result-only "UnityEditor.EditorPrefs.SetInt(\"ScriptCompilationDuringPlay\", 2); return 0;" >/dev/null  # stop Play before recompiling (a reload mid-play nulls statics)
 "${U[@]}" console clear >/dev/null
 "${U[@]}" script eval --result-only "UnityEditor.EditorSettings.asyncShaderCompilation = false; return 0;" >/dev/null  # no cyan placeholders
 "${U[@]}" editor.playmode set_run_in_background >/dev/null

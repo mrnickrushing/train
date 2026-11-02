@@ -50,7 +50,7 @@ loco("redmesa", 15.9, "an original American 2-6-0 Mogul freight steam locomotive
 loco("copperqueen", 17.0, "an original American 4-6-0 ten-wheeler steam locomotive with its coal tender: deep emerald green (#14532D) boiler, cab and tender with gleaming copper-gold (#E0A458) bands, domes and lining, black smokebox, straight capped smokestack, electric headlamp, iron pilot, a four-wheel leading truck and three pairs of green spoked driving wheels with steel rods, ornate wooden cab")
 loco("ironbison", 19.6, "an original heavy 2-8-2 freight steam locomotive with a large coal tender: massive black (#1C1C1C) boiler with red-oxide (#A33B20) running boards, wheel rims and trim, air pumps on the side, big headlamp, short capped stack, steel pilot, a two-wheel leading truck, four pairs of black driving wheels with red rims and heavy steel rods, a trailing truck under the cab, rugged and powerful")
 loco("sundown", 19.4, "an original 1930s art-deco streamlined 4-6-4 steam locomotive with a matching streamlined tender: a smooth bullet-nosed shroud in deep navy blue (#1F3A68) with flowing cream-gold (#E8C26A) speed stripes, side skirts with the large spoked driving wheels and rods visible below, a chrome nose headlamp, enclosed cab, tender shrouded to match")
-loco("silverarrow", 15.0, "an original 1940s streamlined diesel passenger locomotive, a single cab unit: fluted brushed stainless steel (#C0C6CC) body with a rounded slanted nose and wraparound cab windows, bold red (#B22222) nose stripes and side band, round porthole windows along the side, two three-axle trucks, chrome headlights")
+loco("silverarrow", 15.0, "an original 1940s streamlined diesel passenger locomotive, a single cab unit: fluted brushed stainless steel (#C0C6CC) body with a rounded slanted nose and wraparound cab windows, bold red (#B22222) nose stripes and side band, round porthole windows along the side, two three-axle trucks, chrome headlights", flip=True)
 loco("thunderhead", 15.1, "an original 1940s streamlined diesel freight-passenger locomotive cab unit: deep royal purple (#5B2A86) body with bright gold (#F2C14E) chevron stripes sweeping back from a rounded bulldog nose, gold side band, wraparound cab windows, louvered side grilles, two three-axle trucks, chrome headlights", twin=True)
 
 # ----------------------------------------------------------------------------------- wagons
@@ -89,6 +89,10 @@ bldg("lamppost", "an original Victorian cast-iron gas street lamp: a fluted blac
 bldg("garden", "an original small town flower garden: neat flower beds with red, yellow and purple blooms, low hedges, a white wooden picket fence, a gravel path and a wooden bench", base="grass", footprint=11.0)
 bldg("fountain", "an original town square fountain: a round stone basin with a tiered cast-iron fountain spraying water, a ring of cobblestones and four flower planters", base="cobblestones", footprint=9.0)
 
+# Station pieces (wide footprints: the long side runs along the tracks)
+bldg("station", "an original long frontier railway depot station, about four and a half times as long as it is deep: a central two-storey block with a clock tower and a pointed copper-green roof, two long single-storey wings with red hip roofs, cream board-and-batten walls with brown trim, a wooden platform canopy with brackets along the front, ticket windows, benches, luggage carts", base="a stone platform edge", footprint=36.0, wide=True)
+bldg("freightshed", "an original wooden railway freight shed, about twice as long as deep: red-painted plank walls, a raised wooden loading dock with sliding doors along the front, a corrugated tin roof with a deep overhang, crates and barrels on the dock", footprint=14.0, wide=True)
+
 
 def hf(*args):
     print("+ higgsfield", " ".join(a if len(a) < 60 else a[:57] + "..." for a in args))
@@ -102,8 +106,9 @@ def hf(*args):
 
 def fetch(url, path):
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=300) as r, open(path, "wb") as f:
+    with urllib.request.urlopen(req, timeout=300) as r, open(path + ".part", "wb") as f:
         f.write(r.read())
+    os.replace(path + ".part", path)  # never expose a half-written file to the importer
 
 
 def concept(i):
@@ -111,7 +116,7 @@ def concept(i):
     if os.path.exists(p):
         return print("have", p)
     a = A[i]
-    ar = "21:9" if a["cat"] != "Buildings" else "1:1"
+    ar = "21:9" if a["cat"] != "Buildings" else "16:9" if a.get("wide") else "1:1"
     url = hf("generate", "create", "gpt_image_2_5", "--aspect_ratio", ar, "--quality", "high", "--resolution", "2k",
              "--background", "opaque", "--prompt", a["prompt"], "--wait")
     fetch(url, p)
@@ -136,16 +141,20 @@ def do_import(i):
     cmd = ["blender", "-b", "--factory-startup", "-P", os.path.join(ROOT, "Tools", "blender", "import_ai.py"), "--", g, a["cat"], i]
     if a["cat"] == "Buildings":
         small = a["footprint"] < 4
-        cmd += ["--footprint", str(a["footprint"]), "--front", a.get("front", "-y"), "--faces", "6000" if small else "20000", "--tex", "512" if small else "1024"]
+        cmd += ["--footprint", str(a["footprint"]), "--faces", "6000" if small else "20000", "--tex", "512" if small else "1024"]
         if "height" in a:
             cmd += ["--height", str(a["height"])]
         if a.get("smoke"):
             cmd += ["--smoke"]
+        if a.get("wide"):
+            cmd += ["--wide"]
     else:
         cmd += ["--length", str(a["length"]), "--front", a.get("front", "auto"), "--faces", "40000" if a["cat"] == "Locomotives" else "15000",
                 "--tex", "2048" if a["cat"] == "Locomotives" else "1024"]
         if a.get("twin"):
             cmd += ["--twin"]
+        if a.get("flip"):
+            cmd += ["--flip"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     print("\n".join(l for l in r.stdout.splitlines() if "[ai]" in l) or r.stdout[-2000:] + r.stderr[-2000:])
 

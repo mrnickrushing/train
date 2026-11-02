@@ -98,16 +98,33 @@ namespace Ironhorse.Game
             AudioManager.MusicOn = state.settings.music;
             AudioManager.SfxOn = state.settings.sfx;
 
+            _loading = LoadingScreen.Show();
+            StartCoroutine(BuildWorld(state, fresh));
+        }
+
+        LoadingScreen _loading;
+
+        /// <summary>Builds the world over several frames so the loading screen can draw and animate.</summary>
+        System.Collections.IEnumerator BuildWorld(GameState state, bool fresh)
+        {
+            _loading.SetProgress(0.05f, "Surveying the valley...");
+            yield return null;
             var world = new GameObject("World").transform;
             world.SetParent(transform, false);
             ValleyTerrain.Build(world);
             ValleyTerrain.BuildWater(world);
+            _loading.SetProgress(0.3f, "Planting the pines...");
+            yield return null;
             Scenery.Build(world);
+            _loading.SetProgress(0.55f, "Laying track...");
+            yield return null;
             Yard.Build(world);
             var loop = new MeshBuilder();
             TrackBuilder.Build(loop, WorldLayout.ScenicLoop, 0, -1, trestleOverWater: true);
             loop.ToObject("Scenic Loop", world);
             Child<Clouds>("Clouds");
+            _loading.SetProgress(0.7f, "Firing up the boilers...");
+            yield return null;
 
             Child<DayNightCycle>("Day & Night");
             Child<CameraRig>("Camera");
@@ -115,11 +132,15 @@ namespace Ironhorse.Game
             Child<Life>("Townsfolk");
             Child<AudioManager>("Audio");
             Child<TrainManager>("Trains");
+            _loading.SetProgress(0.85f, "Raising the town...");
+            yield return null;
             Child<TownView>("Town");
             Child<UIRoot>("UI");
 
+            yield return null; // let Start() run on everything before revealing the world
             if (!fresh) WelcomeBack(state);
-            else Invoke(nameof(Intro), 1.2f);
+            else Invoke(nameof(Intro), 2.2f);
+            yield return _loading.Finish();
         }
 
         T Child<T>(string name) where T : Component

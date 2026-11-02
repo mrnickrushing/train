@@ -46,6 +46,7 @@ namespace Ironhorse.Game
             if (artSmoke != null && artSmoke.Count > 0) Smoke = Fx.Create(IsSteam ? FxKind.Steam : FxKind.Exhaust, artSmoke[0], Vector3.zero);
             else if (art == null && lm.Stack.HasValue) Smoke = Fx.Create(FxKind.Steam, lead, lm.Stack.Value);
             else if (art == null && lm.Exhaust.HasValue) Smoke = Fx.Create(FxKind.Exhaust, lead, lm.Exhaust.Value);
+            NightLights.Attach(lead, new Vector3(0, 3.2f, Cars[0].Length * 0.5f + 0.5f), LightType.Spot, 45f, 25f, new Color(1f, 0.88f, 0.65f), Quaternion.Euler(12, 0, 0), 55f);
             foreach (var w in wagons) AddCar(TrainFactory.Wagon(w), w, w.Name, ModelRegistry.Wagons, w.Id);
             var col = lead.gameObject.AddComponent<BoxCollider>();
             col.center = new Vector3(0, 2.5f, 0);

@@ -300,6 +300,16 @@ namespace Ironhorse.Game
                 float x = x0 + c * WorldLayout.PlotPitchX;
                 RoadStrip(mb, new Vector3(x, 0, z0), new Vector3(x, 0, z1), 2.8f, road);
             }
+            mb.Surf = SurfaceKind.Auto;
+            // Street lamps: along Main Street, and at every other cross-street intersection.
+            for (int c = 0; c <= WorldLayout.PlotCols; c++)
+            {
+                float x = x0 + c * WorldLayout.PlotPitchX;
+                Station.Lamp(mb, new Vector3(x + 2.4f, 0, z0 - 4.2f));
+                for (int r = 2; r <= WorldLayout.PlotRows; r += 2)
+                    if ((c + r / 2) % 2 == 0) Station.Lamp(mb, new Vector3(x + 1.9f, 0, z0 + r * WorldLayout.PlotPitchZ + 1.9f));
+            }
+            mb.Surf = SurfaceKind.Gravel;
             // Station plaza between Main Street and the depot.
             mb.Box(new Vector3(0, 0.04f, -14.5f), new Vector3(36, 0.08f, 6), MeshBuilder.Darken(road, 0.95f));
             mb.ToObject("Roads", root, false);

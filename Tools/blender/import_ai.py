@@ -47,6 +47,15 @@ def save_png(arr, path, colorspace):
     img.save()
 
 
+def to_jpg(png):
+    """Albedo and normal maps ship as quality-90 JPG (Unity recompresses to ASTC anyway); keeps the repo small."""
+    import subprocess
+    jpg = png[:-4] + ".jpg"
+    subprocess.run(["python3", "-c",
+                    "from PIL import Image;Image.open(%r).convert('RGB').save(%r,quality=90)" % (png, jpg)], check=True)
+    os.remove(png)
+
+
 def resize(img, size):
     if img.size[0] > size:
         img.scale(size, size)
@@ -86,9 +95,16 @@ def main():
     mn, mx = bounds(o)
     size = mx - mn
     rot = Matrix.Identity(4)
-    if category != "Buildings" and size.x > size.y:
+    if category == "Buildings":
+        # Tripo puts the side that faced the viewer in the concept (the entrance) at +X; turn it to
+        # -Y (Unity -Z, the street). Wide buildings' long side then runs along X (the tracks).
+        rot = Matrix.Rotation(math.radians(-90), 4, "Z")
+        front = "flip" if "--flip" in sys.argv else "none"
+    elif size.x > size.y:
         rot = Matrix.Rotation(math.radians(90), 4, "Z")  # long axis onto Y
     o.data.transform(rot)
+    if front == "flip":
+        o.data.transform(Matrix.Rotation(math.radians(180), 4, "Z"))
     if front == "auto":
         # Steam locomotives: the smokestack top is the highest point and sits at the front.
         o.data.update()
@@ -96,6 +112,8 @@ def main():
         mn, mx = bounds(o)
         front = "-y" if top.co.y < (mn.y + mx.y) / 2 else "+y"
         print("[ai] auto front:", front)
+    if "--flip" in sys.argv and category != "Buildings":
+        front = {"-y": "+y", "+y": "-y"}.get(front, front)
     if front == "-y":
         o.data.transform(Matrix.Rotation(math.radians(180), 4, "Z"))
     elif front == "+x":
@@ -154,7 +172,7 @@ def main():
     if orm is not None:
         ormp = image_px(resize(orm, tex))  # same size as albedo for the AO fold; ms is halved below
         ao = ormp[..., 0:1]
-        alb[..., :3] *= (0.45 + 0.55 * ao)  # fold ambient occlusion into the albedo
+        alb[..., :3] *= (0.72 + 0.28 * ao)  # light AO fold: Tripo albedo already carries some shading
         ms = np.zeros_like(ormp)
         ms[..., 0] = ormp[..., 2]            # metallic
         ms[..., 1] = ormp[..., 2]
@@ -165,10 +183,12 @@ def main():
         save_png(ms, os.path.join(out_dir, model_id + "_ms.png"), "Non-Color")
     alb[..., 3] = 1.0
     save_png(alb, os.path.join(out_dir, model_id + "_albedo.png"), "sRGB")
+    to_jpg(os.path.join(out_dir, model_id + "_albedo.png"))
     if nrm is not None:
         npx = image_px(resize(nrm, max(512, tex // 2))).copy()
         npx[..., 3] = 1.0
         save_png(npx, os.path.join(out_dir, model_id + "_normal.png"), "Non-Color")
+        to_jpg(os.path.join(out_dir, model_id + "_normal.png"))
 
     o.name = model_id
     o.data.name = model_id

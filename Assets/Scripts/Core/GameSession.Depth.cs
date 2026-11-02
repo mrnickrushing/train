@@ -200,7 +200,9 @@ namespace Ironhorse.Core
             if (State.trains.Count >= FleetCapacity) return ActionResult.Fail("All platforms are full");
             State.blueprints.Change(d.Id, -d.Blueprints);
             int platform = Enumerable.Range(0, Balance.Platforms).First(p => State.trains.All(t => t.platform != p));
-            State.trains.Add(new TrainState { uid = NewUid(), defId = d.Id, platform = platform });
+            var built = new TrainState { uid = NewUid(), defId = d.Id, platform = platform };
+            State.trains.Add(built);
+            RaiseLocomotiveAdded(built);
             AddXp(200);
             RaiseChanged();
             return ActionResult.Success(d.Name + " rolls out of the shops!");

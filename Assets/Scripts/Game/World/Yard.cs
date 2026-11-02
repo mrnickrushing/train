@@ -25,6 +25,9 @@ namespace Ironhorse.Game
 
         static void BuildFreightYard(Transform root)
         {
+            var yr = WorldLayout.YardRect;
+            for (int i = 0; i < 3; i++)
+                NightLights.AddPoint(new Vector3(yr.xMin + yr.width * (0.2f + 0.3f * i), 11f, yr.center.y), 40f, 22f, new Color(1f, 0.85f, 0.6f));
             var r = WorldLayout.YardRect;
             var mb = new MeshBuilder();
             mb.Matte();

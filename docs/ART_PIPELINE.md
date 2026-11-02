@@ -1,5 +1,10 @@
 # Art pipeline: dropping in real 3D models
 
+> The shipped art is generated: see "AI art" in `CLAUDE.md` (`Tools/art/ai_assets.py`). Each model is
+> `Resources/Models/<Category>/<id>.fbx` plus `<id>_albedo.png`, `<id>_ms.png` (metallic R, smoothness A)
+> and `<id>_normal.png`; `ModelRegistry` builds the URP material from those maps. Hand-made models
+> follow the same layout.
+
 The game builds every model from code so it always runs. **Any model can be replaced with real art
 one at a time** by putting a prefab in the right folder; no code changes needed.
 

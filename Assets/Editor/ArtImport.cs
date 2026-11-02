@@ -33,7 +33,7 @@ namespace Ironhorse.EditorTools
             if (assetPath.StartsWith(Models))
             {
                 var t = (TextureImporter)assetImporter;
-                bool normal = assetPath.EndsWith("_normal.png"), data = assetPath.EndsWith("_ms.png");
+                bool normal = assetPath.EndsWith("_normal.jpg") || assetPath.EndsWith("_normal.png"), data = assetPath.EndsWith("_ms.png");
                 t.textureType = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
                 t.sRGBTexture = !normal && !data;
                 t.mipmapEnabled = true;
