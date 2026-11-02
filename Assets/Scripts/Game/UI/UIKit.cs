@@ -267,8 +267,38 @@ namespace Ironhorse.Game
         }
 
         /// <summary>Round resource icon with its glyph, optionally with an amount label.</summary>
+        static readonly System.Collections.Generic.Dictionary<string, Sprite> _icons = new System.Collections.Generic.Dictionary<string, Sprite>();
+
+        /// <summary>Painted icon from Resources/UI/Icons (Tools/art/ai_icons.py), or null when it isn't there.</summary>
+        public static Sprite IconSprite(string id)
+        {
+            Sprite s;
+            if (_icons.TryGetValue(id, out s)) return s;
+            var tex = Resources.Load<Texture2D>("UI/Icons/" + id);
+            if (tex != null) s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100);
+            _icons[id] = s;
+            return s;
+        }
+
+        /// <summary>An Image showing a painted icon at size × size, or null so callers can draw a fallback.</summary>
+        public static GameObject Icon(Transform parent, string id, float size)
+        {
+            var sp = IconSprite(id);
+            if (sp == null) return null;
+            var go = Node("Icon " + id, parent);
+            var img = go.AddComponent<Image>();
+            img.sprite = sp;
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            Size(go, size, size);
+            ((RectTransform)go.transform).sizeDelta = new Vector2(size, size);
+            return go;
+        }
+
         public static GameObject ResIcon(Transform parent, string resId, float size = 44)
         {
+            var painted = Icon(parent, resId, size * 1.15f);
+            if (painted != null) return painted;
             var res = GameDatabase.Resource(resId);
             var img = Panel(parent, Palette.Hex(res.ColorRgb), "Icon " + resId, Circle);
             Size(img.gameObject, size, size);
@@ -295,6 +325,8 @@ namespace Ironhorse.Game
 
         public static GameObject CoinIcon(Transform parent, float size = 40)
         {
+            var painted = Icon(parent, "coin", size * 1.1f);
+            if (painted != null) return painted;
             var img = Panel(parent, Gold, "Coin", Circle);
             Size(img.gameObject, size, size);
             var inner = Panel(img.transform, BrassDark, "Inner", Circle);
@@ -308,6 +340,8 @@ namespace Ironhorse.Game
 
         public static GameObject NuggetIcon(Transform parent, float size = 40)
         {
+            var painted = Icon(parent, "nugget", size * 1.1f);
+            if (painted != null) return painted;
             var holder = Node("Nugget", parent);
             Size(holder, size, size);
             var img = Panel(holder.transform, Palette.Hex(0xFFD34D), "Gem", RoundedSmall);
@@ -427,6 +461,8 @@ namespace Ironhorse.Game
 
         public static GameObject XpIcon(Transform parent, float size)
         {
+            var painted = UIKit.Icon(parent, "xp", size * 1.1f);
+            if (painted != null) return painted;
             var img = UIKit.Panel(parent, Palette.Hex(0xF29B2C), "XP", UIKit.RoundedSmall);
             UIKit.Size(img.gameObject, size, size);
             img.transform.localRotation = Quaternion.identity;

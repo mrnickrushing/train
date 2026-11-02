@@ -70,6 +70,7 @@ namespace Ironhorse.Game
 
         static void FuelIcon(Transform t, float size)
         {
+            if (UIKit.Icon(t, "fuel", size * 1.1f) != null) return;
             // A lump of coal with a flame: "Coal & Water".
             var h = UIKit.Node("FuelIcon", t);
             UIKit.Size(h, size, size);
