@@ -77,7 +77,7 @@ namespace Ironhorse.Game
             var dn = DayNightCycle.Instance;
             if (dn != null)
             {
-                _color.postExposure.Override(Mathf.Lerp(0f, -0.2f, dn.Night));
+                _color.postExposure.Override(Mathf.Lerp(0f, 0.15f, dn.Night)); // lift nights a touch; the lamps carry the mood
                 _bloom.intensity.Override(Mathf.Lerp(0.55f, 1.2f, dn.Night));
             }
         }

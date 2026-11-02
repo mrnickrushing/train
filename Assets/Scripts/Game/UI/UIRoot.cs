@@ -71,6 +71,7 @@ namespace Ironhorse.Game
             _popupLayer = UIKit.Stretch(UIKit.Node("Popups", cgo.transform));
             _toasts = UIKit.Anchor(UIKit.Node("Toasts", cgo.transform), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-420, -360), new Vector2(420, -150));
             UIKit.VStack(_toasts.gameObject, 10, 0, TextAnchor.UpperCenter);
+            Celebrations.Init(cgo.transform); // above windows, popups and toasts
         }
 
         void Start()
@@ -79,7 +80,10 @@ namespace Ironhorse.Game
             S.LeveledUp += OnLevelUp;
             S.Notify += msg => Toast(msg, true);
             S.TrainArrived += t => AudioManager.Play(Sfx.Bell, 0.5f);
-            S.ContractCompleted += c => AudioManager.Play(Sfx.Deliver);
+            S.ContractCompleted += OnContractCompleted;
+            S.ProjectCompleted += p => Celebrations.Instance.Play("project", "Project Complete!", p.Name + " is finished. The whole territory feels it.");
+            S.LocomotiveAdded += t => Celebrations.Instance.Play("newloco", "New Locomotive!", GameDatabase.Locomotive(t.defId).Name + " joins your fleet.", force: true);
+            S.TaskSetCompleted += ts => Celebrations.Instance.Confetti();
             RefreshHud();
             Invoke(nameof(MaybeShowFeaturedOffer), 4f);
         }
@@ -358,7 +362,8 @@ namespace Ironhorse.Game
         // ================================================================ windows
 
         /// <summary>Opens a modal parchment window. The builder runs again whenever game state changes.</summary>
-        public void ShowWindow(string title, Action<Transform> build, float width = 1180, float height = 820)
+        /// <param name="back">When set, a Back button returns to the window this one was opened from.</param>
+        public void ShowWindow(string title, Action<Transform> build, float width = 1180, float height = 820, Action back = null)
         {
             CloseWindow();
             AudioManager.Play(Sfx.Open);
@@ -390,6 +395,11 @@ namespace Ironhorse.Game
 
             var close = UIKit.Btn(sheet.transform, "X", Palette.Hex(0x2A1C12), CloseWindow, 40, 92, 92);
             UIKit.Place(close.gameObject, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-40, -24), new Vector2(92, 92));
+            if (back != null)
+            {
+                var b = UIKit.Btn(sheet.transform, "< Back", UIKit.WoodLight, () => back(), 30, 200, 92);
+                UIKit.Place(b.gameObject, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-150, -24), new Vector2(200, 92));
+            }
 
             var frame = UIKit.Panel(sheet.transform, UIKit.Parchment, "Frame", null, true);
             UIKit.Place(frame.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -50), new Vector2(width + 120, height - 40));
@@ -460,7 +470,7 @@ namespace Ironhorse.Game
 
         public bool WindowOpen { get { return _window != null; } }
 
-        void SetHudVisible(bool on)
+        public void SetHudVisible(bool on)
         {
             foreach (var layer in new[] { _safe, _markers })
             {
@@ -499,8 +509,21 @@ namespace Ironhorse.Game
             if (!string.IsNullOrEmpty(r.Message)) Toast(r.Message, r.Ok);
         }
 
+        void OnContractCompleted(ContractState c)
+        {
+            AudioManager.Play(Sfx.Deliver);
+            var cel = Celebrations.Instance;
+            cel.Confetti();
+            var center = new Vector2(Screen.width * 0.5f, Screen.height * 0.45f);
+            if (c.rewardCoins > 0) cel.FlyTo(center, (RectTransform)_coins.transform.parent, t => UIKit.CoinIcon(t, 48), 10);
+            if (c.rewardNuggets > 0) cel.FlyTo(center, (RectTransform)_nuggets.transform.parent, t => UIKit.NuggetIcon(t, 48), 5);
+            cel.Play("contract", "Contract Fulfilled!", c.client + " paid " + Fmt.Num(c.rewardCoins) + " coins.");
+        }
+
         void OnLevelUp(int level)
         {
+            if (level == Balance.GoldenAgeLevel) Celebrations.Instance.Play("goldenage", "The Golden Age!", "Streamliners, steel and silver. A new era begins.", force: true);
+            else Celebrations.Instance.Play("levelup", "Level " + level + "!", G.Session.State.townName + " is growing.", force: level <= 3);
             AudioManager.Play(Sfx.LevelUp);
             Fx.Burst(CameraRig.Instance.Focus + Vector3.up * 12, 80);
             var unlocks = new List<string>();

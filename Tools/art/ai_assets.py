@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""AI art pipeline for Ironhorse Frontier (Higgsfield: GPT Image 2.5 concept -> Tripo H3.1 3D -> Blender cleanup).
+
+  python3 Tools/art/ai_assets.py concept <id>...   # concept image (skips ids that already have one)
+  python3 Tools/art/ai_assets.py model <id>...     # image-to-3D GLB from the approved concept (skips existing)
+  python3 Tools/art/ai_assets.py import <id>...    # Blender cleanup -> Assets/Resources/Models/...
+  python3 Tools/art/ai_assets.py list
+
+Work files live in art-src/ (gitignored, large). Never re-run a paid step for an id that already has its
+output: delete the file first if a redo is really wanted. All designs are original (no real railroads,
+liveries or brands).
+"""
+import json
+import os
+import subprocess
+import sys
+import urllib.request
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SRC = os.path.join(ROOT, "art-src")
+
+VEHICLE = ("Game asset reference render of {what}. Slightly elevated three-quarter view of its left side with the front "
+           "pointing to the LEFT, isolated on a plain flat white background, the entire vehicle visible and nothing cropped, "
+           "no rails, no ground. Semi-realistic, richly detailed like a premium mobile railroad tycoon game, clean studio "
+           "lighting with soft shadows. No text, no numbers, no logos, no people.")
+BUILDING = ("Game asset reference render of {what}. Isometric three-quarter view from the front-right, the main entrance "
+            "facing the viewer, the whole building visible on a thin square base of {base}, isolated on a plain flat white "
+            "background, nothing cropped. Semi-realistic 1880s American frontier town, richly detailed like a premium "
+            "mobile city-builder, warm clean studio lighting with soft shadows. No text, no signs with letters, no logos, no people.")
+
+A = {}
+
+
+def loco(i, length, what, **kw):
+    A[i] = dict(cat="Locomotives", length=length, prompt=VEHICLE.format(what=what), **kw)
+
+
+def wagon(i, length, what, **kw):
+    A[i] = dict(cat="Wagons", length=length, prompt=VEHICLE.format(what=what), **kw)
+
+
+def bldg(i, what, base="packed earth", footprint=11.0, **kw):
+    A[i] = dict(cat="Buildings", footprint=footprint, prompt=BUILDING.format(what=what, base=base), **kw)
+
+
+# ----------------------------------------------------------------------------------- locomotives
+loco("lark", 15.5, "an original American 4-4-0 steam locomotive with its separate coal tender: iron cowcatcher, square oil headlamp, black smokebox, tall flared diamond smokestack, long deep crimson (#7A1F1F) boiler with polished brass bands, brass sand and steam domes, brass bell, crimson wooden cab with windows at the rear, crimson tender with coal; a four-wheel leading truck and two large crimson spoked driving wheels with steel side rods, fine gold (#D4AF37) lining")
+loco("dusty", 8.5, "an original small 0-4-0 saddle-tank steam yard switcher with NO tender: a short boiler with a rounded saddle water tank over it, painted dark forest green (#3B5D3A) with brass (#C9A227) trim and lining, short straight smokestack with a brass cap, brass dome and bell, compact cab with a coal bunker at the back, four small green spoked driving wheels with steel side rods, wooden pilot beam with footboards and a small oil headlamp")
+loco("redmesa", 15.9, "an original American 2-6-0 Mogul freight steam locomotive with its coal tender: slate blue (#2F3E59) boiler and cab with burnished copper (#B87333) bands and trim, black smokebox, flared diamond smokestack, copper domes and bell, iron cowcatcher, oil headlamp, a two-wheel leading truck and three pairs of large blue spoked driving wheels with steel rods, slate blue tender with coal")
+loco("copperqueen", 17.0, "an original American 4-6-0 ten-wheeler steam locomotive with its coal tender: deep emerald green (#14532D) boiler, cab and tender with gleaming copper-gold (#E0A458) bands, domes and lining, black smokebox, straight capped smokestack, electric headlamp, iron pilot, a four-wheel leading truck and three pairs of green spoked driving wheels with steel rods, ornate wooden cab")
+loco("ironbison", 19.6, "an original heavy 2-8-2 freight steam locomotive with a large coal tender: massive black (#1C1C1C) boiler with red-oxide (#A33B20) running boards, wheel rims and trim, air pumps on the side, big headlamp, short capped stack, steel pilot, a two-wheel leading truck, four pairs of black driving wheels with red rims and heavy steel rods, a trailing truck under the cab, rugged and powerful")
+loco("sundown", 19.4, "an original 1930s art-deco streamlined 4-6-4 steam locomotive with a matching streamlined tender: a smooth bullet-nosed shroud in deep navy blue (#1F3A68) with flowing cream-gold (#E8C26A) speed stripes, side skirts with the large spoked driving wheels and rods visible below, a chrome nose headlamp, enclosed cab, tender shrouded to match")
+loco("silverarrow", 15.0, "an original 1940s streamlined diesel passenger locomotive, a single cab unit: fluted brushed stainless steel (#C0C6CC) body with a rounded slanted nose and wraparound cab windows, bold red (#B22222) nose stripes and side band, round porthole windows along the side, two three-axle trucks, chrome headlights", flip=True)
+loco("thunderhead", 15.1, "an original 1940s streamlined diesel freight-passenger locomotive cab unit: deep royal purple (#5B2A86) body with bright gold (#F2C14E) chevron stripes sweeping back from a rounded bulldog nose, gold side band, wraparound cab windows, louvered side grilles, two three-axle trucks, chrome headlights", twin=True)
+
+# ----------------------------------------------------------------------------------- wagons
+wagon("flatcar", 8.0, "an original 1880s wooden railroad flatcar, empty: weathered brown (#6B4226) plank deck with stake pockets and a few wooden stakes, steel truss rods underneath, two four-wheel trucks, link-and-pin couplers")
+wagon("hopper", 8.0, "an original 1880s open-top ore hopper railroad car: riveted dark iron grey (#3A3A3A) steel body with sloped bottom chutes, side ribs, two four-wheel trucks, empty")
+wagon("boxcar", 8.0, "an original 1880s wooden railroad boxcar: oxide red (#8C2F1B) vertical board siding, sliding side door, roof walk with a brake wheel, ladders at the corners, two four-wheel trucks")
+wagon("stockcar", 8.0, "an original 1880s wooden livestock stock car: sienna (#A0522D) slatted sides with gaps, sliding door, roof walk, ladders, two four-wheel trucks, empty")
+wagon("mailcoach", 8.0, "an original 1880s wooden railway mail and express car: dark green (#1F4E3D) varnished wood sides with fine gold lining, clerestory roof, a mail catcher arm, small windows, open platforms at the ends, two four-wheel trucks")
+wagon("longflat", 10.0, "an original long heavy-duty wooden railroad flatcar, empty: dark brown (#5A3A1E) plank deck, steel side sills with stake pockets and stakes, fishbelly steel center sill, two four-wheel trucks")
+wagon("steelhopper", 10.0, "an original 1920s twin-bay steel hopper railroad car: riveted slate grey (#55606B) steel with outside ribs, twin bottom discharge bays, ladders, two four-wheel trucks, empty")
+wagon("reefer", 10.0, "an original 1920s insulated refrigerator boxcar (reefer): cream (#E8E2D0) wood sides with dark brown roof and ends, ice hatches on the roof, plug doors, roof walk, two four-wheel trucks")
+wagon("tankcar", 8.0, "an original 1900s railroad tank car: black (#202020) riveted cylindrical tank on a steel frame with a top dome and safety walkway rails, ladders, two four-wheel trucks")
+wagon("pullman", 10.0, "an original 1920s heavyweight Pullman passenger coach: dark midnight blue (#2E2A5A) steel sides with thin gold lining, a row of large windows, clerestory roof, vestibules at both ends, two six-wheel trucks")
+
+# ----------------------------------------------------------------------------------- buildings
+bldg("cabin", "an original settler's log cabin: notched log walls, a wood shingle roof, a stone chimney, a small porch with posts, a wood pile and a rain barrel")
+bldg("clapboard", "an original two-storey clapboard family house: pale blue-grey painted clapboard siding with white trim, a front porch with railings, gabled shingle roof, brick chimney, a little picket fence")
+bldg("boarding", "an original three-storey wooden boarding house: tan clapboard with green shutters, a long balcony along the upper floor, many windows, a false-front parapet, wooden boardwalk in front")
+bldg("rowhouse", "an original row of three attached red-brick townhouses: arched windows, stone lintels, stoops with iron railings, slate mansard roof with dormers, chimneys")
+bldg("grandhotel", "an original grand Victorian frontier hotel: four storeys of cream stone and red brick, a corner turret with a copper dome, wraparound verandah with iron columns, many windows with awnings, ornate cornice")
+bldg("sawmill", "an original water-powered frontier sawmill: a timber mill shed with an open side showing a big circular saw blade, a log ramp with stacked logs, piles of fresh planks, a small smokestack", spin=True, smoke=True)
+bldg("gristmill", "an original frontier grist mill: a tall timber mill house with a stone base and a large wooden windmill with four sails on top, sacks of grain by the door", spin=True)
+bldg("packing", "an original frontier meat packing house: a long red-painted wooden building with a loading dock, cattle pens with rails beside it, a water tank on the roof, a small chimney", smoke=True)
+bldg("smelter", "an original frontier ore smelter: a stone and iron furnace building with a tall brick smokestack, ore carts, a heap of dark ore, glowing furnace doors, corrugated iron roof", smoke=True)
+bldg("toolworks", "an original 1890s tool works factory: a brick workshop with big arched windows, a sawtooth skylight roof, a forge chimney, crates of tools and an anvil outside", smoke=True)
+bldg("wireworks", "an original 1900s copper wire works factory: a brick and corrugated-iron factory hall with large spools of copper wire stacked outside, a chimney, rooftop ventilators", smoke=True)
+bldg("assay", "an original frontier assay office: a sturdy stone building with iron-barred windows, a heavy door, gold-trimmed cornice, a small balance-scale sign shape, crates and a strongbox on the porch")
+bldg("refinery", "an original 1910s oil refinery: steel distillation towers, round storage tanks, pipes and catwalks, a tall flare stack, a small brick control house", smoke=True)
+bldg("watertower", "an original wooden railroad water tower: a large round wooden tank with iron hoops and a conical shingled roof on a tall timber trestle with cross bracing, a swinging spout", footprint=7.0)
+bldg("saloon", "an original frontier saloon: a two-storey false-front wooden building painted oxblood red with cream trim, swinging half doors, a balcony on the upper floor, hitching rail and water trough out front")
+bldg("telegraph", "an original frontier telegraph office: a small wooden office with a bay window, a tall telegraph pole with many glass insulators and wires beside it, a bench on the porch")
+bldg("schoolhouse", "an original one-room frontier schoolhouse: white-painted clapboard, a small bell tower with a bell on the roof, tall windows, front steps, a little fenced yard")
+bldg("bank", "an original frontier territorial bank: a solid two-storey stone and brick building with columns at the entrance, arched windows with iron grilles, a gilded cornice, a heavy vault door visible inside the doorway")
+bldg("clocktower", "an original town clock tower: a tall brick and stone tower with a large clock face on each side, a copper-green pointed roof with a weathervane, an arched base")
+bldg("lamppost", "an original Victorian cast-iron gas street lamp: a fluted black iron post on a round base with a four-sided glass lantern on top and a small ladder bar", base="cobblestones", footprint=2.2, height=5.5)
+bldg("garden", "an original small town flower garden: neat flower beds with red, yellow and purple blooms, low hedges, a white wooden picket fence, a gravel path and a wooden bench", base="grass", footprint=11.0)
+bldg("fountain", "an original town square fountain: a round stone basin with a tiered cast-iron fountain spraying water, a ring of cobblestones and four flower planters", base="cobblestones", footprint=9.0)
+
+# Station pieces (wide footprints: the long side runs along the tracks)
+bldg("station", "an original long frontier railway depot station, about four and a half times as long as it is deep: a central two-storey block with a clock tower and a pointed copper-green roof, two long single-storey wings with red hip roofs, cream board-and-batten walls with brown trim, a wooden platform canopy with brackets along the front, ticket windows, benches, luggage carts", base="a stone platform edge", footprint=36.0, wide=True)
+bldg("freightshed", "an original wooden railway freight shed, about twice as long as deep: red-painted plank walls, a raised wooden loading dock with sliding doors along the front, a corrugated tin roof with a deep overhang, crates and barrels on the dock", footprint=14.0, wide=True)
+
+
+def hf(*args):
+    print("+ higgsfield", " ".join(a if len(a) < 60 else a[:57] + "..." for a in args))
+    r = subprocess.run(["higgsfield", *args], capture_output=True, text=True)
+    out = (r.stdout + r.stderr).strip().splitlines()
+    url = next((l for l in reversed(out) if l.startswith("http")), None)
+    if not url:
+        raise RuntimeError("\n".join(out[-5:]))
+    return url
+
+
+def fetch(url, path):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=300) as r, open(path + ".part", "wb") as f:
+        f.write(r.read())
+    os.replace(path + ".part", path)  # never expose a half-written file to the importer
+
+
+def concept(i):
+    p = os.path.join(SRC, i + ".png")
+    if os.path.exists(p):
+        return print("have", p)
+    a = A[i]
+    ar = "21:9" if a["cat"] != "Buildings" else "16:9" if a.get("wide") else "1:1"
+    url = hf("generate", "create", "gpt_image_2_5", "--aspect_ratio", ar, "--quality", "high", "--resolution", "2k",
+             "--background", "opaque", "--prompt", a["prompt"], "--wait")
+    fetch(url, p)
+    print("concept", i, url)
+
+
+def model(i):
+    p, g = os.path.join(SRC, i + ".png"), os.path.join(SRC, i + ".glb")
+    if os.path.exists(g):
+        return print("have", g)
+    if not os.path.exists(p):
+        raise SystemExit("no concept for " + i)
+    url = hf("generate", "create", "tripo_h3_1_image_to_3d", "--image", p, "--texture_quality", "detailed",
+             "--geometry_quality", "standard", "--pbr", "true", "--wait", "--wait-timeout", "25m")
+    fetch(url, g)
+    print("model", i, url)
+
+
+def do_import(i):
+    a = A[i]
+    g = os.path.join(SRC, i + ".glb")
+    cmd = ["blender", "-b", "--factory-startup", "-P", os.path.join(ROOT, "Tools", "blender", "import_ai.py"), "--", g, a["cat"], i]
+    if a["cat"] == "Buildings":
+        small = a["footprint"] < 4
+        cmd += ["--footprint", str(a["footprint"]), "--faces", "6000" if small else "20000", "--tex", "512" if small else "1024"]
+        if "height" in a:
+            cmd += ["--height", str(a["height"])]
+        if a.get("smoke"):
+            cmd += ["--smoke"]
+        if a.get("wide"):
+            cmd += ["--wide"]
+    else:
+        cmd += ["--length", str(a["length"]), "--front", a.get("front", "auto"), "--faces", "40000" if a["cat"] == "Locomotives" else "15000",
+                "--tex", "2048" if a["cat"] == "Locomotives" else "1024"]
+        if a.get("twin"):
+            cmd += ["--twin"]
+        if a.get("flip"):
+            cmd += ["--flip"]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    print("\n".join(l for l in r.stdout.splitlines() if "[ai]" in l) or r.stdout[-2000:] + r.stderr[-2000:])
+
+
+if __name__ == "__main__":
+    os.makedirs(SRC, exist_ok=True)
+    cmd, ids = sys.argv[1], sys.argv[2:]
+    if cmd == "list":
+        for k, v in A.items():
+            print(k, v["cat"], "concept" if os.path.exists(os.path.join(SRC, k + ".png")) else "-", "glb" if os.path.exists(os.path.join(SRC, k + ".glb")) else "-")
+        sys.exit()
+    fn = {"concept": concept, "model": model, "import": do_import}[cmd]
+    for i in ids or list(A):
+        try:
+            fn(i)
+        except Exception as e:  # keep going; report at the end
+            print("FAILED", i, e)

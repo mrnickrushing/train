@@ -11,8 +11,42 @@ namespace Ironhorse.EditorTools
     {
         const string Folder = "Assets/Resources/Textures/";
 
+        const string Models = "Assets/Resources/Models/";
+
+        void OnPreprocessModel()
+        {
+            if (!assetPath.StartsWith(Models)) return;
+            var mi = (ModelImporter)assetImporter;
+            mi.materialImportMode = ModelImporterMaterialImportMode.None; // ArtMaterials builds URP materials at runtime
+            mi.importAnimation = false;
+            mi.importCameras = false;
+            mi.importLights = false;
+            mi.animationType = ModelImporterAnimationType.None;
+            mi.isReadable = false;
+            mi.meshCompression = ModelImporterMeshCompression.Medium;
+            mi.importNormals = ModelImporterNormals.Import;
+            mi.importTangents = ModelImporterTangents.CalculateMikk;
+        }
+
         void OnPreprocessTexture()
         {
+            if (assetPath.StartsWith(Models))
+            {
+                var t = (TextureImporter)assetImporter;
+                bool normal = assetPath.EndsWith("_normal.jpg") || assetPath.EndsWith("_normal.png"), data = assetPath.EndsWith("_ms.png");
+                t.textureType = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
+                t.sRGBTexture = !normal && !data;
+                t.mipmapEnabled = true;
+                t.anisoLevel = 4;
+                t.maxTextureSize = 2048;
+                t.textureCompression = TextureImporterCompression.CompressedHQ;
+                t.SetPlatformTextureSettings(new TextureImporterPlatformSettings
+                {
+                    name = "iPhone", overridden = true, maxTextureSize = 2048,
+                    format = TextureImporterFormat.ASTC_6x6, compressionQuality = 50,
+                });
+                return;
+            }
             if (!assetPath.StartsWith(Folder)) return;
             var ti = (TextureImporter)assetImporter;
             string file = System.IO.Path.GetFileNameWithoutExtension(assetPath);

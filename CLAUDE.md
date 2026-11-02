@@ -47,6 +47,20 @@ install it with `dotnet-install.sh --channel 8.0` if `dotnet --list-sdks` lacks 
 
 ## Art
 
+- **AI models** (every locomotive, wagon, building, the station and freight shed):
+  `Tools/art/ai_assets.py` holds the original prompts and runs Higgsfield (GPT Image 2.5 concept ->
+  Tripo H3.1 3D) then `Tools/blender/import_ai.py` (orient, scale to game size, decimate, pack PBR maps).
+  Raw files live in `art-src/` (gitignored). Paid steps skip ids that already have output; review a
+  concept image before paying for its 3D model. Check facing with `Tools/blender/side_sheet.py`
+  (vehicles: front on the right) and `orient_sheet.py` (buildings: Tripo puts the entrance at +X).
+  Budgets: locomotives 40k tris / 2K maps, wagons 15k / 1K, buildings 20k / 1K.
+- **Key art and cinematics**: `Tools/art/ai_media.py` (stills + Seedance clips) then `install`, which
+  writes `Assets/StreamingAssets/Videos/*.mp4`, fallback stills in `Resources/UI/Cinematics`, the
+  loading art, and VP8 copies in `Library/EditorVideos` because the Linux Editor can't decode H.264.
+  `Celebrations` plays them (contract, level up, new locomotive, project, golden age).
+- Higgsfield credits are the user's money: check `higgsfield generate cost` first and never retry a
+  paid job without checking `higgsfield account transactions` for a charge.
+
 - `Tools/art/pack_textures.py` rebuilds `Assets/Resources/Textures/*.png` from CC0 ambientCG
   materials; `Assets/Editor/ArtImport.cs` imports them as Texture2DArrays. Layer order must match
   `SurfaceKind` (`Materials.cs`) and the terrain layer list in `Terrain.shader` / `Terrain.cs`.

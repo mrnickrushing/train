@@ -68,6 +68,10 @@ namespace Ironhorse.Game
             foreach (var p in model.Smoke)
                 _smoke.Add(Fx.Create(_def.Style == BuildingStyle.Fountain ? FxKind.Spray : FxKind.Chimney, _body.transform, p));
 
+            if (_def.Style == BuildingStyle.LampPost)
+                NightLights.Attach(transform, new Vector3(0, Height * 0.9f, 0), LightType.Point, 20f, 12f, NightLights.Lamp);
+            else
+                NightLights.Attach(transform, new Vector3(0, Mathf.Min(3.2f, Height * 0.45f), -WorldLayout.PlotSize * 0.5f), LightType.Point, 13f, 7f, NightLights.Warm);
             _scaffold = BuildingFactory.Scaffold(Mathf.Max(5, model.Height * 0.7f)).ToObject("Scaffold", transform);
             _dust = Fx.Create(FxKind.Dust, _scaffold.transform, new Vector3(0, 0.5f, 0));
 

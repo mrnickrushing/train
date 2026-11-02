@@ -83,6 +83,16 @@ namespace Ironhorse.EditorTools
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
             PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.iOS, ManagedStrippingLevel.Low);
             PlayerSettings.SplashScreen.showUnityLogo = false;
+            PlayerSettings.SplashScreen.show = false; // our own loading screen takes over immediately
+            // iOS launch screen: the same key art as the in-game loading screen, so launch feels seamless.
+            var launch = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/UI/LoadingArt.jpg");
+            if (launch != null)
+            {
+                PlayerSettings.iOS.SetiPhoneLaunchScreenType(iOSLaunchScreenType.ImageAndBackgroundRelative);
+                PlayerSettings.iOS.SetiPadLaunchScreenType(iOSLaunchScreenType.ImageAndBackgroundRelative);
+                PlayerSettings.iOS.SetLaunchScreenImage(launch, iOSLaunchScreenImageType.iPhoneLandscapeImage);
+                PlayerSettings.iOS.SetLaunchScreenImage(launch, iOSLaunchScreenImageType.iPadImage);
+            }
             PlayerSettings.SplashScreen.backgroundColor = new Color(0.23f, 0.15f, 0.09f);
         }
     }

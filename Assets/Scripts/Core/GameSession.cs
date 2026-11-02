@@ -44,6 +44,9 @@ namespace Ironhorse.Core
         public event Action<BuildingState> BuildingFinished;
         public event Action<BuildingState> ProductionFinished;
         public event Action<ContractState> ContractCompleted;
+        /// <summary>A locomotive joined the fleet (bought, assembled from blueprints, or from a purchase).</summary>
+        public event Action<TrainState> LocomotiveAdded;
+        void RaiseLocomotiveAdded(TrainState t) { LocomotiveAdded?.Invoke(t); }
 
         readonly HashSet<int> _arrivalSeen = new HashSet<int>();
         readonly HashSet<int> _constructionSeen = new HashSet<int>();

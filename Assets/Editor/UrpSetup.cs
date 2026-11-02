@@ -41,6 +41,8 @@ namespace Ironhorse.EditorTools
                     asset = UniversalRenderPipelineAsset.Create(renderer);
                     AssetDatabase.CreateAsset(asset, AssetPath);
                 }
+                renderer.renderingMode = RenderingMode.ForwardPlus; // dozens of night lamps without per-object limits
+                EditorUtility.SetDirty(renderer);
                 asset.shadowDistance = 230f;
                 asset.shadowCascadeCount = 2;
                 asset.msaaSampleCount = 4;
