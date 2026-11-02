@@ -406,6 +406,7 @@ namespace Ironhorse.Game
             var frame = UIKit.Panel(sheet.transform, UIKit.Parchment, "Frame", null, true);
             UIKit.Place(frame.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -50), new Vector2(width + 120, height - 40));
             frame.gameObject.AddComponent<Button>().transition = Selectable.Transition.None; // swallow clicks
+            frame.gameObject.AddComponent<TapSwallow>();
             frame.gameObject.AddComponent<WindowIntro>();
             var edge = frame.gameObject.AddComponent<Outline>();
             edge.effectColor = new Color(UIKit.Brass.r, UIKit.Brass.g, UIKit.Brass.b, 0.85f);
