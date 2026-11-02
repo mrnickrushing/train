@@ -45,6 +45,10 @@ namespace Ironhorse.Core
         /// <summary>Coin value of one unit, used for contract rewards and XP.</summary>
         public int Value;
         public bool Manufactured;
+        /// <summary>Locomotive workshop part: stored outside the warehouse limit, never requested by orders.</summary>
+        public bool IsPart;
+        /// <summary>Passengers: unloaded as fares, never stored.</summary>
+        public bool IsPassenger;
         public uint ColorRgb;
         public string Glyph;
     }
@@ -63,6 +67,8 @@ namespace Ironhorse.Core
         public int UnlockLevel;
         public int PriceCoins;
         public int PriceNuggets;
+        /// <summary>When &gt; 0 the locomotive can be assembled from this many blueprints.</summary>
+        public int Blueprints;
         public uint PrimaryRgb;
         public uint TrimRgb;
         public string Blurb;
@@ -92,6 +98,7 @@ namespace Ironhorse.Core
         public string Description;
         /// <summary>Normalised position on the territory map (0..1).</summary>
         public float MapX, MapY;
+        public bool IsTown { get { return ResourceId == "passengers"; } }
     }
 
     public sealed class Recipe

@@ -57,6 +57,33 @@ diamond-stack steamers into the **Golden Age** of chrome streamliners.
 - **Decorations** add small income bonuses.
 - Construction takes real time, shown with scaffolding.
 
+### Crew & conveyors
+Each factory has a conveyor of job slots (1 + building level, plus up to 3 more bought with nuggets).
+Jobs run back to back. Every job, running or waiting to be collected, occupies one crew member.
+The crew is 3 base hands, plus 1 per 60 settlers, plus hands hired with nuggets (up to 10).
+
+### Territory projects
+Six multi-stage builds unlock from level 3 to 15: Telegraph Line, Crooked River Trestle, Black
+Hollow Deep Shaft, Fort Calder Resupply, Silver Lake Dam and The Golden Spike. Players deliver any
+amount at a time, and each finished stage pays coins and XP. Completing a project grants a
+**permanent perk** (XP, speed, cargo yield or income) plus nuggets, parts and locomotive blueprints.
+
+### Passengers
+Coach trains run to Silver Springs, Prosperity City and Capital Junction. Seats filled are capped
+by your own population, which ties town growth to passenger income. Fares are paid in coins on
+arrival and never take warehouse space.
+
+### Foreman's orders
+Hank the stationmaster issues sets of three orders: six handcrafted sets, then an endless scaling
+rotation. Progress counts from when a set starts. Rewards are coins, nuggets, workshop parts and
+blueprints.
+
+### Parts & blueprints
+Locomotive overhauls cost coins plus **workshop parts** (rivets, then bearings, then drive rods and
+gauges). Parts come from orders, projects, the Foreman, the Season Pass and the Workshop Crate.
+Parts don't use warehouse space. Epic and Legendary locomotives can also be **assembled from
+blueprints** (12/14/20), which are earned from projects, the Foreman and offers.
+
 ### Contracts
 3 slots (+1 from the Telegraph Office). Orders ask for 1–2 resources the player can currently
 obtain; rewards scale with the goods' value, and 15% of orders also pay nuggets. Discarded or

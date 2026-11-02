@@ -16,6 +16,8 @@ namespace Ironhorse.Core
         public ResourceAmount[] Resources = new ResourceAmount[0];
         public bool PassPremium;
         public bool FuelTank;
+        public string BlueprintLoco;
+        public int Blueprints;
 
         public override string ToString()
         {
@@ -26,6 +28,7 @@ namespace Ironhorse.Core
             if (Fuel > 0) parts.Add(Fuel + " fuel");
             foreach (var r in Resources) parts.Add(r.amount + " " + GameDatabase.Resource(r.id).Name);
             if (PassPremium) parts.Add("Premium Season Pass");
+            if (BlueprintLoco != null && Blueprints > 0) parts.Add(Blueprints + " " + GameDatabase.Locomotive(BlueprintLoco).Name + " blueprint" + (Blueprints > 1 ? "s" : ""));
             if (FuelTank) parts.Add("+" + Balance.FuelTankBonus + " max fuel forever");
             return string.Join(", ", parts);
         }
@@ -104,6 +107,7 @@ namespace Ironhorse.Core
             new OfferDef { Id = "n_coal", Title = "Coal Car Delivery", Subtitle = "150 fuel for your fleet.", Schedule = OfferSchedule.Always, NuggetPrice = 30, Grant = new Grant { Fuel = 150 } },
             new OfferDef { Id = "n_lumber", Title = "Lumber Shipment", Subtitle = "80 timber and 40 planks.", Schedule = OfferSchedule.Always, NuggetPrice = 25, Grant = new Grant { Resources = new[] { new ResourceAmount("timber", 80), new ResourceAmount("planks", 40) } } },
             new OfferDef { Id = "n_steel", Title = "Steel Consignment", Subtitle = "40 steel straight from the mills back east.", Schedule = OfferSchedule.Always, NuggetPrice = 45, UnlockLevel = 4, Grant = new Grant { Resources = new[] { new ResourceAmount("steel", 40) } } },
+            new OfferDef { Id = "n_parts", Title = "Workshop Crate", Subtitle = "30 rivets, 20 bearings and 8 drive rods for locomotive overhauls.", Schedule = OfferSchedule.Always, NuggetPrice = 50, UnlockLevel = 2, Grant = new Grant { Resources = new[] { new ResourceAmount("rivets", 30), new ResourceAmount("bearings", 20), new ResourceAmount("rods", 8) } } },
             new OfferDef { Id = "n_coins", Title = "Bank Draft", Subtitle = "10,000 coins.", Schedule = OfferSchedule.Always, NuggetPrice = 60, Grant = new Grant { Coins = 10000 } },
         };
 

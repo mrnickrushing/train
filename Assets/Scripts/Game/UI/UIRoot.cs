@@ -66,6 +66,7 @@ namespace Ironhorse.Game
             BuildGoal();
             BuildBanner();
             BuildMoneyHud();
+            BuildDepthHud();
             _windowLayer = UIKit.Stretch(UIKit.Node("Windows", cgo.transform));
             _popupLayer = UIKit.Stretch(UIKit.Node("Popups", cgo.transform));
             _toasts = UIKit.Anchor(UIKit.Node("Toasts", cgo.transform), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-420, -360), new Vector2(420, -150));
@@ -317,6 +318,7 @@ namespace Ironhorse.Game
         {
             if (_level == null) return;
             RefreshMoneyHud();
+            RefreshDepthHud();
             _level.text = S.Level.ToString();
             UIKit.SetBar(_xpFill, S.LevelProgress);
             _xpText.text = Fmt.Num(S.State.xp) + " / " + Fmt.Num(Balance.XpForNextLevel(S.Level)) + " XP";
@@ -339,7 +341,7 @@ namespace Ironhorse.Game
                 if (done) _goalClaim.transform.localScale = Vector3.one * (1 + Mathf.Sin(Time.unscaledTime * 6) * 0.04f);
             }
 
-            int deliverable = S.State.contracts.Count(c => S.CanDeliver(c));
+            int deliverable = S.State.contracts.Count(c => S.CanDeliver(c)) + S.ProjectsReadyToDeliver;
             _contractsBadge.text = deliverable.ToString();
             _contractsBadge.transform.parent.gameObject.SetActive(deliverable > 0);
             int ready = S.State.trains.Count(t => S.HasArrived(t) || (t.IsIdle && S.WagonsOf(t).Count > 0));
@@ -473,6 +475,7 @@ namespace Ironhorse.Game
             unlocks.AddRange(GameDatabase.Locomotives.Where(d => d.UnlockLevel == level).Select(d => "Locomotive: " + d.Name));
             unlocks.AddRange(GameDatabase.Wagons.Where(d => d.UnlockLevel == level).Select(d => "Wagon: " + d.Name));
             unlocks.AddRange(GameDatabase.Buildings.Where(d => d.UnlockLevel == level).Select(d => "Building: " + d.Name));
+            unlocks.AddRange(DepthContent.Projects.Where(d => d.UnlockLevel == level).Select(d => "Project: " + d.Name));
             if (level == Balance.GoldenAgeLevel) unlocks.Insert(0, "THE GOLDEN AGE BEGINS!");
 
             var dim = UIKit.Panel(_popupLayer, UIKit.Dim, "LevelUp");
@@ -607,7 +610,7 @@ namespace Ironhorse.Game
                     else if (S.IsProductionDone(b))
                     {
                         string res = def.Recipe.Output.id;
-                        ShowMarker(pos, "res:" + res, h => UIKit.ResIcon(h, res, 56), "+" + def.Recipe.Output.amount * b.productionBatches, -1, () =>
+                        ShowMarker(pos, "res:" + res, h => UIKit.ResIcon(h, res, 56), "+" + def.Recipe.Output.amount * S.FinishedJobs(b), -1, () =>
                         {
                             var r = S.CollectProduction(uid);
                             Result(r);
@@ -615,7 +618,7 @@ namespace Ironhorse.Game
                         }, true);
                     }
                     else if (S.IsProducing(b))
-                        ShowMarker(pos, "work:" + def.Recipe.Output.id, h => UIKit.ResIcon(h, def.Recipe.Output.id, 48), Fmt.Time(b.productionEndsAt - S.Now), S.ProductionProgress(b), () => OpenBuilding(uid), false);
+                        ShowMarker(pos, "work:" + def.Recipe.Output.id, h => UIKit.ResIcon(h, def.Recipe.Output.id, 48), Fmt.Time(S.QueueRemaining(b)), S.ProductionProgress(b), () => OpenBuilding(uid), false);
                     else if (def.Category == BuildingCategory.Residential && S.RentFill(b) > 0.15f)
                     {
                         int coins = S.PendingRent(b);

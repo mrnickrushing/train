@@ -45,6 +45,15 @@ namespace Ironhorse.Core
         public List<ResourceAmount> adCounts = new List<ResourceAmount>();
         public double lastOfferShownAt;
 
+        // Gameplay depth
+        public int hiredCrew;
+        public List<ResourceAmount> blueprints = new List<ResourceAmount>();
+        public List<ProjectProgress> projects = new List<ProjectProgress>();
+        public int taskSet;
+        public List<int> taskBaselines = new List<int>();
+        /// <summary>Per task in the current set: true when it was swapped for a repeatable fallback at set start.</summary>
+        public List<bool> taskFallback = new List<bool>();
+
         public Stats stats = new Stats();
         public Settings settings = new Settings();
     }
@@ -92,8 +101,29 @@ namespace Ironhorse.Core
         /// <summary>Residential: time rent was last collected.</summary>
         public double lastCollectAt;
         /// <summary>Production: 0 when idle.</summary>
+        /// <summary>Legacy single-batch production (migrated into <see cref="queue"/> on load).</summary>
         public double productionEndsAt;
         public int productionBatches;
+        /// <summary>Conveyor of production jobs, one batch each, running back to back.</summary>
+        public List<ProductionJob> queue = new List<ProductionJob>();
+        /// <summary>Conveyor slots bought with nuggets.</summary>
+        public int extraSlots;
+    }
+
+    [Serializable]
+    public class ProductionJob
+    {
+        public double startsAt;
+        public double endsAt;
+    }
+
+    [Serializable]
+    public class ProjectProgress
+    {
+        public string id;
+        public int stage;
+        public int delivered;
+        public bool done;
     }
 
     [Serializable]
@@ -105,6 +135,7 @@ namespace Ironhorse.Core
         public int rewardCoins;
         public int rewardXp;
         public int rewardNuggets;
+        public List<ResourceAmount> rewardParts = new List<ResourceAmount>();
     }
 
     [Serializable]
@@ -120,6 +151,8 @@ namespace Ironhorse.Core
         public int dispatches;
         public int contractsCompleted;
         public int coinsEarned;
+        public int passengers;
+        public int projectDeliveries;
         public List<ResourceAmount> collected = new List<ResourceAmount>();
         public List<ResourceAmount> produced = new List<ResourceAmount>();
     }

@@ -107,7 +107,7 @@ namespace Ironhorse.Core
             if (b == null) return ActionResult.Fail("Unknown building");
             if (!IsReady(b)) return ActionResult.Fail("Still under construction");
             if (!CanUpgradeBuilding(b)) return ActionResult.Fail("Already at max level");
-            if (b.productionEndsAt > 0) return ActionResult.Fail("Collect production first");
+            if (b.queue.Count > 0) return ActionResult.Fail("Finish and collect the conveyor first");
             // Bank any rent before the rate changes.
             if (GameDatabase.Building(b.defId).Category == BuildingCategory.Residential) CollectRent(uid);
             int coins = BuildingUpgradeCoins(b);
@@ -172,12 +172,46 @@ namespace Ironhorse.Core
             return total;
         }
 
-        // ---------------------------------------------------------------- Production
+        // ---------------------------------------------------------------- Production (crew + conveyor)
 
-        public int MaxBatches(BuildingState b) { return 1 + b.level; }
+        /// <summary>Crew available for factory jobs: a base crew, hired hands, and settlers looking for work.</summary>
+        public int CrewTotal { get { return Balance.BaseCrew + State.hiredCrew + Population / Balance.SettlersPerCrew; } }
+        /// <summary>Each queued job (running or waiting to be collected) occupies one crew member.</summary>
+        public int CrewBusy { get { int n = 0; foreach (var b in State.buildings) n += b.queue.Count; return n; } }
+        public int CrewFree { get { return Math.Max(0, CrewTotal - CrewBusy); } }
+        public int HireCrewCost { get { return Balance.HireCrewNuggets(State.hiredCrew); } }
 
-        public bool IsProducing(BuildingState b) { return b.productionEndsAt > 0 && Now < b.productionEndsAt; }
-        public bool IsProductionDone(BuildingState b) { return b.productionEndsAt > 0 && Now >= b.productionEndsAt; }
+        public ActionResult HireCrew()
+        {
+            if (State.hiredCrew >= Balance.MaxHiredCrew) return ActionResult.Fail("The bunkhouse is full");
+            var r = SpendNuggets(HireCrewCost);
+            if (!r) return r;
+            State.hiredCrew++;
+            RaiseChanged();
+            return ActionResult.Success("A new crew member signs on!");
+        }
+
+        public int QueueSlots(BuildingState b) { return 1 + b.level + b.extraSlots; }
+        public int ExtraSlotCost(BuildingState b) { return Balance.ExtraSlotNuggets(b.extraSlots); }
+
+        public ActionResult BuySlot(int uid)
+        {
+            var b = Building(uid);
+            if (b == null || GameDatabase.Building(b.defId).Recipe == null) return ActionResult.Fail("Not a factory");
+            if (b.extraSlots >= Balance.MaxExtraSlots) return ActionResult.Fail("The conveyor is as long as it gets");
+            var r = SpendNuggets(ExtraSlotCost(b));
+            if (!r) return r;
+            b.extraSlots++;
+            RaiseChanged();
+            return ActionResult.Success("Conveyor extended");
+        }
+
+        /// <summary>Free conveyor slots (kept under its old name for callers that count batches).</summary>
+        public int MaxBatches(BuildingState b) { return Math.Max(0, QueueSlots(b) - b.queue.Count); }
+
+        public bool IsProducing(BuildingState b) { foreach (var j in b.queue) if (Now < j.endsAt) return true; return false; }
+        public bool IsProductionDone(BuildingState b) { foreach (var j in b.queue) if (Now >= j.endsAt) return true; return false; }
+        public int FinishedJobs(BuildingState b) { int n = 0; foreach (var j in b.queue) if (Now >= j.endsAt) n++; return n; }
 
         public double ProductionSeconds(BuildingState b, int batches)
         {
@@ -185,69 +219,114 @@ namespace Ironhorse.Core
             return d.Recipe.Seconds * batches / Balance.BuildingLevelMultiplier(b.level);
         }
 
+        ProductionJob RunningJob(BuildingState b) { foreach (var j in b.queue) if (Now < j.endsAt) return j; return null; }
+
+        /// <summary>Progress of the job currently on the belt (0 when idle).</summary>
         public float ProductionProgress(BuildingState b)
         {
-            if (b.productionEndsAt <= 0) return 0;
-            double total = ProductionSeconds(b, Math.Max(1, b.productionBatches));
-            return (float)Math.Min(1, Math.Max(0, 1 - (b.productionEndsAt - Now) / total));
+            var j = RunningJob(b);
+            if (j == null) return 0;
+            double total = j.endsAt - j.startsAt;
+            return total <= 0 ? 1 : (float)Math.Min(1, Math.Max(0, (Now - j.startsAt) / total));
         }
+
+        /// <summary>Seconds until the whole queue is done.</summary>
+        public double QueueRemaining(BuildingState b) { return b.queue.Count == 0 ? 0 : Math.Max(0, b.queue[b.queue.Count - 1].endsAt - Now); }
 
         public int AffordableBatches(BuildingState b)
         {
             var d = GameDatabase.Building(b.defId);
             if (d.Recipe == null) return 0;
-            int n = MaxBatches(b);
+            int n = Math.Min(MaxBatches(b), CrewFree);
             foreach (var i in d.Recipe.Inputs) n = Math.Min(n, Amount(i.id) / i.amount);
             return Math.Max(0, n);
         }
 
-        public ActionResult StartProduction(int uid, int batches)
+        /// <summary>Puts one batch on the conveyor. Jobs run back to back; each needs a crew member and its inputs.</summary>
+        public ActionResult Enqueue(int uid)
         {
             var b = Building(uid);
             if (b == null) return ActionResult.Fail("Unknown building");
             var d = GameDatabase.Building(b.defId);
             if (d.Recipe == null) return ActionResult.Fail("This building doesn't produce goods");
             if (!IsReady(b)) return ActionResult.Fail("Still under construction");
-            if (b.productionEndsAt > 0) return ActionResult.Fail(IsProducing(b) ? "Already working" : "Collect finished goods first");
-            if (batches < 1 || batches > MaxBatches(b)) return ActionResult.Fail("Upgrade to run " + batches + " batches");
-            var cost = d.Recipe.Inputs.Select(i => new ResourceAmount(i.id, i.amount * batches)).ToArray();
-            if (!CanAfford(0, cost)) return ActionResult.Fail(MissingText(0, cost));
-            Pay(0, cost);
-            b.productionBatches = batches;
-            b.productionEndsAt = Now + ProductionSeconds(b, batches);
-            _productionSeen.Remove(b.uid);
+            if (b.queue.Count >= QueueSlots(b)) return ActionResult.Fail("The conveyor is full");
+            if (CrewFree <= 0) return ActionResult.Fail("No crew free. Collect finished goods or hire hands");
+            if (!CanAfford(0, d.Recipe.Inputs)) return ActionResult.Fail(MissingText(0, d.Recipe.Inputs));
+            Pay(0, d.Recipe.Inputs);
+            double start = b.queue.Count > 0 ? Math.Max(Now, b.queue[b.queue.Count - 1].endsAt) : Now;
+            b.queue.Add(new ProductionJob { startsAt = start, endsAt = start + ProductionSeconds(b, 1) });
             RaiseChanged();
             return ActionResult.Success(d.Name + " is working");
         }
 
+        public ActionResult StartProduction(int uid, int batches)
+        {
+            if (batches < 1) return ActionResult.Fail("Nothing to start");
+            ActionResult last = ActionResult.Fail("Nothing started");
+            int started = 0;
+            for (int i = 0; i < batches; i++)
+            {
+                last = Enqueue(uid);
+                if (!last) break;
+                started++;
+            }
+            return started > 0 ? ActionResult.Success(started + " batch" + (started > 1 ? "es" : "") + " on the conveyor") : last;
+        }
+
+        /// <summary>Collects every finished job on the conveyor; their crew returns.</summary>
         public ActionResult CollectProduction(int uid)
         {
             var b = Building(uid);
             if (b == null) return ActionResult.Fail("Unknown building");
-            if (!IsProductionDone(b)) return ActionResult.Fail("Not finished yet");
+            int done = FinishedJobs(b);
+            if (done == 0) return ActionResult.Fail("Not finished yet");
             var d = GameDatabase.Building(b.defId);
-            int amount = d.Recipe.Output.amount * b.productionBatches;
+            int amount = d.Recipe.Output.amount * done;
             if (WarehouseFree < amount) return ActionResult.Fail("Warehouse is full!");
+            b.queue.RemoveAll(j => Now >= j.endsAt);
             State.inventory.Change(d.Recipe.Output.id, amount);
             State.stats.produced.Change(d.Recipe.Output.id, amount);
             var res = GameDatabase.Resource(d.Recipe.Output.id);
             AddXp(Balance.XpForCargo(res, amount));
-            AddPassXp(Balance.PassXpProduction * b.productionBatches);
-            b.productionEndsAt = 0;
-            b.productionBatches = 0;
+            AddPassXp(Balance.PassXpProduction * done);
+            _productionSeen.Remove(b.uid);
             RaiseChanged();
             return ActionResult.Success("+" + amount + " " + res.Name);
         }
 
+        public int RushProductionCost(BuildingState b) { return Balance.RushCost(QueueRemaining(b)); }
+
+        /// <summary>Finishes everything on the conveyor now.</summary>
         public ActionResult RushProduction(int uid)
         {
             var b = Building(uid);
             if (b == null || !IsProducing(b)) return ActionResult.Fail("Nothing to rush");
-            var r = SpendNuggets(Balance.RushCost(b.productionEndsAt - Now));
+            var r = SpendNuggets(RushProductionCost(b));
             if (!r) return r;
-            b.productionEndsAt = Now;
+            foreach (var j in b.queue) if (j.endsAt > Now) { j.endsAt = Now; if (j.startsAt > Now) j.startsAt = Now; }
             RaiseChanged();
             return ActionResult.Success();
+        }
+
+        void MigrateProduction()
+        {
+            foreach (var b in State.buildings)
+            {
+                if (b.queue == null) b.queue = new List<ProductionJob>();
+                if (b.productionEndsAt > 0 && b.productionBatches > 0)
+                {
+                    var d = GameDatabase.Building(b.defId);
+                    double per = d.Recipe != null ? ProductionSeconds(b, 1) : 0;
+                    for (int i = 0; i < b.productionBatches; i++)
+                    {
+                        double end = b.productionEndsAt - per * (b.productionBatches - 1 - i);
+                        b.queue.Add(new ProductionJob { startsAt = end - per, endsAt = end });
+                    }
+                }
+                b.productionEndsAt = 0;
+                b.productionBatches = 0;
+            }
         }
 
         // ---------------------------------------------------------------- Land & warehouse

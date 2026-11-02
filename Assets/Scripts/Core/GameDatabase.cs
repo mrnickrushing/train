@@ -31,6 +31,13 @@ namespace Ironhorse.Core
             R("copper_wire","Copper Wire",  CargoClass.Box,       24, true,  0xD98B4A, "W"),
             R("gold_bars",  "Gold Bars",    CargoClass.Box,       60, true,  0xFFD34D, "GB"),
             R("fuel",       "Fuel",         CargoClass.Tank,      28, true,  0x6B4F2A, "Fu"),
+            // Passengers ride coaches to towns and pay fares on arrival.
+            Pax(),
+            // Workshop parts for locomotive overhauls.
+            Part("rivets",   "Rivets",          0x8A8F96, "Ri"),
+            Part("bearings", "Bearings",        0xC0C6CC, "Be"),
+            Part("rods",     "Drive Rods",      0x5B6470, "Ro"),
+            Part("gauges",   "Pressure Gauges", 0xD4A64A, "Ga"),
         };
 
         public static readonly List<LocomotiveDef> Locomotives = new List<LocomotiveDef>
@@ -44,6 +51,13 @@ namespace Ironhorse.Core
             L("silverarrow", "Silver Arrow",          Era.GoldenAge, Rarity.Epic,      LocoStyle.DieselStreamliner, 8, 82, 18, 42000, 0,   0xC0C6CC, 0xB22222, "Stainless steel and a twin-prime-mover heart."),
             L("thunderhead", "Thunderhead Twin",      Era.GoldenAge, Rarity.Legendary, LocoStyle.DieselTwin,       10, 78, 22, 0,     420, 0x5B2A86, 0xF2C14E, "Two units, one roar. The territory's mightiest hauler."),
         };
+
+        static GameDatabase()
+        {
+            Locomotive("sundown").Blueprints = 12;
+            Locomotive("silverarrow").Blueprints = 14;
+            Locomotive("thunderhead").Blueprints = 20;
+        }
 
         public static readonly List<WagonDef> Wagons = new List<WagonDef>
         {
@@ -70,6 +84,10 @@ namespace Ironhorse.Core
             D("coppertop",   "Coppertop Diggings",     "copper_ore", 8,  600,  1.0f, "Green-stained hills and a boomtown of tents.",        0.62f, 0.12f),
             D("eldorado",    "Eldorado Gulch",         "gold_ore",   12, 1200, 0.9f, "Where fortunes are made... and lost.",                0.12f, 0.20f),
             D("blackgold",   "Black Gold Fields",      "oil",        15, 1500, 1.0f, "Derricks rising where the buffalo roamed.",           0.90f, 0.82f),
+            // Passenger towns
+            D("silversprings", "Silver Springs",       "passengers", 6,  360,  1.0f, "A spa town where folks take the waters.",            0.30f, 0.90f),
+            D("prosperity",    "Prosperity City",      "passengers", 11, 720,  1.3f, "Brick, bustle and a brass band at every arrival.",   0.75f, 0.92f),
+            D("capitaljct",    "Capital Junction",     "passengers", 16, 1080, 1.7f, "The territorial capital. Everyone wants a ticket.",  0.95f, 0.50f),
         };
 
         public static readonly List<BuildingDef> Buildings = new List<BuildingDef>
@@ -150,6 +168,12 @@ namespace Ironhorse.Core
 
         static LocomotiveDef L(string id, string name, Era era, Rarity r, LocoStyle s, int power, int speed, int lvl, int coins, int nuggets, uint primary, uint trim, string blurb)
         { return new LocomotiveDef { Id = id, Name = name, Era = era, Rarity = r, Style = s, Power = power, Speed = speed, UnlockLevel = lvl, PriceCoins = coins, PriceNuggets = nuggets, PrimaryRgb = primary, TrimRgb = trim, Blurb = blurb }; }
+
+        static ResourceDef Pax()
+        { return new ResourceDef { Id = "passengers", Name = "Passengers", Cargo = CargoClass.Coach, Value = 6, ColorRgb = 0x2E4A7A, Glyph = "Px", IsPassenger = true }; }
+
+        static ResourceDef Part(string id, string name, uint rgb, string glyph)
+        { return new ResourceDef { Id = id, Name = name, Cargo = CargoClass.Box, Value = 25, Manufactured = true, IsPart = true, ColorRgb = rgb, Glyph = glyph }; }
 
         static WagonDef W(string id, string name, CargoClass c, int cap, int lvl, int price, uint rgb)
         { return new WagonDef { Id = id, Name = name, Cargo = c, Capacity = cap, UnlockLevel = lvl, PriceCoins = price, ColorRgb = rgb }; }
