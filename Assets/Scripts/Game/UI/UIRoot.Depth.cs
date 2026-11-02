@@ -70,7 +70,10 @@ namespace Ironhorse.Game
                 ForemanPortrait(head.transform, 140);
                 var hc = Col(head.transform);
                 Line(hc.transform, set.Title + "   (set " + (set.Index + 1) + ")", 30, UIKit.Ink, true);
-                Line(hc.transform, "\"" + set.Quote + "\"", 22, UIKit.InkSoft);
+                var bubble = UIKit.Panel(hc.transform, Color.white, "Bubble", UIKit.Rounded, true);
+                UIKit.Size(bubble.gameObject, -1, 64);
+                var q = UIKit.Label(bubble.transform, set.Quote, 22, UIKit.Ink, TextAnchor.MiddleLeft);
+                UIKit.Stretch(q.gameObject, 14);
                 Line(hc.transform, "— Hank, Dry Creek stationmaster", 18, UIKit.InkSoft);
 
                 for (int i = 0; i < set.Tasks.Length; i++)
@@ -116,7 +119,7 @@ namespace Ironhorse.Game
                 var pr = S.Progress(def.Id);
                 bool locked = !S.IsProjectUnlocked(def);
                 var card = UIKit.Panel(content, locked ? new Color(0.8f, 0.76f, 0.68f) : pr.done ? Palette.Hex(0xBFDDB0) : Palette.Hex(0xD9C6E8), "Project", null, true);
-                UIKit.Size(card.gameObject, -1, 230);
+                UIKit.Size(card.gameObject, -1, 290);
                 UIKit.HStack(card.gameObject, 18, 16, TextAnchor.MiddleLeft);
 
                 var col = Col(card.transform);
@@ -129,19 +132,24 @@ namespace Ironhorse.Game
                 if (locked || pr.done) continue;
                 var stage = def.Stages[pr.stage];
                 var res = GameDatabase.Resource(stage.ResourceId);
-                // Parchment "order slip" for the current stage.
-                var slip = UIKit.Panel(card.transform, UIKit.Parchment, "Slip", UIKit.Rounded, true);
-                UIKit.Size(slip.gameObject, 360, 190);
-                UIKit.VStack(slip.gameObject, 4, 12, TextAnchor.MiddleCenter);
-                var top = UIKit.Row(slip.transform, 56, 10, TextAnchor.MiddleCenter);
-                UIKit.ResIcon(top.transform, stage.ResourceId, 50);
-                UIKit.Label(top.transform, "DELIVER " + stage.Amount, 26, UIKit.Ink, TextAnchor.MiddleLeft, true, FontStyle.Bold);
-                var bar = UIKit.Bar(slip.transform, UIKit.Green, 18);
+                // Notepad slip for the current stage, like a job card.
+                var slip = UIDeco.Slip(card.transform, 260);
+                UIKit.Size(slip.parent.gameObject, 400, 260);
+                var top = UIKit.Row(slip, 50, 10, TextAnchor.MiddleCenter);
+                UIKit.ResIcon(top.transform, stage.ResourceId, 46);
+                var dl = UIKit.Label(top.transform, "DELIVER " + stage.Amount, 30, UIKit.Ink, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+                dl.font = UIKit.Display;
+                var barRow = UIKit.Node("Progress", slip);
+                UIKit.Size(barRow, -1, 26);
+                UIKit.HStack(barRow, 0);
+                var bar = UIKit.Bar(barRow.transform, UIKit.Green, 24, new Color(0.25f, 0.18f, 0.12f, 0.55f));
                 UIKit.SetBar(bar, pr.delivered / (float)stage.Amount);
-                var info = UIKit.Label(slip.transform, pr.delivered + "/" + stage.Amount + " · have " + S.Amount(stage.ResourceId) + " · pays " + Fmt.Num(stage.Coins), 18, UIKit.InkSoft, TextAnchor.MiddleCenter);
-                UIKit.Size(info.gameObject, -1, 24);
+                var bt = UIKit.Label(bar.transform.parent, pr.delivered + " / " + stage.Amount + "   (have " + S.Amount(stage.ResourceId) + ")", 18, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                UIKit.Stretch(bt.gameObject);
+                bt.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.5f);
+                UIDeco.Rewards(slip, S, stage.Coins, stage.Xp, 0);
                 string id = def.Id;
-                UIKit.Btn(slip.transform, "Deliver " + res.Name, UIKit.Green, () => Result(S.DeliverToProject(id), Sfx.Deliver), 20, -1, 52, S.Amount(stage.ResourceId) > 0);
+                UIKit.Btn(slip, "Deliver " + res.Name, UIKit.Green, () => Result(S.DeliverToProject(id), Sfx.Deliver), 20, -1, 52, S.Amount(stage.ResourceId) > 0);
             }
         }
 
@@ -151,18 +159,21 @@ namespace Ironhorse.Game
         {
             if (d.Blueprints <= 0) return;
             int have = S.BlueprintsOf(d.Id);
-            var row = UIKit.Row(col, 34, 10);
+            var row = UIKit.Row(col, 40, 0, TextAnchor.MiddleCenter);
+            if (S.CanAssemble(d))
+            {
+                // Ready: the whole row becomes the Assemble button, so it fits narrow depot cards.
+                string id = d.Id;
+                var b = UIKit.Btn(row.transform, "Assemble (" + have + "/" + d.Blueprints + ")", UIKit.Green, () => Result(S.AssembleLocomotive(id), Sfx.Bell), 20, -1, 40);
+                UIKit.Size(b.gameObject, -1, 40, 1);
+                return;
+            }
             var tag = UIKit.Panel(row.transform, UIKit.Blue, "Blueprints", UIKit.RoundedSmall);
-            UIKit.Size(tag.gameObject, 300, 30);
+            UIKit.Size(tag.gameObject, -1, 32, 1);
             var bar = UIKit.Panel(tag.transform, Palette.Hex(0x7FB0D8), "Fill", UIKit.RoundedSmall);
             UIKit.Anchor(bar.gameObject, Vector2.zero, new Vector2(Mathf.Clamp01(have / (float)d.Blueprints), 1), Vector2.zero, Vector2.zero);
             var l = UIKit.Label(tag.transform, "Blueprints " + have + "/" + d.Blueprints, 18, UIKit.Cream, TextAnchor.MiddleCenter, true, FontStyle.Bold);
             UIKit.Stretch(l.gameObject);
-            if (S.CanAssemble(d))
-            {
-                string id = d.Id;
-                UIKit.Btn(row.transform, "Assemble!", UIKit.Green, () => Result(S.AssembleLocomotive(id), Sfx.Bell), 18, 160, 34);
-            }
         }
     }
 }

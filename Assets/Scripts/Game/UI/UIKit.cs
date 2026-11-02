@@ -44,6 +44,9 @@ namespace Ironhorse.Game
         static Font _body, _heading;
         public static Font Body { get { return _body ?? (_body = MakeFont(new[] { "Avenir Next", "Avenir Next Condensed", "Segoe UI", "Helvetica Neue", "Arial" })); } }
         public static Font Heading { get { return _heading ?? (_heading = MakeFont(new[] { "Rockwell", "American Typewriter", "Georgia", "Times New Roman" })); } }
+        static Font _display;
+        /// <summary>Condensed bold face for titles, buttons and big numbers (iOS: Avenir Next Condensed; Windows: Bahnschrift).</summary>
+        public static Font Display { get { return _display ?? (_display = MakeFont(new[] { "Avenir Next Condensed", "AvenirNextCondensed-Bold", "Bahnschrift", "Oswald", "Arial Narrow", "Helvetica Neue" })); } }
 
         static Font MakeFont(string[] names)
         {
@@ -57,12 +60,14 @@ namespace Ironhorse.Game
             return f;
         }
 
-        static Sprite _rounded, _circle, _roundedSmall;
+        static Sprite _rounded, _circle, _roundedSmall, _roundedGrad;
+        /// <summary>Rounded rect with a top-to-bottom sheen; tint it like any panel.</summary>
+        public static Sprite RoundedGrad { get { return _roundedGrad ?? (_roundedGrad = MakeRounded(96, 26, true, 0.78f)); } }
         public static Sprite Rounded { get { return _rounded ?? (_rounded = MakeRounded(96, 30)); } }
         public static Sprite RoundedSmall { get { return _roundedSmall ?? (_roundedSmall = MakeRounded(48, 14)); } }
         public static Sprite Circle { get { return _circle ?? (_circle = MakeRounded(128, 64, false)); } }
 
-        static Sprite MakeRounded(int size, int radius, bool sliced = true)
+        static Sprite MakeRounded(int size, int radius, bool sliced = true, float bottomShade = 1f)
         {
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
             var px = new Color32[size * size];
@@ -72,7 +77,11 @@ namespace Ironhorse.Game
                     float cx = Mathf.Clamp(x + 0.5f, radius, size - radius), cy = Mathf.Clamp(y + 0.5f, radius, size - radius);
                     float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(cx, cy));
                     float a = Mathf.Clamp01(radius - d + 0.5f);
-                    px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                    // Gradient lives in the slice centre rows so it stretches with the panel.
+                    float g = Mathf.Lerp(bottomShade, 1f, (y + 0.5f) / size);
+                    if (y > size - 5 && bottomShade < 1f) g = 1.12f; // top highlight lip
+                    byte v = (byte)Mathf.Clamp(g * 235f, 0, 255);
+                    px[y * size + x] = bottomShade < 1f ? new Color32(v, v, v, (byte)(a * 255)) : new Color32(255, 255, 255, (byte)(a * 255));
                 }
             tex.SetPixels32(px);
             tex.Apply();
@@ -196,9 +205,17 @@ namespace Ironhorse.Game
 
         public static Button Btn(Transform parent, string text, Color bg, Action onClick, int fontSize = 26, float w = -1, float h = 64, bool enabled = true)
         {
-            var img = Panel(parent, enabled ? bg : Disabled, "Button " + text, null, true);
-            var go = img.gameObject;
+            // Chunky "3D" button: a darker base slab with the gradient face sitting on top of it.
+            var go = Node("Button " + text, parent);
             Size(go, w, h);
+            Color face = enabled ? bg : Disabled;
+            var baseImg = Panel(go.transform, MeshBuilder.Darken(face, 0.55f), "Base", Rounded);
+            Stretch(baseImg.gameObject);
+            var drop = baseImg.gameObject.AddComponent<Shadow>();
+            drop.effectColor = new Color(0, 0, 0, 0.3f);
+            drop.effectDistance = new Vector2(0, -4);
+            var img = Panel(go.transform, face, "Face", RoundedGrad);
+            Anchor(img.gameObject, Vector2.zero, Vector2.one, new Vector2(0, 6), Vector2.zero);
             var b = go.AddComponent<Button>();
             b.targetGraphic = img;
             var colors = b.colors;
@@ -207,11 +224,15 @@ namespace Ironhorse.Game
             colors.disabledColor = Color.white;
             b.colors = colors;
             b.interactable = enabled;
-            var t = Label(go.transform, text, fontSize, enabled ? Cream : new Color(0.95f, 0.93f, 0.9f, 0.9f), TextAnchor.MiddleCenter, true);
+            var t = Label(img.transform, text.ToUpperInvariant(), Mathf.RoundToInt(fontSize * 1.08f), enabled ? Color.white : new Color(0.95f, 0.93f, 0.9f, 0.9f), TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            t.font = Display;
+            t.resizeTextForBestFit = true;
+            t.resizeTextMinSize = 12;
+            t.resizeTextMaxSize = t.fontSize;
             Stretch(t.gameObject, 8);
-            var sh = t.gameObject.AddComponent<Shadow>();
+            var sh = t.gameObject.AddComponent<Outline>();
             sh.effectColor = new Color(0, 0, 0, 0.35f);
-            sh.effectDistance = new Vector2(0, -2);
+            sh.effectDistance = new Vector2(1.5f, -1.5f);
             go.AddComponent<ButtonFx>();
             if (onClick != null) b.onClick.AddListener(() => { AudioManager.Play(Sfx.Click); onClick(); });
             return b;
@@ -320,6 +341,122 @@ namespace Ironhorse.Game
             var t = Label(img.transform, text, 20, Cream, TextAnchor.MiddleCenter, true, FontStyle.Bold);
             Stretch(t.gameObject);
             return t;
+        }
+    }
+
+    /// <summary>Signature widgets: ribbon banners, "Rewards" dividers, notepad slips and level chips.</summary>
+    public static class UIDeco
+    {
+        /// <summary>A ribbon banner with folded tails, the classic reward/achievement header.</summary>
+        public static GameObject Ribbon(Transform parent, string text, Color color, float width = 900, float height = 110)
+        {
+            var root = UIKit.Node("Ribbon", parent);
+            UIKit.Size(root, width + 160, height + 20);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                var tail = UIKit.Panel(root.transform, MeshBuilder.Darken(color, 0.72f), "Tail", UIKit.RoundedSmall);
+                UIKit.Place(tail.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(s * (width / 2 + 20), -14), new Vector2(170, height * 0.72f));
+                var notch = UIKit.Panel(tail.transform, MeshBuilder.Darken(color, 0.5f), "Fold", UIKit.RoundedSmall);
+                UIKit.Place(notch.gameObject, new Vector2(s < 0 ? 1 : 0, 1), new Vector2(0.5f, 0.5f), new Vector2(s * -20, -6), new Vector2(40, 24)).localRotation = Quaternion.Euler(0, 0, s * 35);
+            }
+            var band = UIKit.Panel(root.transform, color, "Band", UIKit.RoundedGrad, true);
+            UIKit.Place(band.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width, height));
+            var trim = UIKit.Panel(band.transform, new Color(UIKit.Brass.r, UIKit.Brass.g, UIKit.Brass.b, 0.9f), "Trim", UIKit.RoundedSmall);
+            UIKit.Anchor(trim.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(18, -14), new Vector2(-18, -10));
+            var trim2 = UIKit.Panel(band.transform, new Color(UIKit.Brass.r, UIKit.Brass.g, UIKit.Brass.b, 0.9f), "Trim", UIKit.RoundedSmall);
+            UIKit.Anchor(trim2.gameObject, new Vector2(0, 0), new Vector2(1, 0), new Vector2(18, 10), new Vector2(-18, 14));
+            var t = UIKit.Label(band.transform, text.ToUpperInvariant(), Mathf.RoundToInt(height * 0.5f), Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            t.font = UIKit.Display;
+            UIKit.Stretch(t.gameObject, 12);
+            var sh = t.gameObject.AddComponent<Shadow>();
+            sh.effectColor = new Color(0, 0, 0, 0.45f);
+            sh.effectDistance = new Vector2(0, -3);
+            return root;
+        }
+
+        /// <summary>"—— Rewards ——" divider line with a centered caption.</summary>
+        public static void Divider(Transform parent, string caption, Color color)
+        {
+            var row = UIKit.Row(parent, 30, 12, TextAnchor.MiddleCenter);
+            var l = UIKit.Panel(row.transform, new Color(color.r, color.g, color.b, 0.45f), "Line", UIKit.RoundedSmall);
+            UIKit.Size(l.gameObject, -1, 3, 1);
+            var t = UIKit.Label(row.transform, caption, 22, color, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            t.font = UIKit.Display;
+            UIKit.Size(t.gameObject, caption.Length * 13 + 20, 30);
+            var r = UIKit.Panel(row.transform, new Color(color.r, color.g, color.b, 0.45f), "Line", UIKit.RoundedSmall);
+            UIKit.Size(r.gameObject, -1, 3, 1);
+        }
+
+        /// <summary>A row of big reward icons with amounts underneath.</summary>
+        public static void Rewards(Transform parent, GameSession s, int coins, int xp, int nuggets, ResourceAmount[] items = null)
+        {
+            var row = UIKit.Row(parent, 80, 8, TextAnchor.MiddleCenter);
+            if (coins > 0) Reward(row.transform, t => UIKit.CoinIcon(t, 44), Fmt.Num(coins));
+            if (xp > 0) Reward(row.transform, t => XpIcon(t, 44), xp.ToString());
+            if (nuggets > 0) Reward(row.transform, t => UIKit.NuggetIcon(t, 44), nuggets.ToString());
+            if (items != null) foreach (var i in items) { var id = i.id; Reward(row.transform, t => UIKit.ResIcon(t, id, 44), i.amount.ToString()); }
+        }
+
+        static void Reward(Transform parent, Action<Transform> icon, string amount)
+        {
+            var col = UIKit.Node("Reward", parent);
+            UIKit.VStack(col, 2, 0, TextAnchor.MiddleCenter);
+            UIKit.Size(col, 72, 78);
+            var ih = UIKit.Node("Icon", col.transform);
+            UIKit.Size(ih, -1, 46);
+            UIKit.HStack(ih, 0, 0, TextAnchor.MiddleCenter);
+            icon(ih.transform);
+            var t = UIKit.Label(col.transform, amount, 22, UIKit.Ink, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            t.font = UIKit.Display;
+            UIKit.Size(t.gameObject, -1, 30);
+        }
+
+        public static GameObject XpIcon(Transform parent, float size)
+        {
+            var img = UIKit.Panel(parent, Palette.Hex(0xF29B2C), "XP", UIKit.RoundedSmall);
+            UIKit.Size(img.gameObject, size, size);
+            img.transform.localRotation = Quaternion.identity;
+            var o = img.gameObject.AddComponent<Outline>();
+            o.effectColor = Palette.Hex(0xA8571A);
+            o.effectDistance = new Vector2(2, -2);
+            var t = UIKit.Label(img.transform, "XP", Mathf.RoundToInt(size * 0.46f), Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            t.font = UIKit.Display;
+            UIKit.Stretch(t.gameObject);
+            t.gameObject.AddComponent<Outline>().effectColor = Palette.Hex(0xA8571A);
+            return img.gameObject;
+        }
+
+        /// <summary>Notepad slip with a perforated top edge, used for delivery requirements.</summary>
+        public static Transform Slip(Transform parent, float height)
+        {
+            var slip = UIKit.Panel(parent, UIKit.Parchment, "Slip", UIKit.Rounded, true);
+            UIKit.Size(slip.gameObject, -1, height);
+            var holes = UIKit.Node("Perforation", slip.transform);
+            UIKit.Anchor(holes, new Vector2(0, 1), new Vector2(1, 1), new Vector2(14, -14), new Vector2(-14, 4));
+            UIKit.HStack(holes, 0, 0, TextAnchor.MiddleCenter).childForceExpandWidth = true;
+            for (int i = 0; i < 14; i++)
+            {
+                var h = UIKit.Panel(holes.transform, new Color(0, 0, 0, 0.55f), "Hole", UIKit.Circle);
+                UIKit.Size(h.gameObject, 12, 12);
+            }
+            var body = UIKit.Node("Body", slip.transform);
+            UIKit.Stretch(body, 12);
+            UIKit.RT(body).offsetMax = new Vector2(-12, -22);
+            UIKit.VStack(body, 4, 0, TextAnchor.MiddleCenter);
+            return body.transform;
+        }
+
+        /// <summary>The "LVL 4 → 5" chip.</summary>
+        public static void LevelChip(Transform parent, int from, int to)
+        {
+            var chip = UIKit.Panel(parent, UIKit.Gold, "LevelChip", UIKit.RoundedGrad, true);
+            UIKit.Size(chip.gameObject, 260, 64);
+            UIKit.HStack(chip.gameObject, 10, 8, TextAnchor.MiddleCenter);
+            var a = UIKit.Label(chip.transform, "LVL", 30, UIKit.Wood, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            a.font = UIKit.Display; UIKit.Size(a.gameObject, 70, 50);
+            var b = UIKit.Label(chip.transform, from + " → " + to, 36, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            b.font = UIKit.Display; UIKit.Size(b.gameObject, 150, 50);
+            b.gameObject.AddComponent<Outline>().effectColor = UIKit.BrassDark;
         }
     }
 

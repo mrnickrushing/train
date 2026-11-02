@@ -23,7 +23,7 @@ steel and tools, fill orders on the contract board, and build out your town.
 | **Atmosphere** | Day/night cycle with golden hour, stars, glowing windows and a sky-reflection probe; soft shadows; animated water; synthesized audio (chuffs, whistles, coins, birds, crickets) and a plucked-guitar music loop |
 | **Depth** | Crew-run factories with conveyor queues (buy slots and hire hands), 6 multi-stage territory projects with permanent bonuses, passenger service to 3 towns, the Foreman's endless task sets, workshop parts for overhauls, and blueprints to assemble top-tier locomotives |
 | **Monetization** | Coal & Water fuel, gold-nugget packs, starter pack, weekly featured bundles, a permanent fuel-tank upgrade, a 30-tier Rail Season Pass, rewarded ads, and RevenueCat-ready purchases. See [docs/MONETIZATION.md](docs/MONETIZATION.md) |
-| **UI** | Wood-and-brass frontier interface: HUD, goal tracker, world collect bubbles, windows for fleet, dispatch, depot, contracts, build, warehouse, land office, territory map, settings; safe-area aware for notched iPhones |
+| **UI** | Full-screen sheets with big condensed titles, chunky 3D buttons, ribbon banners, job-card grids with notepad delivery slips, "Rewards" rows, a locomotive depot card grid, offer seals, a foreman with a speech bubble; wood-and-brass frontier palette; safe-area aware for notched iPhones |
 
 ## Opening the project (Windows or Mac)
 

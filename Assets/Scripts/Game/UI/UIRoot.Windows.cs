@@ -331,6 +331,56 @@ namespace Ironhorse.Game
             UIKit.Place(body.gameObject, new Vector2(0.5f, 0.2f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(38, 24));
         }
 
+        /// <summary>Depot card: big swatch on a rarity backdrop, name plate, stat chips and a buy button.</summary>
+        void LocoCard(Transform grid, LocomotiveDef d)
+        {
+            bool locked = !S.IsLocoUnlocked(d);
+            var card = UIKit.Panel(grid, UIKit.RarityColor(d.Rarity), "Loco", UIKit.RoundedGrad, true);
+            UIKit.VStack(card.gameObject, 8, 12, TextAnchor.UpperCenter);
+            var art = UIKit.Row(card.transform, 170, 0, TextAnchor.MiddleCenter);
+            LocoSwatch(art.transform, d, 170);
+            var plate = UIKit.Panel(card.transform, UIKit.Wood, "Plate", UIKit.Rounded);
+            UIKit.Size(plate.gameObject, -1, 60);
+            var name = UIKit.Label(plate.transform, d.Name.ToUpperInvariant(), 26, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            name.font = UIKit.Display;
+            name.resizeTextForBestFit = true; name.resizeTextMinSize = 14; name.resizeTextMaxSize = 26;
+            UIKit.Stretch(name.gameObject, 8);
+            var chips = UIKit.Row(card.transform, 44, 8, TextAnchor.MiddleCenter);
+            StatChip(chips.transform, "PULLS " + d.Power);
+            StatChip(chips.transform, "SPEED " + d.Speed);
+            StatChip(chips.transform, d.Rarity.ToString().ToUpperInvariant());
+            var blurb = UIKit.Label(card.transform, d.Blurb, 18, new Color(1, 1, 1, 0.9f), TextAnchor.MiddleCenter);
+            UIKit.Size(blurb.gameObject, -1, 46);
+            BlueprintRow(card.transform, d);
+            if (locked)
+            {
+                var l = UIKit.Label(card.transform, "UNLOCKS AT LEVEL " + d.UnlockLevel, 24, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                l.font = UIKit.Display;
+                UIKit.Size(l.gameObject, -1, 60);
+                card.color = MeshBuilder.Lerp(card.color, UIKit.Disabled, 0.6f);
+                return;
+            }
+            string id = d.Id;
+            var buy = UIKit.Btn(card.transform, "", UIKit.Green, () => Result(S.BuyLocomotive(id), Sfx.Bell), 26, -1, 64);
+            var label = buy.GetComponentInChildren<Text>();
+            label.text = "";
+            var row = UIKit.Node("Price", label.transform.parent);
+            UIKit.Stretch(row, 6);
+            UIKit.HStack(row, 8, 0, TextAnchor.MiddleCenter);
+            if (d.PriceNuggets > 0) UIKit.NuggetIcon(row.transform, 34); else UIKit.CoinIcon(row.transform, 34);
+            var price = UIKit.Label(row.transform, Fmt.Num(d.PriceNuggets > 0 ? d.PriceNuggets : d.PriceCoins), 28, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+            price.font = UIKit.Display;
+        }
+
+        static void StatChip(Transform parent, string text)
+        {
+            var chip = UIKit.Panel(parent, new Color(0, 0, 0, 0.35f), "Chip", UIKit.RoundedSmall);
+            UIKit.Size(chip.gameObject, 108, 38);
+            var t = UIKit.Label(chip.transform, text, 18, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            t.font = UIKit.Display;
+            UIKit.Stretch(t.gameObject, 4);
+        }
+
         static void WagonSwatch(Transform parent, WagonDef wd)
         {
             var bg = UIKit.Panel(parent, Palette.Hex(wd.ColorRgb), "Wagon", UIKit.RoundedSmall);
@@ -357,25 +407,16 @@ namespace Ironhorse.Game
                 if (_depotTab == "locos")
                 {
                     Line(content, "Platforms: " + S.State.trains.Count + "/" + S.FleetCapacity, 22, UIKit.InkSoft);
+                    var grid = UIKit.Node("Locomotives", content);
+                    var g = grid.AddComponent<GridLayoutGroup>();
+                    g.cellSize = new Vector2(380, 500);
+                    g.spacing = new Vector2(20, 20);
+                    g.childAlignment = TextAnchor.UpperCenter;
+                    grid.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
                     foreach (var d in GameDatabase.Locomotives)
                     {
                         if (d.PriceCoins == 0 && d.PriceNuggets == 0) continue;
-                        bool locked = !S.IsLocoUnlocked(d);
-                        var c = Card(content, 140, locked ? new Color(0.8f, 0.76f, 0.68f) : (Color?)null);
-                        LocoSwatch(c.transform, d, 110);
-                        var col = Col(c.transform);
-                        Line(col.transform, d.Name, 26, UIKit.Ink, true);
-                        Line(col.transform, d.Rarity + " · " + d.Era + " · Pulls " + d.Power + " · Speed " + d.Speed, 20, UIKit.RarityColor(d.Rarity));
-                        Line(col.transform, d.Blurb, 18, UIKit.InkSoft);
-                        BlueprintRow(col.transform, d);
-                        if (locked) Line(c.transform, "Level " + d.UnlockLevel, 24, UIKit.InkSoft, true).GetComponent<LayoutElement>().preferredWidth = 150;
-                        else
-                        {
-                            var bc = Col(c.transform, -1, 220);
-                            UIKit.Cost(bc.transform, S, d.PriceCoins, null, d.PriceNuggets);
-                            string id = d.Id;
-                            UIKit.Btn(bc.transform, "Buy", UIKit.Green, () => Result(S.BuyLocomotive(id), Sfx.Bell), 24, -1, 56);
-                        }
+                        LocoCard(grid.transform, d);
                     }
                 }
                 else
@@ -418,26 +459,13 @@ namespace Ironhorse.Game
                 });
                 if (_ordersTab == "projects") { ProjectsTab(content); return; }
                 Line(content, "Townsfolk and outfits post orders here. Deliver goods for coins, XP, workshop parts and sometimes gold nuggets.", 20, UIKit.InkSoft);
-                foreach (var c in S.State.contracts.ToList())
-                {
-                    bool can = S.CanDeliver(c);
-                    var card = Card(content, 150, can ? Palette.Hex(0xDCE8C0) : (Color?)null);
-                    var col = Col(card.transform);
-                    Line(col.transform, c.client, 26, UIKit.Ink, true);
-                    var req = UIKit.Row(col.transform, 46, 22);
-                    foreach (var r in c.requirements)
-                        UIKit.Amount(req.transform, r.id, S.Amount(r.id) + "/" + r.amount + " " + GameDatabase.Resource(r.id).Name, S.Amount(r.id) >= r.amount ? UIKit.Green : UIKit.Red, 40, 22);
-                    var rew = UIKit.Row(col.transform, 40, 14);
-                    UIKit.Label(rew.transform, "Reward:", 20, UIKit.InkSoft);
-                    UIKit.CoinIcon(rew.transform, 30); UIKit.Label(rew.transform, Fmt.Num(c.rewardCoins), 22, UIKit.Ink, TextAnchor.MiddleLeft, true);
-                    UIKit.Label(rew.transform, "+" + c.rewardXp + " XP", 22, UIKit.Blue, TextAnchor.MiddleLeft, true);
-                    if (c.rewardNuggets > 0) { UIKit.NuggetIcon(rew.transform, 30); UIKit.Label(rew.transform, "+" + c.rewardNuggets, 22, UIKit.Ink, TextAnchor.MiddleLeft, true); }
-                    if (c.rewardParts != null) foreach (var p in c.rewardParts) UIKit.Amount(rew.transform, p.id, "+" + p.amount, UIKit.Ink, 30, 22);
-                    var bc = Col(card.transform, -1, 200);
-                    int uid = c.uid;
-                    UIKit.Btn(bc.transform, "Deliver", UIKit.Green, () => Result(S.DeliverContract(uid), Sfx.Deliver), 24, -1, 60, can);
-                    UIKit.Btn(bc.transform, "Tear up", UIKit.WoodLight, () => Result(S.DiscardContract(uid), Sfx.Click), 18, -1, 44);
-                }
+                var grid = UIKit.Node("Orders", content);
+                var g = grid.AddComponent<GridLayoutGroup>();
+                g.cellSize = new Vector2(370, 610);
+                g.spacing = new Vector2(20, 20);
+                g.childAlignment = TextAnchor.UpperCenter;
+                grid.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                foreach (var c in S.State.contracts.ToList()) OrderCard(grid.transform, c);
                 if (S.State.contracts.Count < S.ContractSlots)
                 {
                     var t = Line(content, "", 22, UIKit.InkSoft);
@@ -446,6 +474,46 @@ namespace Ironhorse.Game
                 }
                 Line(content, "Build a Telegraph Office for an extra contract slot.", 18, UIKit.InkSoft);
             });
+        }
+
+        /// <summary>An order as a tall job card: client header, notepad slip of goods, rewards and a Deliver button.</summary>
+        void OrderCard(Transform grid, ContractState c)
+        {
+            bool can = S.CanDeliver(c);
+            var card = UIKit.Panel(grid, can ? Palette.Hex(0x5E7F48) : Palette.Hex(0x4A5A6E), "Order", UIKit.RoundedGrad, true);
+            UIKit.VStack(card.gameObject, 8, 14, TextAnchor.UpperCenter);
+            var head = UIKit.Label(card.transform, c.client, 26, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+            head.font = UIKit.Display;
+            UIKit.Size(head.gameObject, -1, 34);
+            head.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.4f);
+
+            // Big icon(s) of what's wanted
+            var icons = UIKit.Row(card.transform, 110, -18, TextAnchor.MiddleCenter);
+            foreach (var r in c.requirements) UIKit.ResIcon(icons.transform, r.id, c.requirements.Count > 1 ? 86 : 104);
+
+            var slip = UIDeco.Slip(card.transform, 300);
+            var deliver = UIKit.Label(slip, "DELIVER", 22, UIKit.InkSoft, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            deliver.font = UIKit.Display;
+            UIKit.Size(deliver.gameObject, -1, 26);
+            foreach (var r in c.requirements)
+            {
+                int have = S.Amount(r.id);
+                var amt = UIKit.Label(slip, r.amount + " " + GameDatabase.Resource(r.id).Name, 28, UIKit.Ink, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                amt.font = UIKit.Display;
+                UIKit.Size(amt.gameObject, -1, 32);
+                var bar = UIKit.Bar(slip, have >= r.amount ? UIKit.Green : Palette.Hex(0xC9862E), 14, new Color(0.25f, 0.18f, 0.12f, 0.5f));
+                UIKit.SetBar(bar, have / (float)r.amount);
+            }
+            UIDeco.Divider(slip, "Rewards", UIKit.InkSoft);
+            var parts = c.rewardParts != null ? c.rewardParts.ToArray() : null;
+            UIDeco.Rewards(slip, S, c.rewardCoins, c.rewardXp, c.rewardNuggets, parts);
+
+            int uid = c.uid;
+            UIKit.Btn(card.transform, "Deliver", can ? UIKit.Green : UIKit.Disabled, () => Result(S.DeliverContract(uid), Sfx.Deliver), 28, -1, 70, can);
+            var tear = UIKit.Label(card.transform, "Tear up order", 18, new Color(1, 1, 1, 0.75f), TextAnchor.MiddleCenter);
+            UIKit.Size(tear.gameObject, -1, 26);
+            tear.raycastTarget = true;
+            Clickable(tear.gameObject, () => Result(S.DiscardContract(uid), Sfx.Click));
         }
 
         // ================================================================ build menu
