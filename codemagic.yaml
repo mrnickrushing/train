@@ -22,9 +22,9 @@ workflows:
       groups:
         - unity_credentials
       vars:
-        UNITY_VERSION: 6000.0.23f1
-        UNITY_CHANGESET: SET_ME  # e.g. from the Unity archive page for your exact version
-        UNITY_BIN: /Applications/Unity/Hub/Editor/6000.0.23f1/Unity.app/Contents/MacOS/Unity
+        UNITY_VERSION: 6000.0.85f1
+        UNITY_CHANGESET: ee7790f1426a
+        UNITY_BIN: /Applications/Unity/Hub/Editor/6000.0.85f1/Unity.app/Contents/MacOS/Unity
         BUNDLE_ID: com.rushingtech.ironhorsefrontier
         XCODE_PROJECT: ios/Unity-iPhone.xcodeproj
         XCODE_SCHEME: Unity-iPhone
