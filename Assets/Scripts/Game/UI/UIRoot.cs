@@ -64,6 +64,7 @@ namespace Ironhorse.Game
             BuildBottomBar();
             BuildGoal();
             BuildBanner();
+            BuildMoneyHud();
             _windowLayer = UIKit.Stretch(UIKit.Node("Windows", cgo.transform));
             _popupLayer = UIKit.Stretch(UIKit.Node("Popups", cgo.transform));
             _toasts = UIKit.Anchor(UIKit.Node("Toasts", cgo.transform), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-420, -360), new Vector2(420, -150));
@@ -78,6 +79,7 @@ namespace Ironhorse.Game
             S.TrainArrived += t => AudioManager.Play(Sfx.Bell, 0.5f);
             S.ContractCompleted += c => AudioManager.Play(Sfx.Deliver);
             RefreshHud();
+            Invoke(nameof(MaybeShowFeaturedOffer), 4f);
         }
 
         void Update()
@@ -310,6 +312,7 @@ namespace Ironhorse.Game
         void RefreshHud()
         {
             if (_level == null) return;
+            RefreshMoneyHud();
             _level.text = S.Level.ToString();
             UIKit.SetBar(_xpFill, S.LevelProgress);
             _xpText.text = Fmt.Num(S.State.xp) + " / " + Fmt.Num(Balance.XpForNextLevel(S.Level)) + " XP";

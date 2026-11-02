@@ -100,6 +100,47 @@ namespace Ironhorse.Core
         }
 
         public static int LevelUpNuggets(int newLevel) { return 3 + newLevel / 3; }
+
+        // ---------------------------------------------------------------- Fuel (Coal & Water)
+
+        public const int FuelTankBonus = 50;
+        public const double FuelRegenSeconds = 45;
+        public const int FuelPerNugget = 8;
+        public const int AdFuel = 25;
+
+        public static int MaxFuel(int level, bool tank) { return 60 + 4 * (level - 1) + (tank ? FuelTankBonus : 0); }
+
+        /// <summary>Fuel burned by a dispatch: heavier consists and farther outposts cost more.</summary>
+        public static int FuelCost(int wagons, DestinationDef d) { return 2 + wagons + d.UnlockLevel / 4; }
+
+        public static int RefillNuggets(int missing) { return missing <= 0 ? 0 : (int)Math.Ceiling(missing / (double)FuelPerNugget); }
+
+        // ---------------------------------------------------------------- Rail Season Pass
+
+        public const int PassTiers = 30;
+        public const int PassXpPerTier = 500;
+        public const double SeasonSeconds = 28 * 24 * 3600;
+        /// <summary>2026-01-05 00:00 UTC (a Monday). Seasons and weekly offers count from here.</summary>
+        public const double SeasonEpoch = 1767571200;
+        public const double WeekSeconds = 7 * 24 * 3600;
+
+        public const int PassXpDispatch = 15, PassXpContract = 60, PassXpProduction = 10, PassXpConstruct = 25;
+
+        // ---------------------------------------------------------------- Ads
+
+        public static int AdDailyLimit(AdReward r)
+        {
+            switch (r)
+            {
+                case AdReward.Fuel: return 5;
+                case AdReward.Nuggets: return 3;
+                default: return 5;
+            }
+        }
+
+        public const int AdNuggets = 3;
+        /// <summary>A rush ad knocks this many seconds off a trip.</summary>
+        public const double AdRushSeconds = 30 * 60;
         public static int LevelUpCoins(int newLevel) { return 150 * newLevel; }
     }
 }

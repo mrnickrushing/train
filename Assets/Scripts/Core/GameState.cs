@@ -30,6 +30,21 @@ namespace Ironhorse.Core
         public List<BuildingState> buildings = new List<BuildingState>();
         public List<ContractState> contracts = new List<ContractState>();
         public List<GoalProgress> goals = new List<GoalProgress>();
+        // Monetization
+        public int fuel = -1;               // -1 = fill to max on first load
+        public double fuelAt;               // last time fuel was settled
+        public List<string> ownedProducts = new List<string>();
+        public List<string> transactions = new List<string>();
+        public List<string> offerPurchases = new List<string>();
+        public int passSeason = -1;
+        public int passXp;
+        public bool passPremium;
+        public List<int> passClaimedFree = new List<int>();
+        public List<int> passClaimedPremium = new List<int>();
+        public int adDay = -1;
+        public List<ResourceAmount> adCounts = new List<ResourceAmount>();
+        public double lastOfferShownAt;
+
         public Stats stats = new Stats();
         public Settings settings = new Settings();
     }

@@ -120,6 +120,8 @@ namespace Ironhorse.Game
             {
                 int cost = S.TrainRushCost(t);
                 UIKit.Btn(card.transform, "Rush " + cost, UIKit.Blue, () => Result(S.RushTrain(uid)), 22, 160, 64);
+                if (S.AdsLeft(AdReward.RushTrain) > 0 && Ads.Current.Available)
+                    UIKit.Btn(card.transform, "Ad: -30m", UIKit.Green, () => Ads.Watch(AdReward.RushTrain, uid, r => Result(r, Sfx.Bell)), 20, 150, 64);
             }
             UIKit.Btn(card.transform, "Details", UIKit.WoodLight, () => OpenTrain(uid), 22, 150, 64);
         }
@@ -181,11 +183,12 @@ namespace Ironhorse.Game
                         UIKit.ResIcon(c.transform, dest.ResourceId, 64);
                         var dc = Col(c.transform);
                         Line(dc.transform, dest.Name, 24, locked ? UIKit.InkSoft : UIKit.Ink, true);
-                        Line(dc.transform, locked ? "Unlocks at level " + dest.UnlockLevel : res.Name + " · needs " + GameSession.CargoWagonName(res.Cargo) + "s · " + Fmt.Time(p.Seconds), 20, UIKit.InkSoft);
+                        Line(dc.transform, locked ? "Unlocks at level " + dest.UnlockLevel : res.Name + " · needs " + GameSession.CargoWagonName(res.Cargo) + "s · " + Fmt.Time(p.Seconds) + " · " + p.Fuel + " fuel", 20, UIKit.InkSoft);
                         if (!locked)
                         {
                             string id = dest.Id;
                             if (p.Possible) UIKit.Btn(c.transform, "Go! +" + p.Amount, UIKit.Red, () => { var r = S.Dispatch(t.uid, id); Result(r, Sfx.Click); if (r.Ok) CloseWindow(); }, 24, 190, 62);
+                            else if (p.Reason.Contains("fuel")) UIKit.Btn(c.transform, "Get fuel", FuelOrange, () => OpenFuel(), 22, 190, 62);
                             else Line(c.transform, p.Reason, 20, UIKit.Red).GetComponent<LayoutElement>().preferredWidth = 220;
                         }
                     }
@@ -656,6 +659,7 @@ namespace Ironhorse.Game
                 var set = S.State.settings;
                 UIKit.Btn(content, "Music: " + (set.music ? "On" : "Off"), UIKit.WoodLight, () => { set.music = !set.music; AudioManager.MusicOn = set.music; RebuildWindow(); }, 24, -1, 64);
                 UIKit.Btn(content, "Sound effects: " + (set.sfx ? "On" : "Off"), UIKit.WoodLight, () => { set.sfx = !set.sfx; AudioManager.SfxOn = set.sfx; RebuildWindow(); }, 24, -1, 64);
+                UIKit.Btn(content, "Restore purchases", UIKit.WoodLight, () => Store.Current.Restore(n => Toast(n > 0 ? "Restored " + n + " purchase(s)" : "Nothing to restore", true)), 24, -1, 64);
                 UIKit.Btn(content, "Save now", UIKit.Green, () => { GameRoot.Instance.Save(); Toast("Game saved", true); }, 24, -1, 64);
                 if (Debug.isDebugBuild)
                 {

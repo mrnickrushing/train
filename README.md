@@ -20,6 +20,7 @@ steel and tools, fill orders on the contract board, and build out your town.
 | **Town** | 22 building types on 36 lots: cabins to a grand hotel, a sawmill with a spinning blade, a smelter with a tall stack, a windmill grist mill, refinery, water tower, saloon, schoolhouse, bank, clock tower, gardens, fountain. Scaffolding and build-up animation, chimney smoke, production animations |
 | **Systems** | Dispatch, cargo classes, warehouse limits, production chains, rent, civic bonuses, contracts, a goal chain, XP/levels with unlocks, land purchase, locomotive and building upgrades, rush timers with gold nuggets, offline progress, autosave |
 | **Atmosphere** | Day/night cycle with golden hour, stars, glowing windows and a sky-reflection probe; soft shadows; animated water; synthesized audio (chuffs, whistles, coins, birds, crickets) and a plucked-guitar music loop |
+| **Monetization** | Coal & Water fuel, gold-nugget packs, starter pack, weekly featured bundles, a permanent fuel-tank upgrade, a 30-tier Rail Season Pass, rewarded ads, and RevenueCat-ready purchases. See [docs/MONETIZATION.md](docs/MONETIZATION.md) |
 | **UI** | Wood-and-brass frontier interface: HUD, goal tracker, world collect bubbles, windows for fleet, dispatch, depot, contracts, build, warehouse, land office, territory map, settings; safe-area aware for notched iPhones |
 
 ## Opening the project (Windows or Mac)

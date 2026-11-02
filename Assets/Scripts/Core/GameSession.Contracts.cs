@@ -93,6 +93,7 @@ namespace Ironhorse.Core
             AddXp(c.rewardXp);
             State.contracts.Remove(c);
             State.stats.contractsCompleted++;
+            AddPassXp(Balance.PassXpContract);
             // A fresh order arrives shortly after a delivery.
             State.nextContractAt = Math.Min(State.nextContractAt, Now + 10);
             ContractCompleted?.Invoke(c);
