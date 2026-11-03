@@ -16,6 +16,18 @@
     "com.unity.modules.ui": "1.0.0",
     "com.unity.modules.uielements": "1.0.0",
     "com.unity.modules.unitywebrequest": "1.0.0",
-    "com.unity.modules.video": "1.0.0"
-  }
+    "com.unity.modules.video": "1.0.0",
+    "com.revenuecat.purchases-unity": "10.0.0",
+    "com.unity.modules.androidjni": "1.0.0"
+  },
+  "scopedRegistries": [
+    {
+      "name": "package.openupm.com",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.revenuecat",
+        "com.google.external-dependency-manager"
+      ]
+    }
+  ]
 }

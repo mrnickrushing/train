@@ -18,8 +18,8 @@ namespace Ironhorse.Game
 
     /// <summary>
     /// Picks the store implementation:
-    ///  • RevenueCat (App Store) when the RevenueCat Unity SDK is installed and the scripting define
-    ///    IRONHORSE_REVENUECAT is set (see docs/MONETIZATION.md).
+    ///  • RevenueCat (App Store) on device when the RevenueCat Unity SDK is installed (which defines
+    ///    IRONHORSE_REVENUECAT) and RevenueCatStore.ApiKey is set (see docs/MONETIZATION.md).
     ///  • TestStore otherwise: instant fake purchases in the editor and development builds only.
     ///    In a release build without RevenueCat, purchases are disabled, never free.
     /// </summary>
@@ -32,7 +32,9 @@ namespace Ironhorse.Game
             {
                 if (_store != null) return _store;
 #if IRONHORSE_REVENUECAT
-                _store = RevenueCatStore.Create();
+                // The RevenueCat package is installed (Ironhorse.Game.asmdef versionDefines); it's used once the
+                // project's Apple SDK key is filled in, and on device only (the Editor has no StoreKit).
+                _store = RevenueCatStore.Configured && !Application.isEditor ? RevenueCatStore.Create() : (IStore)new TestStore();
 #else
                 _store = new TestStore();
 #endif
@@ -86,6 +88,7 @@ namespace Ironhorse.Game
     {
         /// <summary>RevenueCat → Project → API keys → Apple App Store public key (appl_...).</summary>
         public const string ApiKey = "appl_REPLACE_ME";
+        public static bool Configured { get { return ApiKey.StartsWith("appl_") && !ApiKey.Contains("REPLACE"); } }
 
         Purchases _purchases;
         readonly Dictionary<string, string> _prices = new Dictionary<string, string>();
@@ -120,12 +123,11 @@ namespace Ironhorse.Game
 
         public void Purchase(string productId, Action<bool, string> done)
         {
-            _purchases.PurchaseProduct(productId, (id, info, cancelled, error) =>
+            _purchases.PurchaseProduct(productId, result =>
             {
-                if (cancelled) { done(false, "Purchase cancelled."); return; }
-                if (error != null) { done(false, error.Message); return; }
-                var tx = info.NonSubscriptionTransactions.Where(t => t.ProductIdentifier == productId)
-                    .OrderByDescending(t => t.PurchaseDate).FirstOrDefault();
+                if (result.UserCancelled) { done(false, "Purchase cancelled."); return; }
+                if (result.Error != null) { done(false, result.Error.Message); return; }
+                var tx = result.StoreTransaction;
                 done(true, tx != null ? tx.TransactionIdentifier : "rc-" + Guid.NewGuid().ToString("N"));
             }, "inapp");
         }

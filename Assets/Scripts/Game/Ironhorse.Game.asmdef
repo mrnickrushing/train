@@ -5,7 +5,8 @@
         "Ironhorse.Core",
         "UnityEngine.UI",
         "Unity.RenderPipelines.Universal.Runtime",
-        "Unity.RenderPipelines.Core.Runtime"
+        "Unity.RenderPipelines.Core.Runtime",
+        "revenuecat.purchases-unity"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -19,6 +20,11 @@
             "name": "com.unity.render-pipelines.universal",
             "expression": "14.0.0",
             "define": "IRONHORSE_URP"
+        },
+        {
+            "name": "com.revenuecat.purchases-unity",
+            "expression": "5.0.0",
+            "define": "IRONHORSE_REVENUECAT"
         }
     ],
     "noEngineReferences": false
