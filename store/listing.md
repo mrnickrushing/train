@@ -36,3 +36,8 @@ A STORY ACROSS THE TERRITORY
 Relaxed, satisfying and beautiful to look at, Ironhorse Frontier is a railroad tycoon you can play a few minutes at a time or all evening.
 
 Ironhorse Frontier is free to play. Optional in-app purchases are available.
+
+## Screenshots
+
+Five per device (town, trains, contract board, depot, night), uploaded to App Store Connect for
+iPhone 6.9" (2868×1320) and iPad 13" (2752×2064). Render them with `Tools/store-shot.cs` in Play mode.
