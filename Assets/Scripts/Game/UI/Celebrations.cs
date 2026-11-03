@@ -54,6 +54,9 @@ namespace Ironhorse.Game
         }
 
         /// <summary>Queues a cinematic. Returns false (and plays nothing) when it's on cooldown or missing.</summary>
+        /// <summary>True while a cinematic or queued full-screen moment is on screen.</summary>
+        public bool Busy { get { return _playing; } }
+
         public bool Play(string video, string title, string subtitle, bool force = false)
         {
             float last;
