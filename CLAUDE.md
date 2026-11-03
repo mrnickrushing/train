@@ -51,8 +51,9 @@ install it with `dotnet-install.sh --channel 8.0` if `dotnet --list-sdks` lacks 
   `Tools/art/ai_assets.py` holds the original prompts and runs Higgsfield (GPT Image 2.5 concept ->
   Tripo H3.1 3D) then `Tools/blender/import_ai.py` (orient, scale to game size, decimate, pack PBR maps).
   Raw files live in `art-src/` (gitignored). Paid steps skip ids that already have output; review a
-  concept image before paying for its 3D model. Check facing with `Tools/blender/side_sheet.py`
-  (vehicles: front on the right) and `orient_sheet.py` (buildings: Tripo puts the entrance at +X).
+  concept image before paying for its 3D model. Check facing **in Unity**, not Blender: Unity reads the exporter's +Y forward as -Z, so
+  `import_ai.py` turns every model 180° before export (`turn_fbx.py` fixes older files). Verify with
+  a Play-mode capture or by checking that a locomotive's Smoke anchor has positive Z.
   Budgets: locomotives 40k tris / 2K maps, wagons 15k / 1K, buildings 20k / 1K.
 - **Key art and cinematics**: `Tools/art/ai_media.py` (stills + Seedance clips) then `install`, which
   writes `Assets/StreamingAssets/Videos/*.mp4`, fallback stills in `Resources/UI/Cinematics`, the
