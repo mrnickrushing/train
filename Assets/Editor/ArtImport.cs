@@ -34,6 +34,23 @@ namespace Ironhorse.EditorTools
             mi.importTangents = ModelImporterTangents.CalculateMikk;
         }
 
+        /// <summary>Recorded game audio (Tools/art/audio.py): effects decompressed for instant playback, beds and music streamed.</summary>
+        void OnPreprocessAudio()
+        {
+            if (!assetPath.StartsWith("Assets/Resources/Audio/")) return;
+            var ai = (AudioImporter)assetImporter;
+            string n = System.IO.Path.GetFileNameWithoutExtension(assetPath);
+            bool music = n == "music", bed = n.StartsWith("amb_");
+            var s = ai.defaultSampleSettings;
+            s.loadType = music ? AudioClipLoadType.Streaming : bed ? AudioClipLoadType.CompressedInMemory : AudioClipLoadType.DecompressOnLoad;
+            s.compressionFormat = AudioCompressionFormat.Vorbis;
+            s.quality = music ? 0.55f : 0.7f;
+            s.preloadAudioData = !music;
+            ai.defaultSampleSettings = s;
+            ai.forceToMono = !music;
+            ai.loadInBackground = music;
+        }
+
         void OnPreprocessTexture()
         {
             if (assetPath.StartsWith(Models))
