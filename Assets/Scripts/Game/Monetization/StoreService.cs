@@ -87,12 +87,19 @@ namespace Ironhorse.Game
     public sealed class RevenueCatStore : IStore
     {
         /// <summary>RevenueCat → Project → API keys → Apple App Store public key (appl_...).</summary>
-        public const string ApiKey = "appl_REPLACE_ME";
+        public const string ApiKey = "appl_hOYAoqSxxCnnylmiftOJFDxdFmi"; // public by design (ships in the app)
         public static bool Configured { get { return ApiKey.StartsWith("appl_") && !ApiKey.Contains("REPLACE"); } }
 
         Purchases _purchases;
+        bool _booted; // Purchases configures itself in its Start(); calls before that hit an unset native wrapper
         readonly Dictionary<string, string> _prices = new Dictionary<string, string>();
         public bool Ready { get; private set; }
+
+        sealed class Boot : MonoBehaviour
+        {
+            public RevenueCatStore Store;
+            System.Collections.IEnumerator Start() { yield return null; Store._booted = true; Store.LoadPrices(); }
+        }
 
         public static RevenueCatStore Create()
         {
@@ -103,8 +110,9 @@ namespace Ironhorse.Game
             s._purchases = go.AddComponent<Purchases>();
             s._purchases.revenueCatAPIKeyApple = ApiKey;
             s._purchases.useRuntimeSetup = false;
+            s._purchases.productIdentifiers = Catalog.Products.Select(p => p.Id).ToArray();
+            go.AddComponent<Boot>().Store = s; // load prices one frame after Purchases.Start has configured the SDK
             go.SetActive(true);
-            s.LoadPrices();
             return s;
         }
 
@@ -123,6 +131,7 @@ namespace Ironhorse.Game
 
         public void Purchase(string productId, Action<bool, string> done)
         {
+            if (!_booted) { done(false, "The store is still loading. Try again in a moment."); return; }
             _purchases.PurchaseProduct(productId, result =>
             {
                 if (result.UserCancelled) { done(false, "Purchase cancelled."); return; }
@@ -134,6 +143,7 @@ namespace Ironhorse.Game
 
         public void Restore(Action<int> done)
         {
+            if (!_booted) { done(0); return; }
             _purchases.RestorePurchases((info, error) =>
             {
                 if (error != null) { done(0); return; }
