@@ -63,6 +63,10 @@ install it with `dotnet-install.sh --channel 8.0` if `dotnet --list-sdks` lacks 
   the terrain (run it after re-importing a town building; the station, freight shed, fountain and
   garden keep their bases). `Tools/blender/lod.py` writes `<id>_far.fbx` (same textures) for models
   drawn in bulk: parked yard wagons go through `Vegetation.AddModel` (GPU instanced, near/far).
+- **Horses**: `A["horse"]` (animal=True) is imported like a vehicle, then `Tools/blender/horse.py` rigs it
+  (four-leg armature, weights from the body plan) and authors a four-beat Walk loop into
+  `Resources/Models/Animals/` (Legacy clips, like People). `Life` hitches a team of two to the
+  `Props/covered_wagon` model.
 - **Townsfolk**: rigged AI characters (Higgsfield Multi-Image to 3D, rigging on) turned into Walk/Idle
   loops by `Tools/blender/townsfolk.py`; check strides with `walk_strip.py`. They snap to whatever is
   underfoot via colliders on layer 2 (`Station.Walkable`).

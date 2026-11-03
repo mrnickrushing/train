@@ -255,21 +255,46 @@ namespace Ironhorse.Game
 
         public static void Crate(MeshBuilder mb, Vector3 p, float rot)
         {
+            // Plank box with darker corner posts and rims, weathered to a mid brown.
             mb.Matte();
+            float h = Mathf.Repeat(p.x * 7.3f + p.z * 3.1f, 1f);
+            Color panel = MeshBuilder.Lerp(Palette.Hex(0x8E6E4C), Palette.Hex(0x9A8A72), h), frame = Palette.Hex(0x5A4130);
             mb.Push().Translate(p).RotateY(rot);
-            mb.Box(new Vector3(0, 0.45f, 0), new Vector3(0.9f, 0.9f, 0.9f), Palette.WoodPale);
-            mb.Box(new Vector3(0, 0.45f, 0), new Vector3(0.95f, 0.12f, 0.95f), Palette.Wood);
+            mb.Surf = SurfaceKind.Planks;
+            mb.Box(new Vector3(0, 0.45f, 0), new Vector3(0.86f, 0.86f, 0.86f), panel);
+            mb.Surf = SurfaceKind.WoodGrain;
+            for (int i = 0; i < 4; i++)
+            {
+                float x = (i & 1) == 0 ? -0.43f : 0.43f, z = (i & 2) == 0 ? -0.43f : 0.43f;
+                mb.Box(new Vector3(x, 0.45f, z), new Vector3(0.1f, 0.9f, 0.1f), frame);
+            }
+            foreach (float y in new[] { 0.05f, 0.85f })
+            {
+                mb.Box(new Vector3(0, y, -0.43f), new Vector3(0.9f, 0.1f, 0.08f), frame);
+                mb.Box(new Vector3(0, y, 0.43f), new Vector3(0.9f, 0.1f, 0.08f), frame);
+                mb.Box(new Vector3(-0.43f, y, 0), new Vector3(0.08f, 0.1f, 0.9f), frame);
+                mb.Box(new Vector3(0.43f, y, 0), new Vector3(0.08f, 0.1f, 0.9f), frame);
+            }
+            mb.Surf = SurfaceKind.Auto;
             mb.Pop();
         }
 
         public static void Barrel(MeshBuilder mb, Vector3 p)
         {
+            // Bulging oak staves, iron hoops, a darker lid.
             mb.Matte();
-            mb.Cylinder(p, p + Vector3.up * 1.1f, 0.42f, 10, Palette.Wood);
-            mb.Mat(0.4f, 0.5f);
-            mb.Cylinder(p + Vector3.up * 0.2f, p + Vector3.up * 0.28f, 0.44f, 10, Palette.Iron, false);
-            mb.Cylinder(p + Vector3.up * 0.82f, p + Vector3.up * 0.9f, 0.44f, 10, Palette.Iron, false);
+            float h = Mathf.Repeat(p.x * 5.1f + p.z * 9.7f, 1f);
+            Color oak = MeshBuilder.Lerp(Palette.Hex(0x6E4A2E), Palette.Hex(0x7E6A52), h);
+            mb.Surf = SurfaceKind.WoodGrain;
+            mb.Cylinder(p, p + Vector3.up * 0.55f, 0.36f, 0.43f, 12, oak, false);
+            mb.Cylinder(p + Vector3.up * 0.55f, p + Vector3.up * 1.1f, 0.43f, 0.36f, 12, oak, false);
+            mb.Surf = SurfaceKind.None;
+            mb.Cylinder(p + Vector3.up * 1.06f, p + Vector3.up * 1.08f, 0.33f, 12, MeshBuilder.Darken(oak, 0.7f));
+            mb.Mat(0.35f, 0.5f);
+            foreach (var (y, r) in new[] { (0.12f, 0.38f), (0.36f, 0.42f), (0.74f, 0.42f), (0.98f, 0.38f) })
+                mb.Cylinder(p + Vector3.up * (y - 0.03f), p + Vector3.up * (y + 0.03f), r + 0.01f, 12, Palette.Hex(0x2E2A26), false);
             mb.Matte();
+            mb.Surf = SurfaceKind.Auto;
         }
     }
 }

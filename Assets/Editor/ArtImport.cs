@@ -18,7 +18,7 @@ namespace Ironhorse.EditorTools
             if (!assetPath.StartsWith(Models)) return;
             var mi = (ModelImporter)assetImporter;
             mi.materialImportMode = ModelImporterMaterialImportMode.None; // ArtMaterials builds URP materials at runtime
-            bool person = assetPath.StartsWith(Models + "People/");
+            bool person = assetPath.StartsWith(Models + "People/") || assetPath.StartsWith(Models + "Animals/"); // rigged, Legacy clips
             mi.importAnimation = person;
             mi.importCameras = false;
             mi.importLights = false;

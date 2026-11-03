@@ -97,6 +97,10 @@ bldg("station", "an original long frontier railway depot station, about four and
 A["station"]["hero"] = True  # the centrepiece, seen up close: locomotive-grade mesh and 2K maps
 bldg("freightshed", "an original wooden railway freight shed, about twice as long as deep: red-painted plank walls, a raised wooden loading dock with sliding doors along the front, a corrugated tin roof with a deep overhang, crates and barrels on the dock", footprint=14.0, wide=True)
 
+# Town life props (vehicle-style side views; the horse is rigged and animated by Tools/blender/horse.py)
+A["horse"] = dict(cat="Props", length=2.8, faces=6000, front="auto", animal=True, prompt=VEHICLE.format(what="a single sturdy chestnut-brown draft horse in a dark leather work harness with a collar and blinkers, standing square and calm with all four legs straight and clearly separated, head forward, tail hanging down").replace("vehicle", "animal").replace("no rails, no ground", "no cart, no rider, no ground").replace("No text, no numbers, no logos, no people.", "No text, no people."))
+A["covered_wagon"] = dict(cat="Props", length=6.2, faces=6000, front="auto", prompt=VEHICLE.format(what="an original 1870s prairie covered wagon with NO horses: a white weathered canvas bonnet stretched over wooden hoops, a blue-grey painted wooden box body, red spoked wooden wheels with iron tyres (larger at the back), a wooden tongue pole sticking out at the front, a water barrel and a toolbox strapped to the side"))
+
 # Vegetation (instanced thousands of times: tiny triangle budgets)
 TREE = ("Game asset reference render of {what}, the whole plant visible from the ground to the top, standing alone, "
         "slightly elevated three-quarter view, isolated on a plain flat white background, nothing cropped, no ground "
@@ -134,7 +138,7 @@ def concept(i):
     if os.path.exists(p):
         return print("have", p)
     a = A[i]
-    ar = "21:9" if a["cat"] != "Buildings" else "16:9" if a.get("wide") else "1:1"
+    ar = "16:9" if a["cat"] == "Props" else "21:9" if a["cat"] != "Buildings" else "16:9" if a.get("wide") else "1:1"
     url = hf("generate", "create", "gpt_image_2_5", "--aspect_ratio", ar, "--quality", "high", "--resolution", "2k",
              "--background", "opaque", "--prompt", a["prompt"], "--wait")
     fetch(url, p)
@@ -183,7 +187,8 @@ def do_import(i, out_id=None, faces=None):
         if a.get("wide"):
             cmd += ["--wide"]
     else:
-        cmd += ["--length", str(a["length"]), "--front", a.get("front", "auto"), "--faces", "40000" if a["cat"] == "Locomotives" else "15000",
+        cmd += ["--length", str(a["length"]), "--front", a.get("front", "auto"),
+                "--faces", str(a.get("faces", 40000 if a["cat"] == "Locomotives" else 15000)),
                 "--tex", "2048" if a["cat"] == "Locomotives" else "1024"]
         if a.get("twin"):
             cmd += ["--twin"]
@@ -192,6 +197,17 @@ def do_import(i, out_id=None, faces=None):
     r = subprocess.run(cmd, capture_output=True, text=True)
     print("\n".join(l for l in r.stdout.splitlines() if "[ai]" in l) or r.stdout[-2000:] + r.stderr[-2000:])
     rebake(out_id, a, src=i)
+    if a.get("animal"):
+        # Rig + walk cycle, then move the result (and its textures) to Models/Animals.
+        props, animals = (os.path.join(ROOT, "Assets", "Resources", "Models", c) for c in ("Props", "Animals"))
+        r = subprocess.run(["blender", "-b", "--factory-startup", "-P", os.path.join(ROOT, "Tools", "blender", "horse.py"), "--",
+                            os.path.join(props, i + ".fbx"), animals], capture_output=True, text=True)
+        print("\n".join(l for l in r.stdout.splitlines() if "[horse]" in l) or r.stdout[-2000:] + r.stderr[-2000:])
+        for kind in ("_albedo.jpg", "_normal.jpg"):
+            os.replace(os.path.join(props, i + kind), os.path.join(animals, i + kind))
+        for f in (i + ".fbx", i + ".fbx.meta", i + "_albedo.jpg.meta", i + "_normal.jpg.meta"):
+            if os.path.exists(os.path.join(props, f)):
+                os.remove(os.path.join(props, f))
 
 
 def rebake(i, a, src=None):
