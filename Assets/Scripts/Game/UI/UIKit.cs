@@ -35,7 +35,7 @@ namespace Ironhorse.Game
             {
                 case Rarity.Uncommon: return Palette.Hex(0x4E8A3A);
                 case Rarity.Rare: return Palette.Hex(0x3C6E8F);
-                case Rarity.Epic: return Palette.Hex(0x7E4BA6);
+                case Rarity.Epic: return Palette.Hex(0xB8402C);
                 case Rarity.Legendary: return Palette.Hex(0xD08A1E);
             }
             return Palette.Hex(0x6A7588);
