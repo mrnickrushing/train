@@ -96,6 +96,20 @@ bldg("fountain", "an original town square fountain: a round stone basin with a t
 bldg("station", "an original long frontier railway depot station, about four and a half times as long as it is deep: a central two-storey block with a clock tower and a pointed copper-green roof, two long single-storey wings with red hip roofs, cream board-and-batten walls with brown trim, a wooden platform canopy with brackets along the front, ticket windows, benches, luggage carts", base="a stone platform edge", footprint=36.0, wide=True)
 bldg("freightshed", "an original wooden railway freight shed, about twice as long as deep: red-painted plank walls, a raised wooden loading dock with sliding doors along the front, a corrugated tin roof with a deep overhang, crates and barrels on the dock", footprint=14.0, wide=True)
 
+# Vegetation (instanced thousands of times: tiny triangle budgets)
+TREE = ("Game asset reference render of {what}, the whole plant visible from the ground to the top, standing alone, "
+        "slightly elevated three-quarter view, isolated on a plain flat white background, nothing cropped, no ground "
+        "patch. Semi-realistic stylized like a premium mobile tycoon game: clear chunky foliage masses, rich natural color, "
+        "soft studio light. No text.")
+for _i, _w in {
+    "pine": "a tall dense ponderosa pine tree with layered drooping dark green branches and a straight reddish-brown trunk",
+    "pine2": "a slender young Douglas fir with a narrow pointed crown of blue-green needles",
+    "cottonwood": "a big rounded cottonwood tree with a thick gnarled trunk and bright yellow-green leafy crown",
+    "saguaro": "a tall saguaro cactus with two upturned arms and ribbed green skin",
+    "sage": "a low rounded silvery sagebrush shrub",
+}.items():
+    A[_i] = dict(cat="Trees", footprint=1.0, prompt=TREE.format(what=_w), tree=True)
+
 
 def hf(*args):
     print("+ higgsfield", " ".join(a if len(a) < 60 else a[:57] + "..." for a in args))
@@ -138,11 +152,26 @@ def model(i):
     print("model", i, url)
 
 
-def do_import(i):
+TREE_HEIGHT = {"pine": 11, "pine2": 9, "cottonwood": 9, "saguaro": 6, "sage": 1.4}
+# (near, far) triangle budgets: near cells draw the detailed mesh, distant cells the light one.
+TREE_VOXELS = {"sage": (22, 12)}  # voxels across the plant's height for the solid canopy remesh
+TREE_FACES = {"pine": (1500, 250), "pine2": (1200, 200), "cottonwood": (1800, 300), "saguaro": (500, 150), "sage": (300, 90)}
+
+
+def do_import(i, out_id=None, faces=None):
     a = A[i]
+    if a.get("tree") and out_id is None:
+        near, far = TREE_FACES[i]
+        do_import(i, i, near)
+        do_import(i, i + "_far", far)
+        return
+    out_id = out_id or i
     g = os.path.join(SRC, i + ".glb")
-    cmd = ["blender", "-b", "--factory-startup", "-P", os.path.join(ROOT, "Tools", "blender", "import_ai.py"), "--", g, a["cat"], i]
-    if a["cat"] == "Buildings":
+    cmd = ["blender", "-b", "--factory-startup", "-P", os.path.join(ROOT, "Tools", "blender", "import_ai.py"), "--", g, a["cat"], out_id]
+    if a.get("tree"):
+        cmd += ["--height", str(TREE_HEIGHT[i]), "--front", "none", "--faces", str(faces), "--tex", "512",
+                "--remesh", str(TREE_VOXELS.get(i, (70, 36))[0 if out_id == i else 1])]
+    elif a["cat"] == "Buildings":
         small = a["footprint"] < 4
         cmd += ["--footprint", str(a["footprint"]), "--faces", "6000" if small else "20000", "--tex", "512" if small else "1024"]
         if "height" in a:
@@ -160,10 +189,10 @@ def do_import(i):
             cmd += ["--flip"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     print("\n".join(l for l in r.stdout.splitlines() if "[ai]" in l) or r.stdout[-2000:] + r.stderr[-2000:])
-    rebake(i, a)
+    rebake(out_id, a, src=i)
 
 
-def rebake(i, a):
+def rebake(i, a, src=None):
     """Bakes the full-detail colours onto the decimated mesh with clean UVs (see Tools/blender/rebake.py)."""
     from PIL import Image
     d = os.path.join(ROOT, "Assets", "Resources", "Models", a["cat"])
@@ -172,14 +201,20 @@ def rebake(i, a):
     os.makedirs(os.path.dirname(tmp), exist_ok=True)
     size = "2048" if a["cat"] == "Locomotives" else "512" if a.get("tree") or a.get("footprint", 9) < 4 else "1024"
     cmd = ["blender", "-b", "--factory-startup", "-P", os.path.join(ROOT, "Tools", "blender", "rebake.py"), "--",
-           os.path.join(SRC, i + ".glb"), fbx, tmp, "--size", size, "--normal"] + (["--twin"] if a.get("twin") else [])
+           os.path.join(SRC, (src or i) + ".glb"), fbx, tmp, "--size", size, "--normal"] + (["--twin"] if a.get("twin") else [])
     r = subprocess.run(cmd, capture_output=True, text=True)
     lines = [l for l in r.stdout.splitlines() if "[bake]" in l]
     if not any("exported" in l for l in lines):
         print("BAKE FAILED", i, (r.stdout + r.stderr)[-1500:])
         return
     for kind in ("albedo", "normal"):
-        Image.open(tmp + "_" + kind + ".png").convert("RGB").save(os.path.join(d, i + "_" + kind + ".jpg"), quality=90)
+        im = Image.open(tmp + "_" + kind + ".png").convert("RGB")
+        if kind == "albedo" and (src or i) == "cottonwood":
+            # The concept's leaves came out lime: deepen them toward the grass.
+            import numpy as np
+            from PIL import ImageEnhance
+            im = ImageEnhance.Color(Image.fromarray((np.asarray(im) * [0.82, 0.92, 0.78]).clip(0, 255).astype("uint8"))).enhance(0.85)
+        im.save(os.path.join(d, i + "_" + kind + ".jpg"), quality=90)
     ms = os.path.join(d, i + "_ms.png")  # old-UV metal map no longer lines up
     for f in (ms, ms + ".meta"):
         if os.path.exists(f):

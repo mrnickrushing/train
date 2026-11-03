@@ -156,6 +156,17 @@ def main():
     bm.free()
     o.data.update()
 
+    if "--remesh" in sys.argv:
+        # Foliage is thousands of separate leaf clumps that decimation can't merge: rebuild it as one
+        # solid canopy shape first (rebake.py paints the leafy look back on from the original).
+        mn_, mx_ = bounds(o)
+        md = o.modifiers.new("vox", "REMESH")
+        md.mode = "VOXEL"
+        md.voxel_size = (mx_.z - mn_.z) / float(arg("--remesh", 60, float))
+        md.adaptivity = 0
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.modifier_apply(modifier="vox")
+
     # Decimate to the mobile budget.
     n = len(o.data.polygons)
     if n > faces:

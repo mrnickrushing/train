@@ -116,8 +116,20 @@ namespace Ironhorse.Game
 
         // ---------------------------------------------------------------- Vegetation
 
+        /// <summary>While true, plants with drop-in art are registered for instanced drawing instead of meshed.</summary>
+        static bool _instancing;
+
+        static bool Instanced(string kind, Vector3 p, float scale)
+        {
+            if (!_instancing || !Vegetation.HasArt(kind)) return false;
+            Vegetation.Add(kind, p, scale);
+            return true;
+        }
+
         static void BuildVegetation(Transform root)
         {
+            if (root.GetComponent<Vegetation>() == null) root.gameObject.AddComponent<Vegetation>();
+            _instancing = true;
             const float chunk = 120f;
             var chunks = new Dictionary<Vector2Int, MeshBuilder>();
             MeshBuilder Chunk(Vector3 p)
@@ -176,6 +188,7 @@ namespace Ironhorse.Game
                 else if (q < 0.55f && clump > 0.35f) Pine(Chunk(p), p, R(0.8f, 1.3f));
             }
 
+            _instancing = false;
             foreach (var kv in chunks)
             {
                 var go = kv.Value.ToObject("Vegetation " + kv.Key, root);
@@ -186,6 +199,7 @@ namespace Ironhorse.Game
         /// <summary>Conifer: stacked star-shaped tiers (jagged silhouette), dark inside, sunlit tips.</summary>
         public static void Pine(MeshBuilder mb, Vector3 p, float s)
         {
+            if (Instanced(Mathf.Repeat(p.x * 0.37f + p.z * 0.71f, 1f) < 0.6f ? "pine" : "pine2", p, s * 0.95f)) return;
             mb.Matte();
             float hue = R(-0.03f, 0.03f);
             Color dark = Shift(Palette.PineDark, hue - 0.03f), mid = Shift(Palette.Pine, hue), tip = Shift(Color.Lerp(Palette.Pine, Palette.Grass, 0.25f), hue);
@@ -231,6 +245,7 @@ namespace Ironhorse.Game
 
         public static void Cottonwood(MeshBuilder mb, Vector3 p, float s)
         {
+            if (Instanced("cottonwood", p, s * 0.75f)) return;
             mb.Matte();
             mb.Cylinder(p, p + Vector3.up * 3.4f * s, 0.4f * s, 0.25f * s, 6, Palette.Bark, false);
             Color leaf = Shift(Palette.Hex(0x6E8C3E), R(-0.05f, 0.05f));
@@ -241,6 +256,7 @@ namespace Ironhorse.Game
 
         public static void Saguaro(MeshBuilder mb, Vector3 p, float s)
         {
+            if (Instanced("saguaro", p, s * 0.95f)) return;
             mb.Mat(0.2f);
             Color c = Shift(Palette.Cactus, R(-0.03f, 0.03f));
             float h = 5.5f * s;
@@ -262,6 +278,7 @@ namespace Ironhorse.Game
 
         public static void Sage(MeshBuilder mb, Vector3 p, float s)
         {
+            if (Instanced("sage", p, s * 0.75f)) return;
             mb.Matte();
             Color c = Shift(Palette.Sage, R(-0.05f, 0.05f));
             mb.Sphere(p + Vector3.up * 0.35f * s, new Vector3(0.9f, 0.6f, 0.8f) * s, 6, c, false);

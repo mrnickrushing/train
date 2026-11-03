@@ -177,17 +177,28 @@ namespace Ironhorse.Game
             var w = new MeshBuilder();
             var rng = new System.Random(Index * 7919 + 13);
             System.Func<float, float, float> rr = (a, b) => a + (float)rng.NextDouble() * (b - a);
+            var art = new List<(string kind, Vector3 pos, float scale)>();
             int trees = 1 + rng.Next(3);
             for (int i = 0; i < trees; i++)
             {
                 var p = new Vector3(rr(-h + 1.5f, h - 1.5f), 0, rr(-h + 1.5f, h - 1.5f));
-                if (rng.NextDouble() < 0.6) Scenery.Pine(w, p, rr(0.55f, 0.85f));
+                if (rng.NextDouble() < 0.6)
+                {
+                    if (Vegetation.HasArt("pine")) art.Add((rng.NextDouble() < 0.5 ? "pine" : "pine2", p, rr(0.5f, 0.8f)));
+                    else Scenery.Pine(w, p, rr(0.55f, 0.85f));
+                }
+                else if (Vegetation.HasArt("cottonwood")) art.Add(("cottonwood", p, rr(0.45f, 0.65f)));
                 else Scenery.Cottonwood(w, p, rr(0.6f, 0.85f));
             }
             for (int i = 0; i < 3 + rng.Next(3); i++)
-                Scenery.Sage(w, new Vector3(rr(-h, h), 0, rr(-h, h)), rr(0.5f, 0.9f));
+            {
+                var p = new Vector3(rr(-h, h), 0, rr(-h, h));
+                if (Vegetation.HasArt("sage")) art.Add(("sage", p, rr(0.4f, 0.7f)));
+                else Scenery.Sage(w, p, rr(0.5f, 0.9f));
+            }
             if (rng.NextDouble() < 0.5) Scenery.Rock(w, new Vector3(rr(-h, h), 0, rr(-h, h)), rr(0.4f, 0.8f));
             _wild = w.ToObject("Wild", transform);
+            foreach (var plant in art) Vegetation.Spawn(plant.kind, _wild.transform, plant.pos, plant.scale);
 
             var col = gameObject.AddComponent<BoxCollider>();
             col.center = new Vector3(0, 0.5f, 0);
