@@ -68,6 +68,12 @@ workflows:
             "${AUTH[@]}" archive > /tmp/xcodebuild_archive.log 2>&1 \
             || { grep -E "error:|error -|Error Domain|No profiles|No signing|requires a provisioning|failed" /tmp/xcodebuild_archive.log | sort -u | tail -40; echo "xcodebuild archive failed (full log in artifacts)"; exit 1; }
           tail -3 /tmp/xcodebuild_archive.log
+          # The archive is unsigned, so it carries no entitlements and the export would drop them (Sign in
+          # with Apple, Game Center). An ad-hoc signature stamps them on; export re-signs for the App Store
+          # and keeps the entitlements the App Store profile allows.
+          APP=$(ls -d /tmp/Ironhorse.xcarchive/Products/Applications/*.app)
+          for f in "$APP"/Frameworks/*.framework "$APP"/Frameworks/*.dylib; do [ -e "$f" ] && codesign --force --sign - "$f"; done
+          codesign --force --sign - --entitlements ios/Ironhorse.entitlements "$APP"
           cat > /tmp/export_options.plist <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -84,6 +90,8 @@ workflows:
           xcodebuild -exportArchive -archivePath /tmp/Ironhorse.xcarchive -exportPath build/ios/ipa \
             -exportOptionsPlist /tmp/export_options.plist "${AUTH[@]}" > /tmp/xcodebuild_export.log 2>&1 \
             || { grep -E "error|Error" /tmp/xcodebuild_export.log | tail -30; exit 1; }
+          rm -rf /tmp/ipa && unzip -q -o build/ios/ipa/*.ipa -d /tmp/ipa
+          echo "Signed entitlements:"; codesign -d --entitlements - --xml /tmp/ipa/Payload/*.app 2>/dev/null | plutil -p - || true
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/Ironhorse.xcarchive/dSYMs/*.dSYM
@@ -95,6 +103,33 @@ workflows:
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
         submit_to_app_store: false
+
+  ios-check:
+    name: iOS build check (signs, no TestFlight upload)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_credentials
+      vars:
+        BUNDLE_ID: com.rushingtech.ironhorsefrontier
+        APPLE_TEAM_ID: PH4AKDQ4Q7
+        XCODE_PROJECT: ios/Unity-iPhone.xcodeproj
+        XCODE_SCHEME: Unity-iPhone
+        EXPORT_URL: https://github.com/mrnickrushing/train/releases/download/ios-latest/ios-xcode.zip
+      xcode: latest
+    scripts:
+      - *check_asc
+      - &download
+        name: Download the exported Xcode project
+        script: |
+          curl -fL --retry 3 -o /tmp/ios-xcode.zip "$EXPORT_URL"
+          rm -rf ios && unzip -q /tmp/ios-xcode.zip -d .
+          ls ios
+      - *build_number
+      - *archive
+    artifacts:
+      - /tmp/xcodebuild_*.log
 
   ios-unity:
     name: iOS → TestFlight (Unity on the Mac; needs Unity Plus/Pro)

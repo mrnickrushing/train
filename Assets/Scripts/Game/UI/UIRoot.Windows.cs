@@ -815,6 +815,27 @@ namespace Ironhorse.Game
             }, 1000, 760);
         }
 
+        static Font _systemFont;
+
+        /// <summary>
+        /// Black "Sign in with Apple" button per Apple's guidelines: mixed case and the Apple logo, drawn in the
+        /// iOS system font (which carries the logo glyph); elsewhere the game font without the logo.
+        /// </summary>
+        void AppleSignInButton(Transform parent, Action onClick)
+        {
+            var b = UIKit.Btn(parent, "Sign in with Apple", Color.black, onClick, 26, -1, 72);
+            var t = b.GetComponentInChildren<Text>();
+            if (Application.platform == RuntimePlatform.IPhonePlayer)
+            {
+                if (_systemFont == null) _systemFont = Font.CreateDynamicFontFromOSFont(new[] { "Helvetica Neue", "Helvetica" }, 30);
+                t.font = _systemFont;
+                t.text = "\uF8FF  Sign in with Apple";
+            }
+            else t.text = "Sign in with Apple";
+            var o = t.GetComponent<Outline>();
+            if (o != null) o.enabled = false;
+        }
+
         void OpenSettings()
         {
             ShowWindow("Settings", content =>
@@ -822,6 +843,30 @@ namespace Ironhorse.Game
                 var set = S.State.settings;
                 UIKit.Btn(content, "Music: " + (set.music ? "On" : "Off"), UIKit.WoodLight, () => { set.music = !set.music; AudioManager.MusicOn = set.music; RebuildWindow(); }, 24, -1, 64);
                 UIKit.Btn(content, "Sound effects: " + (set.sfx ? "On" : "Off"), UIKit.WoodLight, () => { set.sfx = !set.sfx; AudioManager.SfxOn = set.sfx; RebuildWindow(); }, 24, -1, 64);
+                UIKit.Btn(content, "Reminders: " + (set.notifications ? "On" : "Off"), UIKit.WoodLight, () => { set.notifications = !set.notifications; if (set.notifications) Reminders.AskOnce(); RebuildWindow(); }, 24, -1, 64);
+                Line(content, "Notifications when trains return, fuel is full or goods are ready.", 18, UIKit.InkSoft);
+
+                Heading(content, "Game Center");
+                var gc = UIKit.Row(content, 64, 16);
+                UIKit.Btn(gc.transform, "Achievements", UIKit.Blue, GameCenter.ShowAchievements, 24, 300, 64);
+                UIKit.Btn(gc.transform, "Leaderboards", UIKit.Blue, GameCenter.ShowLeaderboards, 24, 300, 64);
+                if (!GameCenter.Supported) Line(content, "Game Center is available on iPhone and iPad.", 18, UIKit.InkSoft);
+
+                Heading(content, "Account");
+                if (AppleAccount.SignedIn)
+                {
+                    Line(content, "Signed in with Apple" + (AppleAccount.DisplayName.Length > 0 ? " as " + AppleAccount.DisplayName : "") + ". Purchases follow your Apple ID to any device.", 20, UIKit.Ink);
+                    UIKit.Btn(content, "Sign out", UIKit.WoodLight, () => { AppleAccount.SignOut(); Toast("Signed out", true); RebuildWindow(); }, 24, -1, 64);
+                }
+                else
+                {
+                    AppleSignInButton(content, () => AppleAccount.SignIn((ok, err) =>
+                    {
+                        if (ok) { Toast("Signed in with Apple", true); RebuildWindow(); }
+                        else if (err != null) Toast(err, true);
+                    }));
+                    Line(content, "Optional. Keeps your purchases with your Apple ID on every device.", 18, UIKit.InkSoft);
+                }
                 UIKit.Btn(content, "Restore purchases", UIKit.WoodLight, () => Store.Current.Restore(n => Toast(n > 0 ? "Restored " + n + " purchase(s)" : "Nothing to restore", true)), 24, -1, 64);
                 UIKit.Btn(content, "Save now", UIKit.Green, () => { GameRoot.Instance.Save(); Toast("Game saved", true); }, 24, -1, 64);
                 if (Debug.isDebugBuild)

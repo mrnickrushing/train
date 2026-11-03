@@ -14,6 +14,8 @@ namespace Ironhorse.Game
         string Price(string productId);
         void Purchase(string productId, Action<bool, string> done);
         void Restore(Action<int> done);
+        /// <summary>Ties purchases to a signed-in account (Sign in with Apple user id), or null to go anonymous.</summary>
+        void Identify(string appUserId);
     }
 
     /// <summary>
@@ -76,6 +78,7 @@ namespace Ironhorse.Game
         }
 
         public void Restore(Action<int> done) { done(0); }
+        public void Identify(string appUserId) { }
     }
 
 #if IRONHORSE_REVENUECAT
@@ -92,13 +95,20 @@ namespace Ironhorse.Game
 
         Purchases _purchases;
         bool _booted; // Purchases configures itself in its Start(); calls before that hit an unset native wrapper
+        string _pendingUser; bool _hasPendingUser; // Identify() before boot
         readonly Dictionary<string, string> _prices = new Dictionary<string, string>();
         public bool Ready { get; private set; }
 
         sealed class Boot : MonoBehaviour
         {
             public RevenueCatStore Store;
-            System.Collections.IEnumerator Start() { yield return null; Store._booted = true; Store.LoadPrices(); }
+            System.Collections.IEnumerator Start()
+            {
+                yield return null;
+                Store._booted = true;
+                if (Store._hasPendingUser) Store.Identify(Store._pendingUser);
+                Store.LoadPrices();
+            }
         }
 
         public static RevenueCatStore Create()
@@ -139,6 +149,20 @@ namespace Ironhorse.Game
                 var tx = result.StoreTransaction;
                 done(true, tx != null ? tx.TransactionIdentifier : "rc-" + Guid.NewGuid().ToString("N"));
             }, "inapp");
+        }
+
+        public void Identify(string appUserId)
+        {
+            if (!_booted) { _pendingUser = appUserId; _hasPendingUser = true; return; }
+            _hasPendingUser = false;
+            if (!string.IsNullOrEmpty(appUserId))
+                _purchases.LogIn(appUserId, (info, created, error) =>
+                {
+                    if (error != null) { Debug.LogWarning("[RevenueCat] log in: " + error.Message); return; }
+                    G.Session.RestoreNonConsumables(info.AllPurchasedProductIdentifiers); // one-time items follow the account
+                });
+            else
+                _purchases.LogOut((info, error) => { if (error != null) Debug.LogWarning("[RevenueCat] log out: " + error.Message); });
         }
 
         public void Restore(Action<int> done)
