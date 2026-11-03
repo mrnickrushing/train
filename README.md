@@ -46,10 +46,10 @@ and skipping time.
 
 ## Building for iPhone with Codemagic
 
-`codemagic.yaml` has two workflows. Both sign with the team's App Store Connect integration
-`CodeMagic-Team` (and `CERTIFICATE_PRIVATE_KEY` from the team group `ios_credentials`), register the
-bundle id `com.rushingtech.ironhorsefrontier` and create the profile themselves, then upload to
-**TestFlight**.
+`codemagic.yaml` has two workflows. Both read an App Store Connect API key (Admin role) from a
+Codemagic variable group `ios_credentials` (`APP_STORE_CONNECT_PRIVATE_KEY` = the `.p8` contents,
+`APP_STORE_CONNECT_KEY_IDENTIFIER`, `APP_STORE_CONNECT_ISSUER_ID`). Xcode signs automatically with
+it (bundle id `com.rushingtech.ironhorsefrontier`) and Codemagic uploads to **TestFlight**.
 
 - **`ios-testflight`** (works with Unity Personal): export the Xcode project here, then build it on
   Codemagic.
