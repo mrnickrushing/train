@@ -100,6 +100,10 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   Shaft by the west mesa, the resupply depot north of the yard, Silver Lake Dam above the lake, the Golden Spike plaza); the share of goods delivered
   decides how many stand, new ones rise when the player is back on the map. `ProjectSites.Blocks` keeps scenery off them.
   Project cards show unfinished projects as a blueprint filled in colour by `ProjectSites.Built`.
+- **Audio**: recorded music, day/night ambience beds and effects (Higgsfield Sonilo, Mirelo, Seed Audio; raw takes in
+  `art-src/audio`) are trimmed, levelled and looped by `Tools/art/audio.py` (free, ffmpeg) into `Resources/Audio/*.ogg`.
+  `AudioManager` loads them and falls back to its synthesized sounds for any that are missing. Seed Audio's quoted
+  cost is 0.1 but it charges about 1 credit a take: check `higgsfield account transactions`.
 - `Tools/art/pack_textures.py` rebuilds `Assets/Resources/Textures/*.png` from CC0 ambientCG
   materials; `Assets/Editor/ArtImport.cs` imports them as Texture2DArrays. Layer order must match
   `SurfaceKind` (`Materials.cs`) and the terrain layer list in `Terrain.shader` / `Terrain.cs`.

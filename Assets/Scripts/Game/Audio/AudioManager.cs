@@ -15,8 +15,17 @@ namespace Ironhorse.Game
         const int Rate = 22050;
 
         readonly Dictionary<Sfx, AudioClip> _clips = new Dictionary<Sfx, AudioClip>();
-        AudioClip _chuff, _whistle, _wind, _music, _bird, _cricket;
-        AudioSource _ui, _ambient, _musicSrc, _chuffSrc, _whistleSrc;
+        AudioClip _chuff, _whistle, _wind, _music, _bird, _cricket, _ambDay, _ambNight;
+        AudioSource _ui, _ambient, _ambientNight, _musicSrc, _chuffSrc, _whistleSrc;
+        bool _recordedBeds;
+
+        static AudioClip Load(string name) { return Resources.Load<AudioClip>("Audio/" + name); }
+
+        void Recorded(Sfx s, string name)
+        {
+            var c = Load(name);
+            if (c != null) _clips[s] = c;
+        }
         System.Random _rng = new System.Random(5);
 
         ConsistView _chuffOwner;
@@ -50,8 +59,23 @@ namespace Ironhorse.Game
             _cricket = Make("cricket", 0.6f, t => Mathf.Sin(2 * Mathf.PI * 4600 * t) * (Mathf.Sin(2 * Mathf.PI * 30 * t) > 0 ? 1 : 0) * Env(t, 0.01f, 0.55f) * 0.06f);
             _music = Music();
 
-            _ambient.clip = _wind; _ambient.loop = true; _ambient.volume = 0.25f; _ambient.Play();
-            _musicSrc.clip = _music; _musicSrc.loop = true; _musicSrc.volume = 0.22f; _musicSrc.Play();
+            // Recorded audio (Resources/Audio, Tools/art/audio.py) replaces the synthesized sounds where present.
+            Recorded(Sfx.Click, "click"); Recorded(Sfx.Open, "click"); Recorded(Sfx.Coin, "coin"); Recorded(Sfx.Error, "error");
+            Recorded(Sfx.Build, "build"); Recorded(Sfx.Bell, "bell"); Recorded(Sfx.LevelUp, "levelup"); Recorded(Sfx.Deliver, "deliver");
+            _chuff = Load("chuff") ?? _chuff;
+            _whistle = Load("whistle") ?? _whistle;
+            var music = Load("music");
+            _ambDay = Load("amb_day");
+            _ambNight = Load("amb_night");
+            _recordedBeds = _ambDay != null && _ambNight != null;
+            if (_recordedBeds)
+            {
+                _ambient.clip = _ambDay; _ambient.loop = true; _ambient.volume = 0; _ambient.Play();
+                _ambientNight = Src(true);
+                _ambientNight.clip = _ambNight; _ambientNight.volume = 0; _ambientNight.Play();
+            }
+            else { _ambient.clip = _wind; _ambient.loop = true; _ambient.volume = 0.25f; _ambient.Play(); }
+            _musicSrc.clip = music ?? _music; _musicSrc.loop = true; _musicSrc.volume = music != null ? 0.32f : 0.22f; _musicSrc.Play();
         }
 
         AudioSource Src(bool loop)
@@ -67,6 +91,15 @@ namespace Ironhorse.Game
         {
             _musicSrc.mute = !MusicOn;
             _ambient.mute = !SfxOn;
+            if (_recordedBeds)
+            {
+                // Prairie wind and birds by day, crickets by night, crossfaded with the light.
+                var cycle = DayNightCycle.Instance;
+                float night = cycle != null ? Mathf.Clamp01(cycle.Night) : 0;
+                _ambient.volume = Mathf.MoveTowards(_ambient.volume, 0.42f * (1 - night), Time.unscaledDeltaTime * 0.3f);
+                _ambientNight.volume = Mathf.MoveTowards(_ambientNight.volume, 0.42f * night, Time.unscaledDeltaTime * 0.3f);
+                _ambientNight.mute = !SfxOn;
+            }
 
             // Locomotive chuffs: the closest moving steam train to the camera sets the rhythm.
             if (_chuffOwner != null && _chuffSteam && _chuffSpeed > 0.6f && SfxOn)
@@ -85,7 +118,7 @@ namespace Ironhorse.Game
             _chuffDist = float.MaxValue;
 
             _critterTimer -= Time.deltaTime;
-            if (_critterTimer <= 0 && SfxOn)
+            if (_critterTimer <= 0 && SfxOn && !_recordedBeds) // the recorded beds already carry birds and crickets
             {
                 _critterTimer = 2.5f + (float)_rng.NextDouble() * 6f;
                 var dn = DayNightCycle.Instance;
