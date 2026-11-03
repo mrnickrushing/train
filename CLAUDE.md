@@ -29,8 +29,8 @@ install it with `dotnet-install.sh --channel 8.0` if `dotnet --list-sdks` lacks 
 
 `Tools/ios-export.sh` exports the Xcode project from the running Editor (iOS Build Support module,
 local Unity Personal license) and uploads it as the `ios-latest` GitHub release asset; then start the
-Codemagic workflow `ios-testflight` (app **train**), which signs with the team integration
-`CodeMagic-Team` and uploads to TestFlight. See README → "Building for iPhone with Codemagic".
+Codemagic workflow `ios-testflight` (app **train**), which signs with the App Store Connect API key in
+the Codemagic variable group `ios_credentials` and uploads to TestFlight. See README → "Building for iPhone with Codemagic".
 
 ## Before committing
 
