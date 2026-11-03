@@ -53,15 +53,17 @@ Done in the project:
   and `RevenueCatStore` is compiled and matched to the v10 API (`PurchaseProduct` returns a
   `PurchaseResult`).
 
-Still to do:
-1. In RevenueCat, create a project and add an **App Store** app for bundle id
-   `com.rushingtech.ironhorsefrontier`. Upload an **In-App Purchase key** (App Store Connect →
-   Users and Access → Integrations → In-App Purchase), then import the products.
-2. Put the project's Apple public SDK key (`appl_…`) in `RevenueCatStore.ApiKey`
-   (`Assets/Scripts/Game/Monetization/StoreService.cs`). Until then the game keeps using the test
-   store (purchases only work in the Editor and development builds, never free in release).
-3. Sign the **Paid Apps Agreement** (App Store Connect → Business) or purchases fail even in sandbox.
-4. Build to TestFlight and buy with a sandbox account.
+- RevenueCat project **Ironhorse Frontier** (`proj71cc52d3`): App Store app `app0384b593bc` for the
+  bundle id, all 12 products, entitlements `starter_pack` and `big_tender` for the one-time items, and a
+  current offering `default` ("Trading Post") with one package per product. Its public key is in
+  `RevenueCatStore.ApiKey`; the store waits one frame for the SDK to configure itself before loading
+  prices or allowing purchases.
+
+Still to do (owner only):
+1. Upload an **In-App Purchase key** to RevenueCat (App Store Connect → Users and Access →
+   Integrations → In-App Purchase) so it can validate purchases.
+2. Sign the **Paid Apps Agreement** (App Store Connect → Business) or purchases fail even in sandbox.
+3. Build to TestFlight and buy with a sandbox account.
 
 ## 3. Rewarded ads
 
