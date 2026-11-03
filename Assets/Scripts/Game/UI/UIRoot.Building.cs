@@ -33,7 +33,7 @@ namespace Ironhorse.Game
                 var crew = Pill(right, t => CrewIcon(t), "Crew " + S.CrewFree + " / " + S.CrewTotal + " free", 32);
                 crew.name = "Crew";
                 if (S.State.hiredCrew < Balance.MaxHiredCrew)
-                    PriceBtn(right, "Hire", Purple, t => UIKit.NuggetIcon(t, 40), S.HireCrewCost.ToString(), () => Result(S.HireCrew(), Sfx.Build), 290, 80, S.Nuggets >= S.HireCrewCost, 34);
+                    PriceBtn(right, "Hire", Premium, t => UIKit.NuggetIcon(t, 40), S.HireCrewCost.ToString(), () => Result(S.HireCrew(), Sfx.Build), 290, 80, S.Nuggets >= S.HireCrewCost, 34);
             }
             else if (ready && d.Category == BuildingCategory.Residential)
                 Big(right, "Collect all rent", UIKit.Gold, () =>
@@ -141,7 +141,7 @@ namespace Ironhorse.Game
                 }
                 else
                 {
-                    var box = Box(belt.transform, Purple, size, size, "Buy slot");
+                    var box = Box(belt.transform, Premium, size, size, "Buy slot");
                     box.raycastTarget = true;
                     Stack(box.gameObject, 4, new RectOffset(6, 6, 14, 14), TextAnchor.MiddleCenter);
                     T1(box.transform, "ADD SLOT", 30, Color.white, TextAnchor.MiddleCenter, true);

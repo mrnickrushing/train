@@ -155,6 +155,7 @@ if __name__ == "__main__":
     panel("card_wood", hexc("4A2E1A"), w=128, h=128, radius=22, outline=(24, 14, 8), rim=(196, 150, 70), rim_w=3, grain=0.6, top_light=0.18)
     panel("tile", hexc("EBDDBB"), w=128, h=128, radius=24, outline=(150, 112, 70), rim=None, grain=0.0, top_light=0.4)
     panel("hero_purple", hexc("6E3AA8"), w=256, h=256, radius=30, outline=(30, 12, 44), rim=(236, 196, 96), rim_w=5, grain=0.15, top_light=0.3)
+    panel("hero_brass", hexc("9A6A1C"), w=256, h=256, radius=30, outline=(44, 28, 6), rim=(246, 214, 120), rim_w=5, grain=0.15, top_light=0.32)  # premium (season pass)
     panel("hero_blue", hexc("2E6AA6"), w=256, h=256, radius=30, outline=(12, 26, 48), rim=(236, 196, 96), rim_w=5, grain=0.15, top_light=0.3)
     panel("hero_red", hexc("A8402C"), w=256, h=256, radius=30, outline=(48, 14, 8), rim=(236, 196, 96), rim_w=5, grain=0.15, top_light=0.3)
     panel("hero_green", hexc("3E8A3A"), w=256, h=256, radius=30, outline=(12, 40, 12), rim=(236, 196, 96), rim_w=5, grain=0.15, top_light=0.3)

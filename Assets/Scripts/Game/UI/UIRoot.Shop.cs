@@ -13,8 +13,9 @@ namespace Ironhorse.Game
         Text _fuelText, _shopBadge, _passBadge, _shopTimer;
         Image _fuelFill;
 
-        static readonly Color Purple = Palette.Hex(0x7E4BA6);
-        static readonly Color PurpleLight = Palette.Hex(0xA77BD0);
+        /// <summary>Premium (season pass, nugget spends): brass gold, which reads as "premium" and fits the frontier palette.</summary>
+        static readonly Color Premium = Palette.Hex(0xD49A22);
+        static readonly Color Legendary = Palette.Hex(0xB8402C);
         static readonly Color FuelOrange = Palette.Hex(0xE0752D);
 
         // ================================================================ HUD pieces
@@ -46,7 +47,7 @@ namespace Ironhorse.Game
             var side = UIKit.Node("SideButtons", _safe);
             UIKit.Place(side, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, 200), new Vector2(170, 380));
             UIKit.VStack(side, 14, 0, TextAnchor.LowerCenter);
-            _passBadge = SideButton(side.transform, "Season", Purple, () => OpenPass(), PassGlyph, out _);
+            _passBadge = SideButton(side.transform, "Season", Premium, () => OpenPass(), PassGlyph, out _);
             _shopBadge = SideButton(side.transform, "Shop", UIKit.Red, () => OpenShop(), ShopGlyph, out _shopTimer);
         }
 
@@ -91,8 +92,8 @@ namespace Ironhorse.Game
             var h = UIKit.Node("Pass", t); UIKit.Size(h, 56, 56);
             Shape(h, UIKit.Cream, new Vector2(0.5f, 0.5f), new Vector2(50, 34));
             Shape(h, UIKit.Gold, new Vector2(0.5f, 0.5f), new Vector2(20, 20), UIKit.Circle);
-            Shape(h, Purple, new Vector2(0.18f, 0.5f), new Vector2(8, 34));
-            Shape(h, Purple, new Vector2(0.82f, 0.5f), new Vector2(8, 34));
+            Shape(h, Premium, new Vector2(0.18f, 0.5f), new Vector2(8, 34));
+            Shape(h, Premium, new Vector2(0.82f, 0.5f), new Vector2(8, 34));
         }
 
         void RefreshMoneyHud()
@@ -187,7 +188,7 @@ namespace Ironhorse.Game
             {
                 var sp = Catalog.Product(Catalog.SeasonPass);
                 var final = GameDatabase.Locomotive("sundown");
-                InCell(ct, t => ShopCard(t, "Rail Season Pass", S.State.passPremium ? "ACTIVE" : "PREMIUM", Purple, null, "silversprings",
+                InCell(ct, t => ShopCard(t, "Rail Season Pass", S.State.passPremium ? "ACTIVE" : "PREMIUM", Premium, null, "silversprings",
                     x => { if (final != null) LocoArt(x, final); }, null, new Grant(), "30 tiers of premium rewards and the Sundown Express",
                     S.State.passPremium ? "View pass" : Store.PriceOf(sp.Id), S.State.passPremium ? UIKit.Blue : UIKit.Green,
                     () => { if (S.State.passPremium) OpenPass(); else BuyProduct(sp.Id); }));
@@ -452,7 +453,7 @@ namespace Ironhorse.Game
             string scene;
             OfferScenes.TryGetValue(o.Id, out scene);
             string tag = o.Schedule == OfferSchedule.Starter ? "ONE TIME ONLY" : o.Badge == "LEGENDARY" ? "LEGENDARY" : "LIMITED OFFER";
-            Color tagColor = o.Schedule == OfferSchedule.Starter ? UIKit.Blue : o.Badge == "LEGENDARY" ? Purple : UIKit.Green;
+            Color tagColor = o.Schedule == OfferSchedule.Starter ? UIKit.Blue : o.Badge == "LEGENDARY" ? Legendary : UIKit.Green;
             var loco = p.Grant.LocomotiveId != null ? GameDatabase.Locomotive(p.Grant.LocomotiveId) : null;
             string note = o.Schedule == OfferSchedule.Weekly ? "Ends in " + Fmt.Time(S.WeekEndsIn) + " · 1 available" : "1 available";
             ShopCard(content, o.Title, tag, tagColor, o.Badge == "LEGENDARY" ? null : o.Badge, scene,
@@ -629,7 +630,7 @@ namespace Ironhorse.Game
             Stack(panel.gameObject, 10, new RectOffset(16, 16, 14, 10));
             var top = panel.transform;
             // Hero header: season, tier, progress and the premium unlock.
-            var head = UIKit.KitImage(top, "hero_purple", "Head", 200);
+            var head = UIKit.KitImage(top, "hero_brass", "Head", 200);
             UIKit.Size(head.gameObject, -1, 200);
             var hh = UIKit.HStack(head.gameObject, 22, 22, TextAnchor.MiddleLeft);
             hh.padding = new RectOffset(24, 26, 20, 20);
@@ -644,10 +645,10 @@ namespace Ironhorse.Game
             var title = UIKit.Label(hc.transform, "SEASON " + (S.CurrentSeason + 1) + " · TIER " + S.PassTier + "/" + Balance.PassTiers, 40, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
             title.font = UIKit.Display; title.fontStyle = FontStyle.Normal;
             UIKit.OneLine(title, 24);
-            UIKit.Stroke(title, new Color(0.12f, 0.03f, 0.2f, 0.9f), 2.5f);
+            UIKit.Stroke(title, new Color(0.22f, 0.12f, 0.02f, 0.9f), 2.5f);
             var bar = UIKit.Bar(hc.transform, UIKit.Gold, 28, new Color(0, 0, 0, 0.45f));
             UIKit.SetBar(bar, S.PassTier >= Balance.PassTiers ? 1 : S.PassTierProgress);
-            var ends = UIKit.Label(hc.transform, "", 22, new Color(1, 0.94f, 1f), TextAnchor.MiddleLeft);
+            var ends = UIKit.Label(hc.transform, "", 22, new Color(1, 0.96f, 0.86f), TextAnchor.MiddleLeft);
             UIKit.Size(ends.gameObject, -1, 30);
             ends.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.6f);
             Action live = () => ends.text = (S.State.passXp % Balance.PassXpPerTier) + "/" + Balance.PassXpPerTier + " season XP to the next tier · ends in " + Fmt.Time(S.SeasonEndsIn);
@@ -667,7 +668,7 @@ namespace Ironhorse.Game
             var hdr = UIKit.Row(top, 44, 14);
             UIKit.Size(UIKit.Node("Pad", hdr.transform), 110, 30);
             TrackHeader(hdr.transform, "FREE", UIKit.Green);
-            TrackHeader(hdr.transform, "PREMIUM", Purple);
+            TrackHeader(hdr.transform, "PREMIUM", Premium);
 
             // Open at the current tier, where the next claims are (1 = top of the list).
             if (!_scrollMemo.ContainsKey("pass")) _scrollMemo["pass"] = new Vector2(0, 1 - Mathf.Clamp01((S.PassTier - 2) / (float)(Balance.PassTiers - 3)));
@@ -701,7 +702,7 @@ namespace Ironhorse.Game
             bool claimed = (premium ? S.State.passClaimedPremium : S.State.passClaimedFree).Contains(t.Tier);
             bool locked = premium && !S.State.passPremium;
             bool reached = t.Tier <= S.PassTier;
-            var cell = UIKit.KitImage(row, premium ? "hero_purple" : "card_light", "Cell", 120);
+            var cell = UIKit.KitImage(row, premium ? "hero_brass" : "card_light", "Cell", 120);
             if (!reached) cell.color = new Color(0.82f, 0.8f, 0.78f);
             UIKit.Size(cell.gameObject, -1, 120, 1);
             var h = UIKit.HStack(cell.gameObject, 10, 10, TextAnchor.MiddleLeft);
