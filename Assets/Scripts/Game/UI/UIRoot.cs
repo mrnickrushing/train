@@ -112,6 +112,7 @@ namespace Ironhorse.Game
                 if (fuel != _lastFuel) { if (_lastFuel >= 0 && WindowOpen) _dirty = true; _lastFuel = fuel; }
                 RefreshHud();
                 foreach (var a in _live.ToList()) a();
+                UpdateCoach();
             }
             UpdateMarkers();
         }
@@ -330,6 +331,7 @@ namespace Ironhorse.Game
         {
             var holder = UIKit.Node(label, parent);
             UIKit.Size(holder, 154, 170);
+            _nav[label] = (RectTransform)holder.transform;
             var circle = HudTile(holder.transform, label, glyph, 150);
             Clickable(holder, onClick);
             var badge = UIKit.Badge(circle.transform, "", UIKit.Red);
@@ -568,6 +570,7 @@ namespace Ironhorse.Game
 
         void RebuildWindow()
         {
+            if (_window != null && _boardBuilder != null) { FillBoard(); return; }
             if (_window == null || _windowScroll == null) return;
             float scroll = _windowScroll.verticalNormalizedPosition;
             var content = _windowScroll.content;
@@ -590,6 +593,9 @@ namespace Ironhorse.Game
             SetHudVisible(true);
             _windowBuilder = null;
             _windowScroll = null;
+            _boardBuilder = null;
+            _boardBody = _boardRight = null;
+            _boardSubLabel = null;
             _live.Clear();
         }
 
@@ -646,19 +652,6 @@ namespace Ironhorse.Game
         {
             if (r.Ok) AudioManager.Play(success);
             if (!string.IsNullOrEmpty(r.Message)) Toast(r.Message, r.Ok);
-        }
-
-        void OnContractCompleted(ContractState c)
-        {
-            AudioManager.Play(Sfx.Deliver);
-            var cel = Celebrations.Instance;
-            cel.Confetti();
-            var center = new Vector2(Screen.width * 0.5f, Screen.height * 0.45f);
-            if (c.rewardCoins > 0) cel.FlyTo(center, (RectTransform)_coins.transform.parent, t => UIKit.CoinIcon(t, 48), 10);
-            if (c.rewardNuggets > 0) cel.FlyTo(center, (RectTransform)_nuggets.transform.parent, t => UIKit.NuggetIcon(t, 48), 5);
-            cel.Play("contract", "Contract Fulfilled!", c.client + ": " + StoryDirector.ClientThanks(c.client));
-            Toast(c.client + ": " + StoryDirector.ClientThanks(c.client), true);
-            StoryDirector.Instance.OnContract();
         }
 
         void OnLevelUp(int level)

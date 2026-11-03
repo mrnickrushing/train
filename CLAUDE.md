@@ -89,6 +89,10 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   `UIKit.Kit(name)` 9-slices them (borders in `UIKit.KitBorder`); `UIKit.Btn` picks the button art from
   the colour (`KitFor`), and `UIKit.Stroke` gives text the thick game-style outline. Destination postcards
   (`ai_media.py postcard`) live in `Resources/UI/Destinations/<id>.jpg`; HUD icons are `nav_*` in Icons.
+- **Boards**: the main screens (dispatch, fleet, contracts, build, depot, warehouse) are fixed-layout `ShowBoard`
+  windows (`UIRoot.Boards.cs` widgets, `UIRoot.Screens.cs`); `Tools/art/ui_cutouts.py` (free) cuts the white
+  backdrop off the concept renders into `Resources/UI/{Locos,Wagons,Buildings}` for their art. `UIRoot.Coach.cs` is
+  Hank's first-launch tutorial (goals g1-g5, `settings.tutorialDone`).
 - `Tools/art/pack_textures.py` rebuilds `Assets/Resources/Textures/*.png` from CC0 ambientCG
   materials; `Assets/Editor/ArtImport.cs` imports them as Texture2DArrays. Layer order must match
   `SurfaceKind` (`Materials.cs`) and the terrain layer list in `Terrain.shader` / `Terrain.cs`.
