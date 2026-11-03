@@ -411,7 +411,7 @@ namespace Ironhorse.Game
             UIKit.Place(art.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(330, 124));
 
             var nc = VBox(row.transform, 6, 0, TextAnchor.MiddleLeft, 460);
-            T1(nc.transform, GameSession.Name(t) + " · Lv " + t.level, 28, arrived ? Palette.Hex(0x6B4C0B) : BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
+            T1(nc.transform, GameSession.Name(t) + " · Lv " + t.level, 28, arrived ? Palette.Hex(0x4A3306) : BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
             var mid = HBox(row.transform, 10, 0, TextAnchor.MiddleCenter, -1, -1, 1);
             var rc = VBox(row.transform, 10, 0, TextAnchor.MiddleCenter, 420);
             rc.GetComponent<VerticalLayoutGroup>().childForceExpandWidth = false;
@@ -1050,7 +1050,7 @@ namespace Ironhorse.Game
         /// <summary>Full-screen reward card: ribbon, glowing reward icons, XP bar; tap to collect.</summary>
         IEnumerator RewardMoment(string who, string title, int coins, int xp, int nuggets, ResourceAmount[] parts)
         {
-            var root = UIKit.Panel(_popupLayer, new Color(0.03f, 0.04f, 0.07f, 0.86f), "Reward");
+            var root = UIKit.Panel(_popupLayer, new Color(0.03f, 0.04f, 0.07f, 0.96f), "Reward");
             SetHudVisible(false);
             root.sprite = null;
             UIKit.Stretch(root.gameObject);

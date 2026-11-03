@@ -16,7 +16,7 @@ namespace Ironhorse.Game
         readonly HashSet<string> _coachDismissed = new HashSet<string>();
         GameObject _coach;
         string _coachKey;
-        RectTransform _coachTarget, _coachRing, _coachArrow;
+        RectTransform _coachTarget, _coachRing, _coachArrow, _coachBubble;
         RectTransform[] _coachDim;
 
         static readonly string[] CoachGoals = { "g1", "g2", "g3", "g4", "g5" };
@@ -66,7 +66,7 @@ namespace Ironhorse.Game
             _coachDim = new RectTransform[4];
             for (int i = 0; i < 4; i++)
             {
-                var d = UIKit.Panel(_coach.transform, new Color(0.03f, 0.04f, 0.07f, target != null ? 0.72f : 0.4f), "Dim");
+                var d = UIKit.Panel(_coach.transform, new Color(0.03f, 0.04f, 0.07f, target != null ? 0.9f : 0.6f), "Dim");
                 d.sprite = null;
                 d.raycastTarget = false;
                 _coachDim[i] = d.rectTransform;
@@ -100,14 +100,14 @@ namespace Ironhorse.Game
 
             var bubble = UIKit.Panel(safe.transform, UIKit.Parchment, "Bubble", UIKit.RoundedGrad, true);
             bubble.pixelsPerUnitMultiplier = 1.4f;
-            UIKit.Place(bubble.gameObject, new Vector2(0, 0), new Vector2(0, 0), new Vector2(330, 300), new Vector2(860, 300));
+            _coachBubble = UIKit.Place(bubble.gameObject, new Vector2(0, 0), new Vector2(0, 0), new Vector2(330, 420), new Vector2(900, 270));
             bubble.gameObject.AddComponent<Outline>().effectColor = BOutline;
             bubble.gameObject.AddComponent<WindowIntro>();
             var tag = UIKit.KitImage(bubble.transform, "btn_gold", "Name", 64);
             UIKit.Place(tag.gameObject, new Vector2(0, 1), new Vector2(0, 0.5f), new Vector2(28, 0), new Vector2(390, 64));
             var tn = T(tag.transform, "HANK · YOUR FOREMAN", 32, Palette.Hex(0x3B2A05), TextAnchor.MiddleCenter);
             UIKit.Anchor(tn.gameObject, Vector2.zero, Vector2.one, new Vector2(8, 10), new Vector2(-8, -2));
-            var body = T(bubble.transform, text, 36, UIKit.Ink, TextAnchor.UpperLeft, false, UIKit.BodyBold);
+            var body = T(bubble.transform, text, 40, UIKit.Ink, TextAnchor.UpperLeft, false, UIKit.BodyBold);
             UIKit.Anchor(body.gameObject, Vector2.zero, Vector2.one, new Vector2(34, 74), new Vector2(-30, -42));
             var foot = UIKit.Node("Foot", bubble.transform);
             UIKit.Anchor(foot, Vector2.zero, new Vector2(1, 0), new Vector2(34, 12), new Vector2(-20, 70));
@@ -129,17 +129,52 @@ namespace Ironhorse.Game
             var root = UIKit.Node("Arrow", parent);
             var rt = UIKit.RT(root);
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(90, 110);
-            var shaft = UIKit.Panel(root.transform, BGold, "Shaft", UIKit.RoundedSmall);
-            shaft.raycastTarget = false;
-            UIKit.Place(shaft.gameObject, new Vector2(0.5f, 1), new Vector2(0.5f, 1), Vector2.zero, new Vector2(34, 66));
-            shaft.gameObject.AddComponent<Outline>().effectColor = BOutline;
-            var head = UIKit.Panel(root.transform, BGold, "Head", UIKit.RoundedSmall);
-            head.raycastTarget = false;
-            UIKit.Place(head.gameObject, new Vector2(0.5f, 0), new Vector2(0.5f, 0.5f), new Vector2(0, 38), new Vector2(62, 62)).localRotation = Quaternion.Euler(0, 0, 45);
-            head.gameObject.AddComponent<Outline>().effectColor = BOutline;
+            rt.sizeDelta = new Vector2(96, 111);
+            var img = UIKit.Node("Shape", root.transform).AddComponent<Image>();
+            img.sprite = ArrowSprite();
+            img.raycastTarget = false;
+            UIKit.Stretch(img.gameObject);
             root.AddComponent<UIBob>();
             return rt;
+        }
+
+        static Sprite _arrowSprite;
+
+        /// <summary>Downward pointer: gold shaft and head with a dark outline (the tutorial mockup's arrow).</summary>
+        static Sprite ArrowSprite()
+        {
+            if (_arrowSprite != null) return _arrowSprite;
+            const int W = 128, H = 148;
+            // Outline in a 64x74 box, y down: shaft 20..44 wide to y 38, head to the tip at (32, 70).
+            var poly = new[] { new Vector2(20, 4), new Vector2(44, 4), new Vector2(44, 38), new Vector2(60, 38), new Vector2(32, 70), new Vector2(4, 38), new Vector2(20, 38) };
+            var tex = new Texture2D(W, H, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[W * H];
+            Color gold = BGold, hi = new Color(1, 0.93f, 0.62f), ink = BOutline;
+            for (int y = 0; y < H; y++)
+                for (int x = 0; x < W; x++)
+                {
+                    var q = new Vector2((x + 0.5f) * 64f / W, (H - 1 - y + 0.5f) * 74f / H);
+                    bool inside = false;
+                    float d = float.MaxValue;
+                    for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
+                    {
+                        Vector2 a = poly[i], b = poly[j];
+                        if ((a.y > q.y) != (b.y > q.y) && q.x < (b.x - a.x) * (q.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+                        var ab = b - a;
+                        float t = Mathf.Clamp01(Vector2.Dot(q - a, ab) / ab.sqrMagnitude);
+                        d = Mathf.Min(d, Vector2.Distance(q, a + ab * t));
+                    }
+                    float sd = inside ? -d : d;                    // signed distance, 64-unit space
+                    float fill = Mathf.Clamp01(0.5f - (sd + 2.4f) * 4); // gold inside the stroke
+                    float all = Mathf.Clamp01(0.5f - (sd - 2.4f) * 4);  // stroke straddles the edge
+                    var c = Color.Lerp(gold, hi, Mathf.Clamp01(1 - q.y / 40f) * (q.x < 32 ? 0.7f : 0.2f));
+                    c = Color.Lerp(ink, c, all > 0 ? fill / all : 0);
+                    c.a = all;
+                    px[y * W + x] = c;
+                }
+            tex.SetPixels32(px);
+            tex.Apply();
+            return _arrowSprite = Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(0.5f, 0.5f));
         }
 
         /// <summary>Keeps the dim's hole, the ring and the arrow on the target (the HUD can move with the safe area).</summary>
@@ -174,6 +209,8 @@ namespace Ironhorse.Game
                 _coachArrow.localRotation = Quaternion.Euler(0, 0, below ? 180 : 0);
                 _coachArrow.anchoredPosition = new Vector2(hole.center.x, below ? hole.yMin - 70 : hole.yMax + 70);
             }
+            // Clear of the pointer: low for a target in the top HUD, raised above the bottom bar otherwise.
+            _coachBubble.anchoredPosition = new Vector2(330, has && hole.center.y > 0 ? 150 : 420);
         }
 
         static void SetRect(RectTransform r, float x0, float y0, float x1, float y1)
