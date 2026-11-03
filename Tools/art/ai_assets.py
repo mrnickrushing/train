@@ -53,6 +53,9 @@ loco("sundown", 19.4, "an original 1930s art-deco streamlined 4-6-4 steam locomo
 loco("silverarrow", 15.0, "an original 1940s streamlined diesel passenger locomotive, a single cab unit: fluted brushed stainless steel (#C0C6CC) body with a rounded slanted nose and wraparound cab windows, bold red (#B22222) nose stripes and side band, round porthole windows along the side, two three-axle trucks, chrome headlights", flip=True)
 loco("thunderhead", 15.1, "an original 1940s streamlined diesel freight-passenger locomotive cab unit: deep royal purple (#5B2A86) body with bright gold (#F2C14E) chevron stripes sweeping back from a rounded bulldog nose, gold side band, wraparound cab windows, louvered side grilles, two three-axle trucks, chrome headlights", twin=True)
 
+A["dusty"]["flip"] = True        # saddle tank: the dome/cab outrank the stack in height
+A["thunderhead"]["flip"] = True  # diesel: no stack to find; cab noses must face outward
+
 # ----------------------------------------------------------------------------------- wagons
 wagon("flatcar", 8.0, "an original 1880s wooden railroad flatcar, empty: weathered brown (#6B4226) plank deck with stake pockets and a few wooden stakes, steel truss rods underneath, two four-wheel trucks, link-and-pin couplers")
 wagon("hopper", 8.0, "an original 1880s open-top ore hopper railroad car: riveted dark iron grey (#3A3A3A) steel body with sloped bottom chutes, side ribs, two four-wheel trucks, empty")
