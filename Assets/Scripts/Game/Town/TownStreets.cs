@@ -163,17 +163,20 @@ namespace Ironhorse.Game
                         // Distance to the nearest east-west street (row 0 = Main Street, wider) and north-south street.
                         float rz = Mathf.Repeat(z - z0 + pitchZ / 2, pitchZ) - pitchZ / 2;
                         bool mainRow = Mathf.Abs(z - z0) < pitchZ / 2;
-                        float halfZ = mainRow ? 3.6f : 1.6f;
+                        float halfZ = mainRow ? 3.6f : 1.05f;                  // side lanes are narrow wagon tracks
                         float cx = Mathf.Repeat(x - x0 + pitchX / 2, pitchX) - pitchX / 2;
-                        float dz = Mathf.Abs(rz) - halfZ, dx = Mathf.Abs(cx) - 1.6f;
-                        float edge = 0.9f + n * 1.4f;                      // ragged, grassy verges
+                        float dz = Mathf.Abs(rz) - halfZ, dx = Mathf.Abs(cx) - 1.05f;
+                        float edge = 0.6f + n * 0.9f;                      // ragged, grassy verges
                         float rEW = 1 - Smooth(-edge * 0.5f, edge * 0.5f, dz + (n - 0.5f) * 1.2f);
                         float rNS = z > z1 - 1 ? 0 : 1 - Smooth(-edge * 0.5f, edge * 0.5f, dx + (n - 0.5f) * 1.2f);
                         road = Mathf.Max(rEW, rNS);
                         // Two wagon-wheel ruts along each street.
                         float along = rEW >= rNS ? Mathf.Abs(rz) : Mathf.Abs(cx);
-                        float rutAt = mainRow && rEW >= rNS ? 1.8f : 0.75f;
+                        bool mainTrack = mainRow && rEW >= rNS;
+                        float rutAt = mainTrack ? 1.8f : 0.6f;
                         rut = road * Mathf.Clamp01(1 - Mathf.Abs(along - rutAt) / 0.28f) * (0.6f + n2 * 0.4f);
+                        // Grass survives in the middle of the side lanes, between the wheel tracks.
+                        if (!mainTrack) road *= 1 - 0.7f * Mathf.Clamp01(1 - along / 0.32f) * Smooth(0.3f, 0.7f, n2);
                     }
                     // Station plaza in front of the depot.
                     if (x > -19 && x < 19 && z > -18 && z < -11)
