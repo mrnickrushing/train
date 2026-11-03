@@ -44,7 +44,7 @@ namespace Ironhorse.Game
 
             // Shop and Season Pass buttons, bottom-right like a storefront sign.
             var side = UIKit.Node("SideButtons", _safe);
-            UIKit.Place(side, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, 190), new Vector2(170, 330));
+            UIKit.Place(side, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-24, 200), new Vector2(170, 380));
             UIKit.VStack(side, 14, 0, TextAnchor.LowerCenter);
             _passBadge = SideButton(side.transform, "Season", Purple, () => OpenPass(), PassGlyph, out _);
             _shopBadge = SideButton(side.transform, "Shop", UIKit.Red, () => OpenShop(), ShopGlyph, out _shopTimer);
@@ -53,13 +53,9 @@ namespace Ironhorse.Game
         Text SideButton(Transform parent, string label, Color c, Action onClick, Action<Transform> glyph, out Text timer)
         {
             var holder = UIKit.Node(label, parent);
-            UIKit.Size(holder, 150, 150);
-            var circle = HudCircle(holder.transform, c, 112);
-            var gl = UIKit.Node("Glyph", circle.transform);
-            UIKit.Stretch(gl, 24);
-            UIKit.HStack(gl, 0, 0, TextAnchor.MiddleCenter);
-            glyph(gl.transform);
-            timer = HudPlate(holder.transform, label, 150, 42, 22);
+            UIKit.Size(holder, 150, 172);
+            var circle = HudTile(holder.transform, label, glyph, 140);
+            timer = circle.GetComponentInChildren<Text>();
             Clickable(holder, onClick);
             var badge = UIKit.Badge(circle.transform, "", UIKit.Red);
             badge.transform.parent.gameObject.SetActive(false);
@@ -82,6 +78,7 @@ namespace Ironhorse.Game
 
         static void ShopGlyph(Transform t)
         {
+            if (UIKit.Icon(t, "shop_nuggets_4", 100) != null) return;
             var h = UIKit.Node("Shop", t); UIKit.Size(h, 58, 56);
             Shape(h, UIKit.Cream, new Vector2(0.5f, 0.38f), new Vector2(46, 34));
             Shape(h, UIKit.Gold, new Vector2(0.5f, 0.78f), new Vector2(54, 16));
@@ -90,6 +87,7 @@ namespace Ironhorse.Game
 
         static void PassGlyph(Transform t)
         {
+            if (UIKit.Icon(t, "xp", 92) != null) return;
             var h = UIKit.Node("Pass", t); UIKit.Size(h, 56, 56);
             Shape(h, UIKit.Cream, new Vector2(0.5f, 0.5f), new Vector2(50, 34));
             Shape(h, UIKit.Gold, new Vector2(0.5f, 0.5f), new Vector2(20, 20), UIKit.Circle);
@@ -120,47 +118,223 @@ namespace Ironhorse.Game
             if (tab != null) _shopTab = tab;
             ShowWindow("Trading Post", content =>
             {
-                Tabs(content, new (string, bool, Action)[]
-                {
-                    ("Offers", _shopTab == "offers", () => _shopTab = "offers"),
-                    ("Nuggets", _shopTab == "nuggets", () => _shopTab = "nuggets"),
-                    ("Supplies", _shopTab == "supplies", () => _shopTab = "supplies"),
-                });
+                // Refresh timer strip, then category tabs on the left and offer cards on the right.
+                var top = UIKit.Row(content, 50, 10, TextAnchor.MiddleRight);
+                top.SetActive(_shopTab == "offers");
+                var tlabel = UIKit.Label(top.transform, "Weekly deals refresh in", 22, UIKit.InkSoft, TextAnchor.MiddleRight, false, FontStyle.Bold);
+                UIKit.Size(tlabel.gameObject, -1, 40, 1);
+                var timer = UIKit.KitImage(top.transform, "pill_slate", "Timer", 44);
+                UIKit.Size(timer.gameObject, 190, 44);
+                var tt = UIKit.Label(timer.transform, "", 24, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                tt.font = UIKit.Display; tt.fontStyle = FontStyle.Normal;
+                UIKit.Stretch(tt.gameObject, 4);
+                Action live = () => tt.text = Fmt.Time(S.WeekEndsIn);
+                live(); Live(live);
+
+                var body = UIKit.Node("Body", content);
+                var bh = UIKit.HStack(body, 22, 0, TextAnchor.UpperLeft);
+                bh.childControlHeight = true;
+                body.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+                var tabs = UIKit.Node("Tabs", body.transform);
+                UIKit.VStack(tabs, 12, 0, TextAnchor.UpperCenter);
+                UIKit.Size(tabs, 196, -1);
+                ShopTab(tabs.transform, "offers", "Offers", "xp", S.StarterAvailable || S.WeeklyOffer != null);
+                ShopTab(tabs.transform, "nuggets", "Nuggets", "shop_nuggets_3", false);
+                ShopTab(tabs.transform, "supplies", "Supplies", "shop_supplies", false);
+                ShopTab(tabs.transform, "season", "Season", "nav_trains", !S.State.passPremium);
+
+                var cards = UIKit.Node("Cards", body.transform);
+                var g = cards.AddComponent<GridLayoutGroup>();
+                g.cellSize = new Vector2(314, 600);
+                g.spacing = new Vector2(18, 20);
+                g.childAlignment = TextAnchor.UpperLeft;
+                g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                g.constraintCount = 4;
+                cards.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                UIKit.Size(cards, 1310, -1);
+                var ct = cards.transform;
+
                 if (_shopTab == "offers")
                 {
-                    foreach (var o in S.ActiveOffers().Where(o => o.ProductId != null)) OfferCard(content, o);
-                    if (!S.HasFuelTank) ProductCard(content, Catalog.Product(Catalog.FuelTank), "Raise your fuel limit by " + Balance.FuelTankBonus + " forever, plus 200 fuel now.");
-                    if (!S.State.passPremium) UIKit.Btn(content, "Rail Season Pass: unlock premium rewards", Purple, () => OpenPass(), 24, -1, 70);
+                    foreach (var o in S.ActiveOffers().Where(o => o.ProductId != null)) OfferCard(ct, o);
+                    if (!S.HasFuelTank)
+                    {
+                        var fp = Catalog.Product(Catalog.FuelTank);
+                        ShopCard(ct, fp.Title, "FOREVER", UIKit.Green, null, "blackhollow", t => Art(t, "shop_fuel", 230), null, fp.Grant, "Fuel limit +" + Balance.FuelTankBonus,
+                            Store.PriceOf(fp.Id), UIKit.Green, () => BuyProduct(fp.Id));
+                    }
                 }
                 else if (_shopTab == "nuggets")
                 {
-                    Line(content, "Gold nuggets rush timers, top up fuel and buy supplies.", 20, UIKit.InkSoft);
-                    var grid = UIKit.Node("Grid", content);
-                    var g = grid.AddComponent<GridLayoutGroup>();
-                    g.cellSize = new Vector2(360, 330);
-                    g.spacing = new Vector2(18, 18);
-                    g.childAlignment = TextAnchor.UpperCenter;
-                    var fit = grid.AddComponent<ContentSizeFitter>();
-                    fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
                     int i = 0;
-                    foreach (var p in Catalog.Products.Where(p => p.Id.StartsWith("ironhorse.nuggets_"))) NuggetCard(grid.transform, p, i++);
-                    WatchAdCard(content, AdReward.Nuggets, "Free nuggets", "+" + Balance.AdNuggets + " nuggets for watching a short video");
-                    UIKit.Btn(content, "Restore purchases", UIKit.WoodLight, () => Store.Current.Restore(n => Toast(n > 0 ? "Restored " + n + " purchase(s)" : "Nothing to restore", true)), 20, -1, 52);
+                    foreach (var p in Catalog.Products.Where(p => p.Id.StartsWith("ironhorse.nuggets_"))) NuggetCard(ct, p, i++);
+                    bool ad = S.AdsLeft(AdReward.Nuggets) > 0 && Ads.Current.Available;
+                    ShopCard(ct, "Free Nuggets", "FREE", UIKit.Blue, null, null, t => Art(t, "shop_nuggets_1", 190), null, new Grant { Nuggets = Balance.AdNuggets },
+                        S.AdsLeft(AdReward.Nuggets) + " left today", "Watch", UIKit.Green, ad ? (Action)(() => Ads.Watch(AdReward.Nuggets, 0, r => { Result(r, Sfx.Coin); RebuildWindow(); })) : null);
+                    UIKit.Btn(content, "Restore purchases", UIKit.WoodLight, () => Store.Current.Restore(n => Toast(n > 0 ? "Restored " + n + " purchase(s)" : "Nothing to restore", true)), 22, -1, 60);
+                }
+                else if (_shopTab == "supplies")
+                {
+                    foreach (var o in S.ActiveOffers().Where(o => o.ProductId == null))
+                    {
+                        var oo = o;
+                        var b = ShopCard(ct, o.Title, null, UIKit.Blue, null, null, t => Art(t, SupplyArt(oo.Grant), 200), null, o.Grant, o.Subtitle,
+                            o.NuggetPrice.ToString(), UIKit.Green, S.Nuggets >= o.NuggetPrice ? (Action)(() => { Result(S.BuyNuggetOffer(oo.Id)); RebuildWindow(); }) : null);
+                        PriceLabelWithNugget(b, o.NuggetPrice);
+                    }
                 }
                 else
                 {
-                    Line(content, "Spend nuggets on deliveries straight to your warehouse.", 20, UIKit.InkSoft);
-                    foreach (var o in S.ActiveOffers().Where(o => o.ProductId == null))
-                    {
-                        var c = Card(content, 110);
-                        var col = Col(c.transform);
-                        Line(col.transform, o.Title, 26, UIKit.Ink, true);
-                        Line(col.transform, o.Subtitle, 20, UIKit.InkSoft);
-                        var price = UIKit.Btn(c.transform, "", UIKit.Green, () => Result(S.BuyNuggetOffer(o.Id)), 24, 200, 64, S.Nuggets >= o.NuggetPrice);
-                        PriceLabelWithNugget(price, o.NuggetPrice);
-                    }
+                    var sp = Catalog.Product(Catalog.SeasonPass);
+                    var final = GameDatabase.Locomotive("sundown");
+                    ShopCard(ct, "Rail Season Pass", S.State.passPremium ? "ACTIVE" : "PREMIUM", Purple, null, "silversprings",
+                        t => { if (final != null) LocoArt(t, final); }, null, new Grant(), "30 tiers of premium rewards and the Sundown Express",
+                        S.State.passPremium ? "View pass" : Store.PriceOf(sp.Id), S.State.passPremium ? UIKit.Blue : UIKit.Green,
+                        () => { if (S.State.passPremium) OpenPass(); else BuyProduct(sp.Id); });
+                    ShopCard(ct, "Season Rewards", null, UIKit.Blue, null, null, t => Art(t, "xp", 200), null, new Grant(), "Tier " + S.PassTier + "/" + Balance.PassTiers + " · see every reward",
+                        "Open", UIKit.Blue, () => OpenPass());
                 }
-            }, 1300, 900);
+            }, 1560, 900);
+        }
+
+        /// <summary>Left-hand category tab: painted icon and caption on a dark tile (light when selected).</summary>
+        void ShopTab(Transform parent, string id, string label, string icon, bool alert)
+        {
+            bool on = _shopTab == id;
+            var tile = UIKit.KitImage(parent, on ? "tab_on" : "tile_dark", "Tab " + id, 150);
+            UIKit.Size(tile.gameObject, 196, 150);
+            var ic = UIKit.Icon(tile.transform, icon, 92);
+            if (ic != null) UIKit.Place(ic, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -8), new Vector2(92, 92));
+            var t = UIKit.Label(tile.transform, label.ToUpperInvariant(), 26, on ? UIKit.Ink : Color.white, TextAnchor.LowerCenter, false, FontStyle.Bold);
+            t.font = UIKit.Display; t.fontStyle = FontStyle.Normal;
+            UIKit.Anchor(t.gameObject, Vector2.zero, new Vector2(1, 0), new Vector2(4, 8), new Vector2(-4, 44));
+            if (!on) UIKit.Stroke(t, new Color(0, 0, 0, 0.7f), 1.5f);
+            if (alert)
+            {
+                var bang = UIKit.Badge(tile.transform, "!", UIKit.Red);
+                UIKit.Place(bang.transform.parent.gameObject, new Vector2(0, 1), new Vector2(0.5f, 0.5f), new Vector2(14, -10), new Vector2(40, 40));
+            }
+            Clickable(tile.gameObject, () => { _shopTab = id; RebuildWindow(); });
+        }
+
+        static string SupplyArt(Grant g)
+        {
+            if (g.Fuel > 0) return "shop_fuel";
+            if (g.Coins > 0) return "shop_coins";
+            if (g.Resources != null && g.Resources.Length >= 1 && g.Resources.Length <= 2) return g.Resources[0].id;
+            return "shop_supplies";
+        }
+
+        static void Art(Transform t, string icon, float size)
+        {
+            var go = UIKit.Icon(t, icon, size);
+            if (go != null) go.GetComponent<LayoutElement>().ignoreLayout = false;
+        }
+
+        static void LocoArt(Transform t, LocomotiveDef d)
+        {
+            var img = ModelIcons.Image(t, ModelIcons.Locomotive(d), 300, 200);
+            UIKit.Size(img.gameObject, 300, 200);
+        }
+
+        /// <summary>
+        /// Tall store card (reference: big painted art over a scene): title, ribbon tag, art with value seal,
+        /// contents as item tiles, a note line and the price button. Returns the price button.
+        /// </summary>
+        Button ShopCard(Transform parent, string title, string tag, Color tagColor, string seal, string scene, Action<Transform> art,
+            string unused, Grant grant, string note, string price, Color priceColor, Action onBuy)
+        {
+            var card = UIKit.KitImage(parent, "card_slate", "ShopCard");
+            HudShadow(card.gameObject);
+
+            var tl = UIKit.Label(card.transform, title, 28, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            tl.font = UIKit.Display; tl.fontStyle = FontStyle.Normal;
+            UIKit.Anchor(tl.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(12, -58), new Vector2(-12, -10));
+            UIKit.OneLine(tl, 18).GetComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Stroke(tl, new Color(0, 0, 0, 0.75f), 2f);
+            var rule = UIKit.Panel(card.transform, new Color(1, 1, 1, 0.14f), "Rule", UIKit.RoundedSmall);
+            UIKit.Anchor(rule.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(18, -62), new Vector2(-18, -60));
+
+            // Art window
+            var win = UIKit.Panel(card.transform, new Color(0.12f, 0.15f, 0.22f), "ArtWindow", UIKit.Rounded);
+            UIKit.Anchor(win.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(10, -330), new Vector2(-10, -70));
+            win.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+            var tex = scene != null ? Resources.Load<Texture2D>("UI/Destinations/" + scene) : null;
+            if (tex != null)
+            {
+                var raw = UIKit.Node("Scene", win.transform).AddComponent<RawImage>();
+                raw.texture = tex;
+                raw.color = new Color(0.62f, 0.62f, 0.66f);
+                raw.raycastTarget = false;
+                UIKit.Stretch(raw.gameObject);
+                var fit = raw.gameObject.AddComponent<AspectRatioFitter>();
+                fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+                fit.aspectRatio = tex.width / (float)tex.height;
+            }
+            else
+            {
+                var glow = UIKit.Node("Glow", win.transform).AddComponent<RawImage>();
+                glow.texture = Materials.SoftCircle;
+                glow.color = new Color(1f, 0.82f, 0.4f, 0.5f);
+                glow.raycastTarget = false;
+                UIKit.Place(glow.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 300));
+            }
+            var holder = UIKit.Node("Art", win.transform);
+            UIKit.Stretch(holder, 6);
+            UIKit.HStack(holder, 0, 0, TextAnchor.MiddleCenter);
+            art(holder.transform);
+            if (!string.IsNullOrEmpty(tag))
+            {
+                var tg = Tag(win.transform, tag, tagColor, 200);
+                UIKit.Place(tg.transform.parent.gameObject, new Vector2(0, 1), new Vector2(0, 1), new Vector2(-8, -10), new Vector2(200, 44));
+            }
+            if (!string.IsNullOrEmpty(seal))
+            {
+                ValueSeal(win.transform, seal);
+                var sl = win.transform.Find("Seal");
+                UIKit.Place(sl.gameObject, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-50, -56), new Vector2(124, 124));
+            }
+
+            // Contents
+            var tiles = UIKit.Node("Tiles", card.transform);
+            UIKit.Anchor(tiles, new Vector2(0, 0), new Vector2(1, 0), new Vector2(12, 170), new Vector2(-12, 262));
+            var tg2 = tiles.AddComponent<GridLayoutGroup>();
+            tg2.cellSize = new Vector2(68, 68);
+            tg2.spacing = new Vector2(6, 6);
+            tg2.childAlignment = TextAnchor.MiddleCenter;
+            int kinds = grant == null ? 0 : (grant.Nuggets > 0 ? 1 : 0) + (grant.Coins > 0 ? 1 : 0) + (grant.Fuel > 0 ? 1 : 0) + (grant.Resources != null ? grant.Resources.Length : 0);
+            if (kinds == 1 && grant.Resources.Length == 0)
+            {
+                // One currency: a big amount pill (icon + number) like the reference stores.
+                UnityEngine.Object.Destroy(tg2);
+                var pill = UIKit.KitImage(tiles.transform, "pill_slate", "Amount", 70);
+                UIKit.Place(pill.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(240, 70));
+                var ph = UIKit.HStack(pill.gameObject, 8, 0, TextAnchor.MiddleCenter);
+                ph.padding = new RectOffset(8, 16, 2, 2);
+                if (grant.Nuggets > 0) UIKit.NuggetIcon(pill.transform, 52); else if (grant.Coins > 0) UIKit.CoinIcon(pill.transform, 52); else FuelIcon(pill.transform, 48);
+                var at = UIKit.Label(pill.transform, Fmt.Num(grant.Nuggets + grant.Coins + grant.Fuel), 40, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                at.font = UIKit.Display; at.fontStyle = FontStyle.Normal;
+                at.horizontalOverflow = HorizontalWrapMode.Overflow;
+                UIKit.Size(at.gameObject, -1, 60);
+                UIKit.Stroke(at, new Color(0, 0, 0, 0.8f), 2f);
+            }
+            else if (grant != null)
+            {
+                float ic = 50;
+                if (grant.Nuggets > 0) GrantTile(tiles.transform, t => UIKit.NuggetIcon(t, ic), Fmt.Num(grant.Nuggets), 68);
+                if (grant.Coins > 0) GrantTile(tiles.transform, t => UIKit.CoinIcon(t, ic), Fmt.Num(grant.Coins), 68);
+                if (grant.Fuel > 0) GrantTile(tiles.transform, t => FuelIcon(t, ic * 0.92f), grant.Fuel.ToString(), 68);
+                if (grant.Resources != null) foreach (var r in grant.Resources) { var id = r.id; GrantTile(tiles.transform, t => UIKit.ResIcon(t, id, ic), r.amount.ToString(), 68); }
+            }
+
+            var nl = UIKit.Label(card.transform, note ?? "", 19, new Color(0.78f, 0.84f, 0.92f), TextAnchor.MiddleCenter);
+            nl.resizeTextForBestFit = true; nl.resizeTextMinSize = 13; nl.resizeTextMaxSize = nl.fontSize;
+            nl.verticalOverflow = VerticalWrapMode.Truncate;
+            UIKit.Anchor(nl.gameObject, new Vector2(0, 0), new Vector2(1, 0), new Vector2(14, 98), new Vector2(-14, 166));
+            var pb = UIKit.Btn(card.transform, price, onBuy != null ? priceColor : UIKit.Disabled, onBuy, 36, -1, 84, onBuy != null);
+            UIKit.Anchor(pb.gameObject, new Vector2(0, 0), new Vector2(1, 0), new Vector2(18, 14), new Vector2(-18, 96));
+            return pb;
         }
 
         void PriceLabelWithNugget(Button b, int amount)
@@ -221,6 +395,9 @@ namespace Ironhorse.Game
             bl.font = UIKit.Display;
             bl.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Stretch(bl.gameObject, 18);
+            bl.resizeTextForBestFit = true; bl.resizeTextMinSize = 12; bl.resizeTextMaxSize = 28;
+            bl.verticalOverflow = VerticalWrapMode.Truncate;
+            bl.horizontalOverflow = HorizontalWrapMode.Overflow;
             bl.transform.localRotation = Quaternion.Euler(0, 0, 12);
             UIKit.Stroke(bl, new Color(0.35f, 0.05f, 0.02f, 0.95f), 2f);
         }
@@ -238,96 +415,34 @@ namespace Ironhorse.Game
             return t;
         }
 
-        /// <summary>Big coloured hero card for a featured real-money offer.</summary>
+        static readonly System.Collections.Generic.Dictionary<string, string> OfferScenes = new System.Collections.Generic.Dictionary<string, string>
+        {
+            { "starter", "willowflats" }, { "w_ironbison", "ironback" }, { "w_prospector", "eldorado" },
+            { "w_silverarrow", "prosperity" }, { "w_thunderhead", "capitaljct" },
+        };
+
+        /// <summary>Featured real-money offer as a tall store card.</summary>
         void OfferCard(Transform content, OfferDef o)
         {
             var p = Catalog.Product(o.ProductId);
-            string hero = o.Badge == "LEGENDARY" ? "hero_purple" : o.Schedule == OfferSchedule.Starter ? "hero_red" : "hero_blue";
-            var card = UIKit.KitImage(content, hero, "Offer", 300);
-            UIKit.Size(card.gameObject, -1, 300);
-            var h = UIKit.HStack(card.gameObject, 20, 22, TextAnchor.MiddleLeft);
-            h.padding = new RectOffset(26, 26, 22, 22);
-            HudShadow(card.gameObject);
-
-            if (p.Grant.LocomotiveId != null) LocoSwatch(card.transform, GameDatabase.Locomotive(p.Grant.LocomotiveId), 170);
-            else { var n = UIKit.Node("Gems", card.transform); UIKit.Size(n, 240, 200); UIKit.HStack(n, 0, 0, TextAnchor.MiddleCenter); UIKit.NuggetIcon(n.transform, 190); }
-
-            var col = Col(card.transform);
-            var title = UIKit.Label(col.transform, o.Title.ToUpperInvariant(), 40, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
-            title.font = UIKit.Display;
-            title.fontStyle = FontStyle.Normal;
-            UIKit.OneLine(title, 24);
-            UIKit.Stroke(title, new Color(0, 0, 0, 0.75f), 2.5f);
-            var sub = UIKit.Label(col.transform, o.Subtitle, 22, new Color(1, 0.96f, 0.86f), TextAnchor.MiddleLeft);
-            UIKit.Size(sub.gameObject, -1, 30);
-            sub.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.6f);
-            GrantTiles(col.transform, p.Grant, 92);
-
-            var buyCol = UIKit.Node("Buy", card.transform);
-            UIKit.VStack(buyCol, 10, 0, TextAnchor.MiddleCenter);
-            UIKit.Size(buyCol, 250, -1);
-            if (o.Schedule == OfferSchedule.Weekly)
-            {
-                var tl = Tag(buyCol.transform, "", UIKit.Red, 230);
-                Action live = () => tl.text = "ENDS IN " + Fmt.Time(S.WeekEndsIn).ToUpperInvariant();
-                live(); Live(live);
-            }
-            else if (o.Schedule == OfferSchedule.Starter) Tag(buyCol.transform, "ONE TIME ONLY", UIKit.Green, 230);
-            UIKit.Btn(buyCol.transform, Store.PriceOf(p.Id), UIKit.Green, () => BuyProduct(p.Id), 40, 250, 100);
-            if (!string.IsNullOrEmpty(o.Badge)) ValueSeal(card.transform, o.Badge);
-        }
-
-        void ProductCard(Transform content, ProductDef p, string desc)
-        {
-            var card = UIKit.KitImage(content, "hero_green", "Product", 200);
-            UIKit.Size(card.gameObject, -1, 200);
-            var h = UIKit.HStack(card.gameObject, 20, 20, TextAnchor.MiddleLeft);
-            h.padding = new RectOffset(26, 26, 18, 18);
-            HudShadow(card.gameObject);
-            var art = UIKit.Node("Art", card.transform); UIKit.Size(art, 150, 150); UIKit.HStack(art, 0, 0, TextAnchor.MiddleCenter);
-            FuelIcon(art.transform, 130);
-            var col = Col(card.transform);
-            var title = UIKit.Label(col.transform, p.Title.ToUpperInvariant(), 36, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
-            title.font = UIKit.Display;
-            title.fontStyle = FontStyle.Normal;
-            UIKit.OneLine(title, 22);
-            UIKit.Stroke(title, new Color(0, 0, 0, 0.75f), 2.5f);
-            var sub = UIKit.Label(col.transform, desc, 22, new Color(1, 0.96f, 0.86f), TextAnchor.MiddleLeft);
-            UIKit.Size(sub.gameObject, -1, 56);
-            sub.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.6f);
-            UIKit.Btn(card.transform, Store.PriceOf(p.Id), UIKit.Gold, () => BuyProduct(p.Id), 36, 230, 92);
+            string scene;
+            OfferScenes.TryGetValue(o.Id, out scene);
+            string tag = o.Schedule == OfferSchedule.Starter ? "ONE TIME ONLY" : o.Badge == "LEGENDARY" ? "LEGENDARY" : "LIMITED OFFER";
+            Color tagColor = o.Schedule == OfferSchedule.Starter ? UIKit.Blue : o.Badge == "LEGENDARY" ? Purple : UIKit.Green;
+            var loco = p.Grant.LocomotiveId != null ? GameDatabase.Locomotive(p.Grant.LocomotiveId) : null;
+            string note = o.Schedule == OfferSchedule.Weekly ? "Ends in " + Fmt.Time(S.WeekEndsIn) + " · 1 available" : "1 available";
+            ShopCard(content, o.Title, tag, tagColor, o.Badge == "LEGENDARY" ? null : o.Badge, scene,
+                t => { if (loco != null) LocoArt(t, loco); else Art(t, "shop_nuggets_4", 230); }, null, p.Grant, note,
+                Store.PriceOf(p.Id), UIKit.Green, () => BuyProduct(p.Id));
         }
 
         void NuggetCard(Transform grid, ProductDef p, int index)
         {
-            bool premium = index >= 3;
-            var card = UIKit.KitImage(grid, premium ? "hero_purple" : "card", "Nuggets");
-            var v = UIKit.VStack(card.gameObject, 4, 14, TextAnchor.MiddleCenter);
-            v.padding = new RectOffset(16, 16, 26, 16);
-            HudShadow(card.gameObject);
-            if (index == 2 || index == 4)
-            {
-                var rib = UIKit.KitImage(card.transform, index == 4 ? "ribbon" : "ribbon_green", "Tag");
-                rib.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-                UIKit.Place(rib.gameObject, new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(0, -4), new Vector2(300, 74));
-                rib.pixelsPerUnitMultiplier = 1.7f;
-                var rt = UIKit.Label(rib.transform, index == 4 ? "BEST VALUE" : "MOST POPULAR", 24, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
-                rt.font = UIKit.Display; rt.fontStyle = FontStyle.Normal;
-                UIKit.Anchor(rt.gameObject, Vector2.zero, Vector2.one, new Vector2(60, 18), new Vector2(-60, -2));
-                UIKit.Stroke(rt, new Color(0, 0, 0, 0.6f), 1.5f);
-            }
-            var icons = UIKit.Node("Icons", card.transform);
-            UIKit.Size(icons, -1, 130);
-            UIKit.HStack(icons, -58, 0, TextAnchor.MiddleCenter);
-            for (int k = 0; k <= Mathf.Min(index, 3); k++) UIKit.NuggetIcon(icons.transform, Mathf.Min(110, 92 + index * 5));
-            var amount = UIKit.Label(card.transform, p.Grant.Nuggets.ToString("#,0"), 44, UIKit.Gold, TextAnchor.MiddleCenter, false, FontStyle.Bold);
-            amount.font = UIKit.Display;
-            amount.fontStyle = FontStyle.Normal;
-            UIKit.Size(amount.gameObject, -1, 50);
-            UIKit.Stroke(amount, new Color(0.25f, 0.12f, 0.02f, 0.95f), 2.5f);
-            var title = UIKit.Label(card.transform, p.Title, 18, premium ? new Color(1, 0.94f, 1f) : UIKit.InkSoft, TextAnchor.MiddleCenter);
-            UIKit.Size(title.gameObject, -1, 24);
-            UIKit.Btn(card.transform, Store.PriceOf(p.Id), UIKit.Green, () => BuyProduct(p.Id), 30, -1, 70);
+            string tag = index == 2 ? "MOST POPULAR" : index == 4 ? "BEST VALUE" : null;
+            float size = 150 + index * 18;
+            ShopCard(grid, p.Title, tag, index == 4 ? UIKit.Red : UIKit.Green, null, null, t => Art(t, "shop_nuggets_" + (index + 1), size), null,
+                new Grant { Nuggets = p.Grant.Nuggets }, index == 0 ? "A handful to get you started" : "Rush timers and buy supplies",
+                Store.PriceOf(p.Id), UIKit.Green, () => BuyProduct(p.Id));
         }
 
         void BuyProduct(string productId)
@@ -407,7 +522,7 @@ namespace Ironhorse.Game
                 Line(scc.transform, supply.Subtitle + " Can overfill your tender.", 20, UIKit.InkSoft);
                 var sb = UIKit.Btn(sc.transform, "", UIKit.Green, () => Result(S.BuyNuggetOffer(supply.Id)), 24, 200, 64, S.Nuggets >= supply.NuggetPrice);
                 PriceLabelWithNugget(sb, supply.NuggetPrice);
-                if (!S.HasFuelTank) ProductCard(content, Catalog.Product(Catalog.FuelTank), "+" + Balance.FuelTankBonus + " max fuel forever, plus 200 fuel now.");
+                if (!S.HasFuelTank) UIKit.Btn(content, "Big Tender: +" + Balance.FuelTankBonus + " max fuel forever  " + Store.PriceOf(Catalog.FuelTank), UIKit.Gold, () => OpenShop("offers"), 26, -1, 74);
             }, 1000, 860);
         }
 
@@ -488,7 +603,7 @@ namespace Ironhorse.Game
             bool claimed = (premium ? S.State.passClaimedPremium : S.State.passClaimedFree).Contains(t.Tier);
             bool locked = premium && !S.State.passPremium;
             bool reached = t.Tier <= S.PassTier;
-            var cell = UIKit.KitImage(row, premium ? "hero_purple" : "card", "Cell", 120);
+            var cell = UIKit.KitImage(row, premium ? "hero_purple" : "card_light", "Cell", 120);
             if (!reached) cell.color = new Color(0.82f, 0.8f, 0.78f);
             UIKit.Size(cell.gameObject, -1, 120, 1);
             var h = UIKit.HStack(cell.gameObject, 10, 10, TextAnchor.MiddleLeft);

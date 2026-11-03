@@ -10,13 +10,15 @@ namespace Ironhorse.Game
     public static class UIKit
     {
         // ---------------------------------------------------------------- theme
-        public static readonly Color Wood = Palette.Hex(0x3B2618);
-        public static readonly Color WoodMid = Palette.Hex(0x5A3A24);
-        public static readonly Color WoodLight = Palette.Hex(0x7A5234);
-        public static readonly Color Parchment = Palette.Hex(0xF3E6C8);
-        public static readonly Color ParchmentDark = Palette.Hex(0xE2CFA6);
-        public static readonly Color Ink = Palette.Hex(0x3A2616);
-        public static readonly Color InkSoft = Palette.Hex(0x7A6048);
+        // Slate theme: dark navy chrome, light cool content, warm brass/gold accents.
+        public static readonly Color Wood = Palette.Hex(0x222B3B);
+        public static readonly Color WoodMid = Palette.Hex(0x2F3A4E);
+        public static readonly Color WoodLight = Palette.Hex(0x56657F);
+        public static readonly Color Parchment = Palette.Hex(0xEEF2F7);
+        public static readonly Color ParchmentDark = Palette.Hex(0xD3DCE7);
+        public static readonly Color Ink = Palette.Hex(0x1F2940);
+        public static readonly Color InkSoft = Palette.Hex(0x55637A);
+        public static readonly Color Title = Palette.Hex(0xF6C744);
         public static readonly Color Brass = Palette.Hex(0xD9A93F);
         public static readonly Color BrassDark = Palette.Hex(0x9C7426);
         public static readonly Color Red = Palette.Hex(0xB5442E);
@@ -36,7 +38,7 @@ namespace Ironhorse.Game
                 case Rarity.Epic: return Palette.Hex(0x7E4BA6);
                 case Rarity.Legendary: return Palette.Hex(0xD08A1E);
             }
-            return Palette.Hex(0x7A6A5A);
+            return Palette.Hex(0x6A7588);
         }
 
         // ---------------------------------------------------------------- fonts & sprites
@@ -245,13 +247,17 @@ namespace Ironhorse.Game
         // 9-slice borders (left, bottom, right, top) in sprite pixels, matching the art in ui_kit.py.
         static Vector4 KitBorder(string name)
         {
+            if (name == "btn_red_sq") return new Vector4(26, 30, 26, 22);
             if (name.StartsWith("btn_")) return new Vector4(44, 46, 44, 34);
             if (name.StartsWith("hero_")) return new Vector4(56, 56, 56, 56);
             if (name.StartsWith("round_")) return Vector4.zero;
             switch (name)
             {
                 case "frame": return new Vector4(64, 64, 64, 64);
-                case "pill": return new Vector4(36, 30, 36, 30);
+                case "pill": case "pill_slate": return new Vector4(36, 30, 36, 30);
+                case "frame_dark": return new Vector4(48, 48, 48, 48);
+                case "inset": case "card_slate": case "card_light": case "tab_on": return new Vector4(26, 26, 26, 26);
+                case "tile_dark": return new Vector4(30, 30, 30, 30);
                 case "ribbon": case "ribbon_green": return new Vector4(120, 60, 120, 40);
                 default: return new Vector4(32, 32, 32, 32); // card, card_wood, tile
             }
@@ -290,6 +296,7 @@ namespace Ironhorse.Game
             Color.RGBToHSV(c, out h, out sat, out v);
             if (v < 0.22f) return null;
             if (sat < 0.22f) return "btn_grey";
+            if (h > 0.55f && h < 0.68f && v < 0.56f) return "btn_slate"; // secondary actions
             if (h < 0.045f || h > 0.94f) return v < 0.55f ? "btn_wood" : "btn_red";
             if (h < 0.095f) return v < 0.62f ? "btn_wood" : "btn_orange";
             if (h < 0.18f) return v < 0.5f ? "btn_wood" : "btn_gold";

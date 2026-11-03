@@ -16,7 +16,7 @@ namespace Ironhorse.Game
 
         static GameObject Card(Transform parent, float height, Color? color = null)
         {
-            var c = color.HasValue ? UIKit.Panel(parent, color.Value, "Card") : UIKit.KitImage(parent, "card", "Card", height);
+            var c = color.HasValue ? UIKit.Panel(parent, color.Value, "Card") : UIKit.KitImage(parent, "card_light", "Card", height);
             UIKit.Size(c.gameObject, -1, height);
             UIKit.HStack(c.gameObject, 18, 14, TextAnchor.MiddleLeft);
             return c.gameObject;
@@ -41,7 +41,7 @@ namespace Ironhorse.Game
 
         static void Heading(Transform parent, string text)
         {
-            var t = UIKit.Label(parent, text.ToUpperInvariant(), 26, Palette.Hex(0x7A4A1E), TextAnchor.MiddleLeft, false, FontStyle.Bold);
+            var t = UIKit.Label(parent, text.ToUpperInvariant(), 26, Palette.Hex(0x2B3D5C), TextAnchor.MiddleLeft, false, FontStyle.Bold);
             t.font = UIKit.Display;
             t.fontStyle = FontStyle.Normal;
             UIKit.Size(t.gameObject, -1, 42);
@@ -241,7 +241,7 @@ namespace Ironhorse.Game
         {
             var p = S.PreviewDispatch(t, dest);
             bool locked = !S.IsDestinationUnlocked(dest);
-            var card = UIKit.KitImage(parent, "card", "Dest " + dest.Id);
+            var card = UIKit.KitImage(parent, "card_slate", "Dest " + dest.Id);
             HudShadow(card.gameObject);
 
             var pic = UIKit.Panel(card.transform, Color.white, "Picture", UIKit.Rounded);
@@ -304,7 +304,7 @@ namespace Ironhorse.Game
             FactPill(facts.transform, null, Fmt.Time(p.Seconds));
             FactPill(facts.transform, tr => FuelIcon(tr, 30), p.Fuel.ToString());
             var res = GameDatabase.Resource(dest.ResourceId);
-            var need = UIKit.Label(facts.transform, dest.IsTown ? "Riders · fare ×" + dest.Yield.ToString("0.0") : "Needs " + Plural(GameSession.CargoWagonName(res.Cargo)), 19, UIKit.InkSoft, TextAnchor.MiddleLeft);
+            var need = UIKit.Label(facts.transform, dest.IsTown ? "Riders · fare ×" + dest.Yield.ToString("0.0") : "Needs " + Plural(GameSession.CargoWagonName(res.Cargo)), 19, new Color(0.8f, 0.85f, 0.92f), TextAnchor.MiddleLeft);
             UIKit.Size(need.gameObject, -1, 40, 1);
 
             // Action
@@ -526,7 +526,7 @@ namespace Ironhorse.Game
                     foreach (var d in GameDatabase.Wagons)
                     {
                         bool locked = !S.IsWagonUnlocked(d);
-                        var c = Card(content, 96, locked ? new Color(0.8f, 0.76f, 0.68f) : (Color?)null);
+                        var c = Card(content, 96, locked ? new Color(0.74f, 0.77f, 0.82f) : (Color?)null);
                         var ws = WagonSwatch(c.transform, d);
                         if (locked) Locks.Badge(ws, d.UnlockLevel, 30);
                         var col = Col(c.transform);
@@ -637,7 +637,7 @@ namespace Ironhorse.Game
                 foreach (var d in GameDatabase.Buildings.Where(b => b.Category == _buildTab))
                 {
                     bool locked = !S.IsBuildingUnlocked(d);
-                    var c = Card(content, 140, locked ? new Color(0.8f, 0.76f, 0.68f) : (Color?)null);
+                    var c = Card(content, 140, locked ? new Color(0.74f, 0.77f, 0.82f) : (Color?)null);
                     var tex = ModelIcons.Building(d);
                     GameObject pic;
                     if (tex != null)
