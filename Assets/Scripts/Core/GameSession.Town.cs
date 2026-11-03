@@ -156,6 +156,7 @@ namespace Ironhorse.Core
             double elapsed = Math.Min(RentStorageSeconds, Now - b.lastCollectAt);
             b.lastCollectAt = Now - Math.Max(0, elapsed - usedSeconds);
             EarnCoins(coins);
+            State.stats.rentCollections++;
             AddXp(Math.Max(1, coins / 20));
             RaiseChanged();
             return ActionResult.Success("+" + coins + " coins");

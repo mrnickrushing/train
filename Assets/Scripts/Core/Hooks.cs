@@ -137,7 +137,8 @@ namespace Ironhorse.Core
         public List<ResourceAmount> Goods = new List<ResourceAmount>();
         public int Crates;
         public int Robbed;
+        public List<CurioDef> Curios = new List<CurioDef>();
 
-        public bool HasAnything { get { return Trains > 0 || Rent > 0 || Goods.Count > 0; } }
+        public bool HasAnything { get { return Trains > 0 || Rent > 0 || Goods.Count > 0 || Curios.Count > 0; } }
     }
 }

@@ -16,6 +16,8 @@ namespace Ironhorse.Core
         public bool Boom;
         /// <summary>Bandits are on this line.</summary>
         public bool Bandits;
+        /// <summary>Full Steam multiplier this dispatch would get (1 = none).</summary>
+        public float Combo;
     }
 
     public sealed partial class GameSession
@@ -66,7 +68,8 @@ namespace Ironhorse.Core
                 var wd = GameDatabase.Wagon(w.defId);
                 if (wd.Cargo == res.Cargo) capacity += wd.Capacity;
             }
-            p.Amount = (int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level) * d.Yield * (1 + CivicBonus(CivicEffect.Yield)));
+            p.Combo = NextCombo;
+            p.Amount = (int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level) * d.Yield * (1 + CivicBonus(CivicEffect.Yield) + EngineerValue(t, EngineerPerk.Cargo, res.Cargo)) * p.Combo);
             if (d.IsTown) p.Amount = Math.Min((int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level)), Balance.PassengerDemand(Population));
             else if (BoomAt(d.Id)) { p.Amount *= 2; p.Boom = true; }
             p.Bandits = BanditsOn(d.Id);
@@ -98,7 +101,7 @@ namespace Ironhorse.Core
         public double TripSeconds(TrainState t, DestinationDef d)
         {
             var loco = GameDatabase.Locomotive(t.defId);
-            double speed = loco.Speed * Balance.LocoSpeedMultiplier(t.level) * (1 + CivicBonus(CivicEffect.TrainSpeed));
+            double speed = loco.Speed * Balance.LocoSpeedMultiplier(t.level) * (1 + CivicBonus(CivicEffect.TrainSpeed) + EngineerValue(t, EngineerPerk.Speed));
             return Math.Max(10, d.BaseSeconds * Balance.ReferenceSpeed / speed);
         }
 
@@ -121,6 +124,7 @@ namespace Ironhorse.Core
             _arrivalSeen.Remove(t.uid);
             State.stats.dispatches++;
             RollTrip(t, p);
+            ChainCombo(t);
             TrainDeparted?.Invoke(t);
             RaiseChanged();
             return ActionResult.Success(Name(t) + " departs for " + d.Name + (crate != null ? ". " + crate : ""));
@@ -162,7 +166,7 @@ namespace Ironhorse.Core
         {
             var d = GameDatabase.Destination(t.destinationId);
             float mult = d != null ? d.Yield : 1;
-            return (int)Math.Round(t.cargoAmount * Balance.FarePerPassenger * mult * (1 + CivicBonus(CivicEffect.Income)));
+            return (int)Math.Round(t.cargoAmount * Balance.FarePerPassenger * mult * (1 + CivicBonus(CivicEffect.Income) + EngineerValue(t, EngineerPerk.Fares)) * (1 + t.combo / 100f));
         }
 
         ActionResult UnloadPassengers(TrainState t)

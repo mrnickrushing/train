@@ -51,6 +51,7 @@ namespace Ironhorse.Core
         readonly HashSet<int> _arrivalSeen = new HashSet<int>();
         readonly HashSet<int> _constructionSeen = new HashSet<int>();
         readonly HashSet<int> _productionSeen = new HashSet<int>();
+        readonly List<CurioDef> _awayCurios = new List<CurioDef>();
 
         public double Now { get { return _clock.Now; } }
 
@@ -60,7 +61,13 @@ namespace Ironhorse.Core
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             Repair();
             // Anything already finished when the save was loaded is not "news".
-            foreach (var t in State.trains) if (!t.IsIdle && Now >= t.arrivesAt) _arrivalSeen.Add(t.uid);
+            foreach (var t in State.trains)
+                if (!t.IsIdle && Now >= t.arrivesAt)
+                {
+                    _arrivalSeen.Add(t.uid);
+                    var found = CollectCurio(t, false); // finds made while the app was closed
+                    if (found != null) _awayCurios.Add(found);
+                }
             foreach (var b in State.buildings)
             {
                 if (Now >= b.readyAt) _constructionSeen.Add(b.uid);
@@ -118,6 +125,7 @@ namespace Ironhorse.Core
             RepairMonetization();
             RepairDepth();
             RepairHooks();
+            RepairFrontier();
         }
 
         // ---------------------------------------------------------------- Tick
@@ -133,6 +141,7 @@ namespace Ironhorse.Core
                 {
                     var d = GameDatabase.Destination(t.destinationId);
                     var res = GameDatabase.Resource(t.cargoId);
+                    CollectCurio(t, true);
                     if (t.robbed > 0 && res != null) Notify?.Invoke("Bandits held up " + Name(t) + " and made off with " + t.robbed + " " + res.Name + "!");
                     else Notify?.Invoke(Name(t) + " is back from " + (d != null ? d.Name : "the line") + (t.crate ? " with a mystery crate!" : "!"));
                     TrainArrived?.Invoke(t);
@@ -155,6 +164,7 @@ namespace Ironhorse.Core
             }
             if (FillContracts(force: false)) changed = true;
             if (TickHooks()) changed = true;
+            if (TickFrontier()) changed = true;
             int season = State.passSeason;
             RollSeason();
             if (season != State.passSeason) changed = true;
@@ -253,7 +263,7 @@ namespace Ironhorse.Core
                 var d = GameDatabase.Building(b.defId);
                 if (d.Effect == fx) total += d.EffectValue * (fx == CivicEffect.ContractSlot || fx == CivicEffect.CoinCap ? 1 : Balance.BuildingLevelMultiplier(b.level));
             }
-            return total + ProjectPerk(fx) + AlbumPerk(fx);
+            return total + ProjectPerk(fx) + AlbumPerk(fx) + ShelfPerk(fx) + CharterPerk(fx);
         }
 
         public int Population

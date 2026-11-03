@@ -493,7 +493,7 @@ namespace Ironhorse.Game
         /// <summary>After the welcome cards when they're showing; otherwise only if nothing else is open.</summary>
         void QueueOffer()
         {
-            if (_welcome.Count > 0 || (WindowOpen && (_windowTitle == "While You Were Away" || _windowTitle == "Payday"))) _welcome.Enqueue(MaybeShowFeaturedOffer);
+            if (_welcome.Count > 0 || (WindowOpen && (_windowTitle == "While You Were Away" || _windowTitle == "Daily"))) _welcome.Enqueue(MaybeShowFeaturedOffer);
             else MaybeShowFeaturedOffer();
         }
 

@@ -69,6 +69,7 @@ namespace Ironhorse.Game
             BuildMoneyHud();
             BuildDepthHud();
             BuildHooksHud();
+            BuildComboHud();
             _windowLayer = UIKit.Stretch(UIKit.Node("Windows", cgo.transform));
             _popupLayer = UIKit.Stretch(UIKit.Node("Popups", cgo.transform));
             _toasts = UIKit.Anchor(UIKit.Node("Toasts", cgo.transform), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-420, -360), new Vector2(420, -150));
@@ -95,6 +96,9 @@ namespace Ironhorse.Game
             S.TelegramArrived += OnTelegram;
             S.MapEventStarted += OnMapEvent;
             S.AlbumSetCompleted += a => AudioManager.Play(Sfx.LevelUp);
+            S.CurioFound += OnCurioFound;
+            S.PeddlerArrived += () => AudioManager.Play(Sfx.Bell);
+            S.EngineerJoined += e => AudioManager.Play(Sfx.LevelUp);
             RefreshHud();
             Invoke(nameof(QueueOffer), 4f);
         }
@@ -492,6 +496,7 @@ namespace Ironhorse.Game
             RefreshDepthHud();
             RefreshChapterHud();
             RefreshHooksHud();
+            RefreshComboHud();
             _level.text = S.Level.ToString();
             UIKit.SetBar(_xpFill, S.LevelProgress);
             _xpText.text = Fmt.Num(S.State.xp) + " / " + Fmt.Num(Balance.XpForNextLevel(S.Level)) + " XP";
@@ -862,6 +867,7 @@ namespace Ironhorse.Game
                     ShowMarker(at, "crate", h => UIKit.Icon(h, "crate_mystery", 64), "?", -1, () => OpenCrateOn(uid, at), true);
                 }
                 UpdateEventMarkers();
+                UpdatePeddlerMarker();
                 foreach (var b in S.State.buildings)
                 {
                     var view = TownView.Instance.View(b.uid);

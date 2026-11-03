@@ -75,10 +75,33 @@ I = {
     "tumbleweed": "a round dry tan tumbleweed ball of tangled twigs with a couple of gold coins caught in it",
     "traveler": "a worn brown leather travel suitcase with brass clasps and a cowboy hat resting on top",
     "album": "a thick brown leather-bound collector's album with brass corners and a few old locomotive photographs sticking out of the pages",
+    # Engineers (portraits, medium quality)
+    "eng_bigjim": "a smiling railroad stoker character with a short black beard, wearing a blue-and-white striped railroad cap and a red flannel work shirt, cartoon game character bust",
+    "eng_ada": "a friendly portrait of a confident frontier woman timber boss with auburn hair tied back, a brown work hat and a green plaid shirt, head and shoulders",
+    "eng_kit": "a friendly portrait of a young Native American cattle drover with long black braids, a flat-brim hat and a blue neckerchief, head and shoulders",
+    "eng_rosa": "a friendly portrait of a sharp-eyed Mexican-American woman locomotive engineer with dark curly hair, goggles pushed up on a striped cap and a denim jacket, head and shoulders",
+    "eng_doc": "a friendly portrait of an elderly railroad conductor with white whiskers, round spectacles, a navy conductor's cap and a gold pocket watch chain, head and shoulders",
+    "eng_smitty": "a friendly portrait of a wiry red-haired Irish locomotive fireman with freckles, a flat cap and rolled-up sleeves, holding a coal shovel over his shoulder, head and shoulders",
+    # Frontier curios (museum)
+    "curio_eagle": "a small hand-carved wooden eagle statuette made of pale pine wood",
+    "curio_fossil": "a spiral ammonite fossil in grey stone",
+    "curio_bell": "a small polished copper mission bell with a wooden yoke",
+    "curio_watch": "an open engraved gold pocket watch with a chain",
+    "curio_doll": "a corn-husk doll wearing a little red calico dress",
+    "curio_spurs": "a pair of ornate silver cowboy spurs with star-shaped rowels",
+    "curio_lamp": "an old brass miner's carbide lamp",
+    "curio_bottle": "a small corked glass bottle of black crude oil with a paper label",
+    "curio_water": "a pretty blue glass mineral water flask with a cork",
+    "curio_bugle": "a brass cavalry bugle with a yellow cord and tassels",
+    "curio_cornet": "a shiny brass band cornet",
+    "curio_seal": "a heavy brass territorial seal stamp with a carved wooden handle and a red wax impression beside it",
+    # Traveling peddler
+    "peddler": "a colorful traveling peddler's wagon with a canvas canopy, pots, pans and lanterns hanging off the sides",
     "foreman": "a friendly portrait of a weathered railroad foreman with a grey moustache, a brown bowler hat and a red neckerchief, head and shoulders",
 }
 
-MEDIUM = {"payday", "telegram", "crate_mystery", "bandit", "tumbleweed", "traveler", "album"}
+MEDIUM = {"payday", "telegram", "crate_mystery", "bandit", "tumbleweed", "traveler", "album", "peddler"}
+MEDIUM |= {k for k in I if k.startswith("eng_") or k.startswith("curio_")}
 
 
 def gen(i):

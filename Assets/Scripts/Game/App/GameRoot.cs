@@ -131,6 +131,7 @@ namespace Ironhorse.Game
             Child<DayNightCycle>("Day & Night");
             Child<CameraRig>("Camera");
             Child<ProjectSites>("Project Sites");
+            Child<Museum>("Museum");
             Child<PostFx>("Post FX");
             Child<Life>("Townsfolk");
             Child<AudioManager>("Audio");
@@ -143,7 +144,13 @@ namespace Ironhorse.Game
             Child<PlatformServices>("Apple Services");
 
             yield return null; // let Start() run on everything before revealing the world
-            if (!fresh) WelcomeBack(state);
+            if (PendingWelcome != null)
+            {
+                string msg = PendingWelcome;
+                PendingWelcome = null;
+                StartCoroutine(Delayed(1.5f, () => Celebrations.Instance.Play("project", "Welcome to " + state.townName + "!", msg, force: true)));
+            }
+            else if (!fresh) WelcomeBack(state);
             else Invoke(nameof(Intro), 2.2f);
             yield return _loading.Finish();
         }
@@ -190,6 +197,18 @@ namespace Ironhorse.Game
 
         void OnApplicationPause(bool paused) { if (paused) Save(); }
         void OnApplicationQuit() { Save(); }
+
+        /// <summary>Set before <see cref="Reload"/> to greet the player in the rebuilt world.</summary>
+        public static string PendingWelcome;
+
+        /// <summary>Saves and rebuilds the whole world from the save (after a new-territory charter).</summary>
+        public void Reload()
+        {
+            Save();
+            Instance = null;
+            enabled = false;
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
 
         public void ResetGame()
         {

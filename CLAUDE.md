@@ -13,7 +13,7 @@ local dev tool: it is **not** in the committed `Packages/manifest.json`.
 unity pipeline install --project-path .     # once per clone (adds com.unity.pipeline locally)
 unity open . --until-ready                  # first open imports for a few minutes
 Tools/unity-recompile.sh                    # leave Play mode, refresh, recompile, list errors (exit 1 on errors)
-unity command --project-path . test run editor --timeout 600 --result-only   # 85 EditMode tests
+unity command --project-path . test run editor --timeout 600 --result-only   # 98 EditMode tests
 Tools/unity-capture.sh out.png 6 'Ironhorse.Game.UIRoot.Instance.OpenDepot("locos"); return 0;'
 ```
 
@@ -106,6 +106,12 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   pay, two hours, outside the contract slots), map events (traveler, tumbleweed, gold strike, bandits; none during the
   tutorial) and the Roundhouse album (sets of owned stock give permanent perks through `CivicBonus`). Screens are in
   `UI/UIRoot.Hooks.cs`; launch queues the away card, then payday, then any featured offer (`QueueWelcome`).
+- **Frontier systems**: `Core/GameSession.Frontier.cs` (content and tuning in `Core/Frontier.cs`) adds the dispatcher's board
+  (4 daily jobs, daily and weekly chests; the Tasks tab of the Daily board), engineers (shards from chests, crates and the
+  peddler; one per locomotive; perks feed `PreviewDispatch`, `TripSeconds`, `FuelCost`, `FareFor`), the traveling peddler,
+  Full Steam combos (trains sent within 60 s haul up to 50% more), curios (one per destination, rolled at dispatch, shown in
+  `World/Museum.cs` west of Main Street) and new-territory charters (after the Golden Spike: the town restarts, stock and
+  collections stay, `GameRoot.Reload` rebuilds the world). Screens: `UI/UIRoot.Frontier.cs`.
 - **Audio**: recorded music, day/night ambience beds and effects (Higgsfield Sonilo, Mirelo, Seed Audio; raw takes in
   `art-src/audio`) are trimmed, levelled and looped by `Tools/art/audio.py` (free, ffmpeg) into `Resources/Audio/*.ogg`.
   `AudioManager` loads them and falls back to its synthesized sounds for any that are missing. Seed Audio's quoted
