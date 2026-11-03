@@ -144,6 +144,8 @@ Shader "Ironhorse/Terrain"
                 }
                 albedo /= max(total, 1e-4); n /= max(total, 1e-4);
                 albedo *= 1 - town.a * 0.35; // packed wheel ruts
+                // Trodden town earth is dustier and greyer than the raw dirt layer.
+                albedo = lerp(albedo, dot(albedo, float3(0.3, 0.59, 0.11)) * float3(1.06, 1.0, 0.9), 0.4 * saturate(town.r + town.b));
 
                 // Large-scale brightness/hue variation hides tiling from the high camera.
                 float m1 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.006).r;
