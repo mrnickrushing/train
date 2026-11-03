@@ -30,6 +30,14 @@ namespace Ironhorse.EditorTools
             if (!string.IsNullOrEmpty(buildNumber)) PlayerSettings.iOS.buildNumber = buildNumber;
             var version = Environment.GetEnvironmentVariable("APP_VERSION");
             if (!string.IsNullOrEmpty(version)) PlayerSettings.bundleVersion = version;
+            // On CI, Xcode signs automatically with the App Store Connect API key (it creates the
+            // bundle id, certificate and profile itself), so the project only needs the team.
+            var team = Environment.GetEnvironmentVariable("APPLE_TEAM_ID");
+            if (!string.IsNullOrEmpty(team))
+            {
+                PlayerSettings.iOS.appleDeveloperTeamID = team;
+                PlayerSettings.iOS.appleEnableAutomaticSigning = true;
+            }
 
             var options = new BuildPlayerOptions
             {
