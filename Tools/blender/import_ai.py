@@ -218,6 +218,13 @@ def main():
             e.parent = o
             anchors.append(e)
 
+    # Unity's FBX import reads the exporter's +Y forward as -Z: turn the model so its front
+    # (+Y in Blender, where everything above was oriented) ends up facing Unity's +Z.
+    turn = Matrix.Rotation(math.radians(180), 4, "Z")
+    o.data.transform(turn)
+    for e in anchors:
+        e.location = turn @ e.location
+
     bpy.ops.object.select_all(action="DESELECT")
     o.select_set(True)
     for e in anchors:
