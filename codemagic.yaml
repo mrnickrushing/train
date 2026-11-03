@@ -10,8 +10,10 @@
 #   APP_STORE_CONNECT_PRIVATE_KEY   contents of AuthKey_XXXX.p8 (secure)
 #   APP_STORE_CONNECT_KEY_IDENTIFIER
 #   APP_STORE_CONNECT_ISSUER_ID     (App Store Connect → Users and Access → Integrations)
-# Xcode signs automatically with that key (cloud-managed certificate, profile created on the fly),
-# and Codemagic uploads to TestFlight with it. The app record must exist in App Store Connect.
+# The archive is built unsigned; the export step signs it with an Apple cloud-managed distribution
+# certificate and an App Store profile it creates on the fly (the key needs the Admin role), so no
+# certificate or private key ever has to live on the build machine. Codemagic then uploads to
+# TestFlight with the same key. The app record must exist in App Store Connect.
 
 workflows:
   ios-testflight:
@@ -61,7 +63,8 @@ workflows:
                 -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID")
           xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Release \
             -destination "generic/platform=iOS" -archivePath /tmp/Ironhorse.xcarchive \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic COMPILER_INDEX_STORE_ENABLE=NO \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             "${AUTH[@]}" archive > /tmp/xcodebuild_archive.log 2>&1 \
             || { grep -E "error:|error -|Error Domain|No profiles|No signing|requires a provisioning|failed" /tmp/xcodebuild_archive.log | sort -u | tail -40; echo "xcodebuild archive failed (full log in artifacts)"; exit 1; }
           tail -3 /tmp/xcodebuild_archive.log
