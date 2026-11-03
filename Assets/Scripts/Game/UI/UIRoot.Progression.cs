@@ -19,7 +19,7 @@ namespace Ironhorse.Game
 
         void BuildChapterHud()
         {
-            var card = UIKit.KitImage(_safe, "card_wood", "Chapter");
+            var card = UIKit.KitImage(_safe, "tile_dark", "Chapter");
             _chapterCard = card.gameObject;
             UIKit.Place(_chapterCard, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -300), new Vector2(430, 118));
             HudShadow(card.gameObject);
@@ -90,7 +90,7 @@ namespace Ironhorse.Game
             bool claimed = S.IsChapterClaimed(c), isCurrent = c == current, locked = !claimed && !isCurrent;
             bool complete = S.IsChapterComplete(c);
 
-            var card = UIKit.Panel(parent, isCurrent ? Palette.Hex(0x3E2A1A) : UIKit.Wood, "Chapter " + c.Number, UIKit.Rounded, true);
+            var card = UIKit.Panel(parent, isCurrent ? Palette.Hex(0x34466A) : UIKit.Wood, "Chapter " + c.Number, UIKit.Rounded, true);
             UIKit.Size(card.gameObject, -1, 330);
             if (isCurrent)
             {

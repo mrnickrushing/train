@@ -18,12 +18,7 @@ namespace Ironhorse.Game
         {
             var holder = UIKit.Node("Foreman", _safe);
             UIKit.Place(holder, new Vector2(0, 0), new Vector2(0, 0), new Vector2(24, 190), new Vector2(150, 150));
-            var circle = HudCircle(holder.transform, UIKit.Blue, 112);
-            var gl = UIKit.Node("Glyph", circle.transform);
-            UIKit.Stretch(gl, 14);
-            UIKit.HStack(gl, 0, 0, TextAnchor.MiddleCenter);
-            ForemanPortrait(gl.transform, 84);
-            HudPlate(holder.transform, "Foreman", 150, 42, 22);
+            var circle = HudTile(holder.transform, "Foreman", t => ForemanPortrait(t, 96), 140);
             Clickable(holder, OpenForeman);
             _foremanBadge = UIKit.Badge(circle.transform, "", UIKit.Green);
             _foremanBadge.transform.parent.gameObject.SetActive(false);
@@ -128,7 +123,7 @@ namespace Ironhorse.Game
             {
                 var pr = S.Progress(def.Id);
                 bool locked = !S.IsProjectUnlocked(def);
-                var card = UIKit.Panel(content, locked ? new Color(0.8f, 0.76f, 0.68f) : pr.done ? Palette.Hex(0xBFDDB0) : Palette.Hex(0xD9C6E8), "Project", null, true);
+                var card = UIKit.Panel(content, locked ? new Color(0.74f, 0.77f, 0.82f) : pr.done ? Palette.Hex(0xBFDDB0) : Palette.Hex(0xD9C6E8), "Project", null, true);
                 UIKit.Size(card.gameObject, -1, 290);
                 UIKit.HStack(card.gameObject, 18, 16, TextAnchor.MiddleLeft);
 

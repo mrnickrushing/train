@@ -58,6 +58,15 @@ I = {
     "nav_build": "a claw hammer crossed over a carpenter's hand saw with wooden handles",
     "nav_depot": "a big red spoked steam locomotive driving wheel with a brass hub",
     "nav_settings": "a polished brass cogwheel gear",
+    # Store art (big, on offer cards)
+    "shop_nuggets_1": "a small handful of shiny gold nuggets",
+    "shop_nuggets_2": "a small brown leather drawstring pouch overflowing with shiny gold nuggets",
+    "shop_nuggets_3": "a burlap sack tied with rope, open at the top and overflowing with shiny gold nuggets",
+    "shop_nuggets_4": "an open iron-banded wooden strongbox heaped high with shiny gold nuggets",
+    "shop_nuggets_5": "an open heavy black iron bank safe with a brass dial, overflowing with a mountain of shiny gold nuggets",
+    "shop_coins": "a big heap of shiny gold coins embossed with steam locomotives, a few coins standing on edge",
+    "shop_fuel": "a large wooden railway coal bin heaped with glossy black coal next to two steel water cans",
+    "shop_supplies": "a stack of three wooden supply crates with rope handles, one open showing steel ingots, tools and planks",
     "foreman": "a friendly portrait of a weathered railroad foreman with a grey moustache, a brown bowler hat and a red neckerchief, head and shoulders",
 }
 
