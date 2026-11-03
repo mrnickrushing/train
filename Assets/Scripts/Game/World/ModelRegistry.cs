@@ -63,7 +63,7 @@ namespace Ironhorse.Game
                 if (ms != null)
                 {
                     m.SetTexture("_MetallicGlossMap", ms);
-                    m.SetFloat("_Smoothness", 0.85f);
+                    m.SetFloat("_Smoothness", 0.6f); // painted wood and iron, not chrome
                     m.EnableKeyword("_METALLICSPECGLOSSMAP");
                 }
                 var n = Resources.Load<Texture2D>("Models/" + key + "_normal");

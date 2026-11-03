@@ -174,10 +174,11 @@ def main():
         ao = ormp[..., 0:1]
         alb[..., :3] *= (0.72 + 0.28 * ao)  # light AO fold: Tripo albedo already carries some shading
         ms = np.zeros_like(ormp)
-        ms[..., 0] = ormp[..., 2]            # metallic
-        ms[..., 1] = ormp[..., 2]
-        ms[..., 2] = ormp[..., 2]
-        ms[..., 3] = 1.0 - ormp[..., 1]      # smoothness in alpha (URP)
+        # Tripo's PBR maps read as polished chrome under URP: tone metal and gloss down to painted iron/wood.
+        ms[..., 0] = ormp[..., 2] * 0.5      # metallic
+        ms[..., 1] = ms[..., 0]
+        ms[..., 2] = ms[..., 0]
+        ms[..., 3] = (1.0 - ormp[..., 1]) * 0.55  # smoothness in alpha (URP)
         if tex >= 1024:
             ms = ms[::2, ::2]
         save_png(ms, os.path.join(out_dir, model_id + "_ms.png"), "Non-Color")
