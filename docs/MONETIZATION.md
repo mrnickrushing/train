@@ -43,18 +43,25 @@ that screenshot.
 
 ## 2. RevenueCat: connect purchases
 
-1. In RevenueCat, create a project and add an **App Store** app. Upload the In-App Purchase key
-   from App Store Connect, then import the products above.
-2. Install the **RevenueCat Unity SDK** (`Purchases`) following RevenueCat's Unity install guide.
-3. In Unity: **Project Settings → Player → iOS → Scripting Define Symbols**, add `IRONHORSE_REVENUECAT`.
-4. Put your Apple public SDK key (`appl_…`) in `RevenueCatStore.ApiKey`
-   (`Assets/Scripts/Game/Monetization/StoreService.cs`).
-5. Build to TestFlight and buy with a sandbox account.
+Done in the project:
+- The 12 products above exist in App Store Connect (app 6830036020) with names, descriptions, US
+  prices (other territories follow Apple's equalized tiers) and availability everywhere.
+- The **RevenueCat Unity SDK 10.0.0** is installed from OpenUPM (`Packages/manifest.json`). It adds
+  RevenueCat's iOS library to the exported Xcode project as a Swift package, so Codemagic needs no
+  CocoaPods step.
+- `Ironhorse.Game.asmdef` defines `IRONHORSE_REVENUECAT` automatically when the package is present,
+  and `RevenueCatStore` is compiled and matched to the v10 API (`PurchaseProduct` returns a
+  `PurchaseResult`).
 
-> The `RevenueCatStore` class was written against RevenueCat's Unity API (`GetProducts`,
-> `PurchaseProduct`, `RestorePurchases`) but has not been compiled yet. It only compiles once the
-> SDK is installed. If the SDK version you install has renamed something, Unity's console will
-> point to the exact line; it's a small adapter.
+Still to do:
+1. In RevenueCat, create a project and add an **App Store** app for bundle id
+   `com.rushingtech.ironhorsefrontier`. Upload an **In-App Purchase key** (App Store Connect →
+   Users and Access → Integrations → In-App Purchase), then import the products.
+2. Put the project's Apple public SDK key (`appl_…`) in `RevenueCatStore.ApiKey`
+   (`Assets/Scripts/Game/Monetization/StoreService.cs`). Until then the game keeps using the test
+   store (purchases only work in the Editor and development builds, never free in release).
+3. Sign the **Paid Apps Agreement** (App Store Connect → Business) or purchases fail even in sandbox.
+4. Build to TestFlight and buy with a sandbox account.
 
 ## 3. Rewarded ads
 
