@@ -40,6 +40,12 @@ namespace Ironhorse.Game
             });
         }
 
+        public static Texture Building(BuildingDef d)
+        {
+            if (!ModelRegistry.Has(ModelRegistry.Buildings, d.Id)) return null;
+            return Get("bldg:" + d.Id, root => ModelRegistry.Spawn(ModelRegistry.Buildings, d.Id, root), building: true);
+        }
+
         /// <summary>A RawImage showing the model, sized w × h, for use inside layouts.</summary>
         public static RawImage Image(Transform parent, Texture tex, float w, float h)
         {
@@ -58,7 +64,7 @@ namespace Ironhorse.Game
             foreach (var r in m.Rods) r.Mesh.ToObject("Rod", go.transform).transform.localPosition = r.Center;
         }
 
-        static Texture Get(string key, System.Action<Transform> build)
+        static Texture Get(string key, System.Action<Transform> build, bool building = false)
         {
             Texture2D tex;
             if (Cache.TryGetValue(key, out tex) && tex != null) return tex;
@@ -71,7 +77,7 @@ namespace Ironhorse.Game
                 foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = Layer;
                 foreach (var c in root.GetComponentsInChildren<Collider>(true)) Object.Destroy(c);
                 var rt = RenderTexture.GetTemporary(new RenderTextureDescriptor(Width, Height, RenderTextureFormat.ARGB32, 24) { msaaSamples = 4, sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear });
-                Frame(root);
+                Frame(root, building);
                 Render(rt);
                 // Keep a plain texture; the multisampled render target goes back to the pool.
                 var prev = RenderTexture.active;
@@ -132,10 +138,11 @@ namespace Ironhorse.Game
         }
 
         /// <summary>Three-quarter view from the front, fitted to the model's bounds.</summary>
-        static void Frame(Transform root)
+        static void Frame(Transform root, bool building = false)
         {
             var b = ModelRegistry.RendererBounds(root.gameObject);
-            var dir = Quaternion.Euler(14, -128, 0) * Vector3.forward; // looking at the nose (+Z) from front-left
+            // Vehicles: look at the nose (+Z) from front-left. Buildings: look at the street side (-Z) from above.
+            var dir = building ? Quaternion.Euler(30, 28, 0) * Vector3.forward : Quaternion.Euler(14, -128, 0) * Vector3.forward;
             float radius = b.extents.magnitude;
             float dist = radius / Mathf.Sin(_cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 0.54f;
             _cam.transform.position = b.center - dir * dist;
