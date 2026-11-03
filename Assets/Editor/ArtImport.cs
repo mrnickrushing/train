@@ -18,10 +18,16 @@ namespace Ironhorse.EditorTools
             if (!assetPath.StartsWith(Models)) return;
             var mi = (ModelImporter)assetImporter;
             mi.materialImportMode = ModelImporterMaterialImportMode.None; // ArtMaterials builds URP materials at runtime
-            mi.importAnimation = false;
+            bool person = assetPath.StartsWith(Models + "People/");
+            mi.importAnimation = person;
             mi.importCameras = false;
             mi.importLights = false;
-            mi.animationType = ModelImporterAnimationType.None;
+            mi.animationType = person ? ModelImporterAnimationType.Legacy : ModelImporterAnimationType.None;
+            if (person)
+            {
+                mi.animationWrapMode = WrapMode.Loop;
+                mi.resampleCurves = true;
+            }
             mi.isReadable = false;
             mi.meshCompression = ModelImporterMeshCompression.Medium;
             mi.importNormals = ModelImporterNormals.Import;

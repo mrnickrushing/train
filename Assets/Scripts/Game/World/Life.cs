@@ -16,6 +16,8 @@ namespace Ironhorse.Game
             public float Y;
             public Vector3 Target;
             public float Speed, Wait, Phase;
+            public Animation Anim;   // drop-in art: Walk / Idle clips
+            public float GroundTimer;
         }
 
         sealed class Cart
@@ -32,9 +34,13 @@ namespace Ironhorse.Game
         float R() { return (float)_rng.NextDouble(); }
         float R(float a, float b) { return a + (b - a) * R(); }
 
+        static readonly string[] Folk = { "gent", "lady", "cowboy", "worker" };
+        readonly List<string> _art = new List<string>();
+
         void Start()
         {
             for (int i = 0; i < 10; i++) _people.Add(PersonMesh(i));
+            foreach (var id in Folk) if (ModelRegistry.Has("People", id)) _art.Add(id);
 
             float island1 = (WorldLayout.PlatformZ(1) + WorldLayout.PlatformZ(2)) / 2;
             float island2 = (WorldLayout.PlatformZ(3) + WorldLayout.PlatformZ(4)) / 2;
@@ -90,14 +96,36 @@ namespace Ironhorse.Game
         {
             for (int i = 0; i < count; i++)
             {
-                var go = new GameObject("Person");
-                go.transform.SetParent(transform, false);
-                go.AddComponent<MeshFilter>().sharedMesh = _people[_rng.Next(_people.Count)];
-                var mr = go.AddComponent<MeshRenderer>();
-                mr.sharedMaterial = Materials.World;
-                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-                var w = new Walker { T = go.transform, Area = area, Y = y, Speed = R(0.9f, 1.5f), Phase = R(0, 10) };
+                GameObject go;
+                Animation anim = null;
+                if (_art.Count > 0)
+                {
+                    go = ModelRegistry.Spawn("People", _art[_rng.Next(_art.Count)], transform);
+                    anim = go.GetComponentInChildren<Animation>();
+                    foreach (var smr in go.GetComponentsInChildren<SkinnedMeshRenderer>())
+                    {
+                        smr.updateWhenOffscreen = false;
+                        smr.quality = SkinQuality.Bone2;
+                    }
+                }
+                else
+                {
+                    go = new GameObject("Person");
+                    go.transform.SetParent(transform, false);
+                    go.AddComponent<MeshFilter>().sharedMesh = _people[_rng.Next(_people.Count)];
+                    var mr = go.AddComponent<MeshRenderer>();
+                    mr.sharedMaterial = Materials.World;
+                    mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                }
+                var w = new Walker { T = go.transform, Area = area, Y = y, Speed = R(0.9f, 1.5f), Phase = R(0, 10), Anim = anim };
+                if (anim != null)
+                {
+                    foreach (AnimationState st in anim) { st.wrapMode = WrapMode.Loop; st.time = R(0, st.length); }
+                    Play(w, "Idle");
+                }
                 w.T.position = RandomIn(area, y);
+                w.Y = Ground(w.T.position, y);
+                w.T.position = new Vector3(w.T.position.x, w.Y, w.T.position.z);
                 w.Target = w.T.position;
                 w.Wait = R(0, 8);
                 go.transform.localScale = Vector3.one * R(0.92f, 1.06f);
@@ -106,6 +134,25 @@ namespace Ironhorse.Game
         }
 
         Vector3 RandomIn(Rect r, float y) { return new Vector3(R(r.xMin, r.xMax), y, R(r.yMin, r.yMax)); }
+
+        const int GroundMask = (1 << 0) | (1 << Station.WalkLayer);
+
+        /// <summary>Height of whatever is underfoot (terrain, streets, platforms, the station floor).</summary>
+        static float Ground(Vector3 p, float hint)
+        {
+            // Start just above head height so canopies and roofs overhead are never mistaken for the floor.
+            RaycastHit hit;
+            if (Physics.Raycast(new Vector3(p.x, hint + 1.6f, p.z), Vector3.down, out hit, 4f, GroundMask, QueryTriggerInteraction.Ignore))
+                return hit.point.y;
+            return hint;
+        }
+
+        static void Play(Walker w, string clip)
+        {
+            if (w.Anim == null) return;
+            foreach (AnimationState st in w.Anim)
+                if (st.name.EndsWith(clip)) { if (!w.Anim.IsPlaying(st.name)) w.Anim.CrossFade(st.name, 0.25f); return; }
+        }
 
         // ---------------------------------------------------------------- carts
 
@@ -164,6 +211,7 @@ namespace Ironhorse.Game
                 to.y = 0;
                 if (to.sqrMagnitude < 0.05f)
                 {
+                    Play(w, "Idle");
                     w.Wait -= dt;
                     if (w.Wait <= 0)
                     {
@@ -177,7 +225,15 @@ namespace Ironhorse.Game
                 var step = to.normalized * w.Speed * dt;
                 if (step.sqrMagnitude > to.sqrMagnitude) step = to;
                 p += step;
-                p.y = w.Y + Mathf.Abs(Mathf.Sin((Time.time + w.Phase) * 7f)) * 0.05f; // walking bob
+                w.GroundTimer -= dt;
+                if (w.GroundTimer <= 0) { w.GroundTimer = 0.2f; w.Y = Ground(p, w.Y); }
+                if (w.Anim != null)
+                {
+                    Play(w, "Walk");
+                    foreach (AnimationState st in w.Anim) if (st.name.EndsWith("Walk")) st.speed = w.Speed / 1.3f; // one stride ≈ 1.3 m
+                    p.y = w.Y;
+                }
+                else p.y = w.Y + Mathf.Abs(Mathf.Sin((Time.time + w.Phase) * 7f)) * 0.05f; // walking bob
                 w.T.position = p;
                 w.T.rotation = Quaternion.Slerp(w.T.rotation, Quaternion.LookRotation(to.normalized), dt * 6f);
             }

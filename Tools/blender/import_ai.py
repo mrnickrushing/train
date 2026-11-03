@@ -146,6 +146,16 @@ def main():
         o.data.update()
         faces = faces * 2
 
+    # Weld the surface first: the GLB splits vertices at every texture seam, and decimating split
+    # geometry pulls the pieces apart (see-through cracks). UVs are per-corner, so welding keeps them.
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+    bm.to_mesh(o.data)
+    bm.free()
+    o.data.update()
+
     # Decimate to the mobile budget.
     n = len(o.data.polygons)
     if n > faces:

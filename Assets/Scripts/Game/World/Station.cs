@@ -35,7 +35,7 @@ namespace Ironhorse.Game
 
             // Drop-in art (Resources/Models/Buildings/station, freightshed) replaces the procedural versions.
             var depotArt = ModelRegistry.Spawn(ModelRegistry.Buildings, "station", root);
-            if (depotArt != null) depotArt.transform.position = DepotPosition;
+            if (depotArt != null) { depotArt.transform.position = DepotPosition; Walkable(depotArt); }
             else Depot(mb);
             var shedArt = ModelRegistry.Spawn(ModelRegistry.Buildings, "freightshed", root);
             if (shedArt != null) shedArt.transform.position = new Vector3(-36, 0, -16);
@@ -59,7 +59,22 @@ namespace Ironhorse.Game
                 if (i % 2 == 0) Crate(mb, p, (float)rng.NextDouble() * 40);
                 else Barrel(mb, p);
             }
-            mb.ToObject("Station", root);
+            Walkable(mb.ToObject("Station", root));
+        }
+
+        /// <summary>Layer for surfaces townsfolk stand on (Ignore Raycast: taps and camera rays skip it).</summary>
+        public const int WalkLayer = 2;
+
+        /// <summary>Gives every mesh under go a collider on <see cref="WalkLayer"/> so people can find the floor.</summary>
+        public static void Walkable(GameObject go)
+        {
+            foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf.sharedMesh == null || mf.GetComponent<Collider>() != null) continue;
+                var c = mf.gameObject.AddComponent<MeshCollider>();
+                c.sharedMesh = mf.sharedMesh;
+                mf.gameObject.layer = WalkLayer;
+            }
         }
 
         static void Depot(MeshBuilder mb)
