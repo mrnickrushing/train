@@ -462,9 +462,23 @@ namespace Ironhorse.Game
             CloseWindow();
             _bannerText.text = "Tap a glowing plot to build the " + building;
             _banner.SetActive(true);
+            ShiftToasts(true); // toasts drop below the banner instead of covering it
         }
 
-        public void HidePlacementBanner() { _banner.SetActive(false); }
+        public void HidePlacementBanner()
+        {
+            _banner.SetActive(false);
+            ShiftToasts(false);
+        }
+
+        bool _toastsShifted;
+
+        void ShiftToasts(bool down)
+        {
+            if (down == _toastsShifted) return;
+            _toastsShifted = down;
+            _toasts.anchoredPosition += new Vector2(0, down ? -110 : 110);
+        }
 
         void RefreshHud()
         {

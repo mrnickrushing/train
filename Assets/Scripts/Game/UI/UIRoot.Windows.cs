@@ -133,13 +133,18 @@ namespace Ironhorse.Game
 
         void ConfirmReset()
         {
-            ShowWindow("Are you sure?", content =>
+            ShowBoard("Are you sure?", (body, right) =>
             {
-                Line(content, "This erases all progress and starts over. It cannot be undone.", 24, UIKit.Red, true);
-                var row = UIKit.Row(content, 70, 20, TextAnchor.MiddleCenter);
-                UIKit.Btn(row.transform, "Keep playing", UIKit.Green, () => CloseWindow(), 24, 300, 64);
-                UIKit.Btn(row.transform, "Erase everything", UIKit.Red, () => { CloseWindow(); GameRoot.Instance.ResetGame(); }, 24, 300, 64);
-            }, 820, 360);
+                var panel = Box(body, BCardDeep, -1, -1, "Panel");
+                UIKit.Stretch(panel.gameObject);
+                Stack(panel.gameObject, 18, new RectOffset(30, 30, 30, 30), TextAnchor.MiddleCenter);
+                T(panel.transform, "Erase this railroad?", 56, BBad, TextAnchor.MiddleCenter, true);
+                T(panel.transform, "All progress, coins and nuggets are lost and the game starts over. One-time purchases such as the Big Tender come back with Restore purchases. This cannot be undone.", 34, Color.white, TextAnchor.MiddleCenter, false, UIKit.Heading);
+                Flex(panel.transform);
+                var row = HBox(panel.transform, 24, 0, TextAnchor.MiddleCenter, -1, 100);
+                Big(row.transform, "Keep playing", UIKit.Green, () => CloseWindow(), 380, 96, true, 40);
+                Big(row.transform, "Erase everything", UIKit.Red, () => { CloseWindow(); GameRoot.Instance.ResetGame(); }, 380, 96, true, 40);
+            }, 1300, 640);
         }
     }
 }
