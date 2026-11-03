@@ -51,6 +51,13 @@ I = {
     "xp": "a glowing golden five-pointed sheriff's star badge",
     "people": "a cowboy hat on top of a small group silhouette of three frontier townsfolk",
     "crate": "a sturdy wooden shipping crate with iron corners",
+    # HUD buttons
+    "nav_trains": "the front of a red and brass steam locomotive in three-quarter view, with a glowing headlamp and a puff of white steam",
+    "nav_territory": "a partly unrolled old parchment map with a dotted railroad route and two red pins",
+    "nav_contracts": "a paper order sheet pinned to a small wooden board, with a red wax seal and a gold coin",
+    "nav_build": "a claw hammer crossed over a carpenter's hand saw with wooden handles",
+    "nav_depot": "a big red spoked steam locomotive driving wheel with a brass hub",
+    "nav_settings": "a polished brass cogwheel gear",
     "foreman": "a friendly portrait of a weathered railroad foreman with a grey moustache, a brown bowler hat and a red neckerchief, head and shoulders",
 }
 

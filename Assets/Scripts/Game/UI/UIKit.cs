@@ -239,8 +239,81 @@ namespace Ironhorse.Game
             return t;
         }
 
+        // ---------------------------------------------------------------- kit sprites (Tools/art/ui_kit.py)
+
+        static readonly System.Collections.Generic.Dictionary<string, Sprite> _kit = new System.Collections.Generic.Dictionary<string, Sprite>();
+        // 9-slice borders (left, bottom, right, top) in sprite pixels, matching the art in ui_kit.py.
+        static Vector4 KitBorder(string name)
+        {
+            if (name.StartsWith("btn_")) return new Vector4(44, 46, 44, 34);
+            if (name.StartsWith("hero_")) return new Vector4(56, 56, 56, 56);
+            if (name.StartsWith("round_")) return Vector4.zero;
+            switch (name)
+            {
+                case "frame": return new Vector4(64, 64, 64, 64);
+                case "pill": return new Vector4(36, 30, 36, 30);
+                case "ribbon": case "ribbon_green": return new Vector4(120, 60, 120, 40);
+                default: return new Vector4(32, 32, 32, 32); // card, card_wood, tile
+            }
+        }
+
+        /// <summary>Shaded kit sprite (9-sliced), or null if the art isn't in Resources/UI/Kit.</summary>
+        public static Sprite Kit(string name)
+        {
+            Sprite sp;
+            if (_kit.TryGetValue(name, out sp)) return sp;
+            var tex = Resources.Load<Texture2D>("UI/Kit/" + name);
+            if (tex != null)
+            {
+                tex.wrapMode = TextureWrapMode.Clamp;
+                sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, KitBorder(name));
+            }
+            _kit[name] = sp;
+            return sp;
+        }
+
+        /// <summary>An image using a kit sprite; scales the slice borders down so they fit a short element.</summary>
+        public static Image KitImage(Transform parent, string kit, string name = null, float height = -1)
+        {
+            var sp = Kit(kit);
+            var img = Panel(parent, Color.white, name ?? kit, sp ?? Rounded);
+            if (sp == null) return img;
+            img.type = sp.border == Vector4.zero ? Image.Type.Simple : Image.Type.Sliced;
+            if (height > 0 && sp.border.y + sp.border.w > height * 0.9f) img.pixelsPerUnitMultiplier = (sp.border.y + sp.border.w) / (height * 0.9f);
+            return img;
+        }
+
+        /// <summary>Kit button sprite that best matches a palette colour (null for near-black/very dark).</summary>
+        public static string KitFor(Color c)
+        {
+            float h, sat, v;
+            Color.RGBToHSV(c, out h, out sat, out v);
+            if (v < 0.22f) return null;
+            if (sat < 0.22f) return "btn_grey";
+            if (h < 0.045f || h > 0.94f) return v < 0.55f ? "btn_wood" : "btn_red";
+            if (h < 0.095f) return v < 0.62f ? "btn_wood" : "btn_orange";
+            if (h < 0.18f) return v < 0.5f ? "btn_wood" : "btn_gold";
+            if (h < 0.47f) return "btn_green";
+            if (h < 0.70f) return "btn_blue";
+            return "btn_purple";
+        }
+
+        /// <summary>Chunky game text: a thick dark outline plus a drop shadow.</summary>
+        public static Text Stroke(Text t, Color c, float px = 2f)
+        {
+            var o = t.gameObject.AddComponent<Outline>();
+            o.effectColor = c;
+            o.effectDistance = new Vector2(px, -px);
+            var s = t.gameObject.AddComponent<Shadow>();
+            s.effectColor = new Color(c.r, c.g, c.b, c.a * 0.8f);
+            s.effectDistance = new Vector2(0, -px * 1.6f);
+            return t;
+        }
+
         public static Button Btn(Transform parent, string text, Color bg, Action onClick, int fontSize = 26, float w = -1, float h = 64, bool enabled = true)
         {
+            var kit = KitFor(enabled ? bg : Disabled);
+            if (kit != null && Kit(kit) != null) return KitBtn(parent, text, kit, enabled ? bg : Disabled, onClick, fontSize, w, h, enabled);
             // Chunky "3D" button: a darker base slab with the gradient face sitting on top of it.
             var go = Node("Button " + text, parent);
             Size(go, w, h);
@@ -271,6 +344,39 @@ namespace Ironhorse.Game
             var sh = t.gameObject.AddComponent<Outline>();
             sh.effectColor = new Color(0, 0, 0, 0.35f);
             sh.effectDistance = new Vector2(1.5f, -1.5f);
+            go.AddComponent<ButtonFx>();
+            if (onClick != null) b.onClick.AddListener(() => { AudioManager.Play(Sfx.Click); onClick(); });
+            return b;
+        }
+
+        /// <summary>Glossy kit button: one sliced sprite with a 3D lip, caption sitting on the face.</summary>
+        static Button KitBtn(Transform parent, string text, string kit, Color tone, Action onClick, int fontSize, float w, float h, bool enabled)
+        {
+            var go = Node("Button " + text, parent);
+            Size(go, w, h);
+            var img = KitImage(go.transform, kit, "Face", h);
+            Stretch(img.gameObject);
+            var drop = img.gameObject.AddComponent<Shadow>();
+            drop.effectColor = new Color(0, 0, 0, 0.28f);
+            drop.effectDistance = new Vector2(0, -4);
+            var b = go.AddComponent<Button>();
+            b.targetGraphic = img;
+            var colors = b.colors;
+            colors.highlightedColor = new Color(1.06f, 1.06f, 1.06f);
+            colors.pressedColor = new Color(0.86f, 0.86f, 0.86f);
+            colors.disabledColor = Color.white;
+            b.colors = colors;
+            b.interactable = enabled;
+            float lip = 12f / img.pixelsPerUnitMultiplier;
+            var t = Label(img.transform, text.ToUpperInvariant(), Mathf.RoundToInt(fontSize * 1.08f), Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            t.font = Display;
+            t.fontStyle = FontStyle.Normal; // the face is already bold
+            t.resizeTextForBestFit = true;
+            t.resizeTextMinSize = 12;
+            t.resizeTextMaxSize = t.fontSize;
+            t.verticalOverflow = VerticalWrapMode.Truncate;
+            Anchor(t.gameObject, Vector2.zero, Vector2.one, new Vector2(10, lip + 3), new Vector2(-10, -3));
+            Stroke(t, new Color(tone.r * 0.3f, tone.g * 0.3f, tone.b * 0.3f, 0.95f), 2f);
             go.AddComponent<ButtonFx>();
             if (onClick != null) b.onClick.AddListener(() => { AudioManager.Play(Sfx.Click); onClick(); });
             return b;

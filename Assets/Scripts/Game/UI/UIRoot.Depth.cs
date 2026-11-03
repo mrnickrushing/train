@@ -18,17 +18,12 @@ namespace Ironhorse.Game
         {
             var holder = UIKit.Node("Foreman", _safe);
             UIKit.Place(holder, new Vector2(0, 0), new Vector2(0, 0), new Vector2(24, 190), new Vector2(150, 150));
-            var circle = UIKit.Panel(holder.transform, UIKit.Blue, "Circle", UIKit.Circle, true);
-            UIKit.Place(circle.gameObject, new Vector2(0.5f, 1), new Vector2(0.5f, 1), Vector2.zero, new Vector2(104, 104));
-            circle.gameObject.AddComponent<Outline>().effectColor = UIKit.Brass;
+            var circle = HudCircle(holder.transform, UIKit.Blue, 112);
             var gl = UIKit.Node("Glyph", circle.transform);
             UIKit.Stretch(gl, 14);
             UIKit.HStack(gl, 0, 0, TextAnchor.MiddleCenter);
-            ForemanPortrait(gl.transform, 70);
-            var plate = UIKit.Panel(holder.transform, UIKit.Wood, "Plate", UIKit.RoundedSmall, true);
-            UIKit.Place(plate.gameObject, new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(150, 40));
-            var t = UIKit.Label(plate.transform, "Foreman", 22, UIKit.Cream, TextAnchor.MiddleCenter, true);
-            UIKit.Stretch(t.gameObject);
+            ForemanPortrait(gl.transform, 84);
+            HudPlate(holder.transform, "Foreman", 150, 42, 22);
             Clickable(holder, OpenForeman);
             _foremanBadge = UIKit.Badge(circle.transform, "", UIKit.Green);
             _foremanBadge.transform.parent.gameObject.SetActive(false);

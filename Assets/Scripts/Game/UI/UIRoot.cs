@@ -121,23 +121,29 @@ namespace Ironhorse.Game
         void BuildHud()
         {
             // Level badge + XP
-            var left = UIKit.Panel(_safe, new Color(UIKit.Wood.r, UIKit.Wood.g, UIKit.Wood.b, 0.92f), "LevelPanel", null, true);
-            UIKit.Place(left.gameObject, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -20), new Vector2(430, 104));
-            var badge = UIKit.Panel(left.transform, UIKit.Brass, "Badge", UIKit.Circle);
-            UIKit.Place(badge.gameObject, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(10, 0), new Vector2(86, 86));
-            badge.gameObject.AddComponent<Outline>().effectColor = UIKit.BrassDark;
-            _level = UIKit.Label(badge.transform, "1", 46, UIKit.Wood, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            var left = UIKit.KitImage(_safe, "card_wood", "LevelPanel");
+            UIKit.Place(left.gameObject, new Vector2(0, 1), new Vector2(0, 1), new Vector2(66, -22), new Vector2(390, 96));
+            HudShadow(left.gameObject);
+            var badge = UIKit.KitImage(left.transform, "round_gold", "Badge");
+            UIKit.Place(badge.gameObject, new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -2), new Vector2(116, 116));
+            HudShadow(badge.gameObject);
+            _level = UIKit.Label(badge.transform, "1", 52, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             _level.font = UIKit.Display;
             _level.fontStyle = FontStyle.Normal; // the face is already bold
-            UIKit.Stretch(_level.gameObject);
-            var town = UIKit.Label(left.transform, S.State.townName.ToUpperInvariant(), 26, UIKit.Brass, TextAnchor.UpperLeft, true);
-            UIKit.Anchor(town.gameObject, new Vector2(0, 0.5f), new Vector2(1, 1), new Vector2(108, 0), new Vector2(-14, -12));
+            UIKit.Stretch(_level.gameObject, 6);
+            UIKit.Stroke(_level, new Color(0.36f, 0.2f, 0.02f, 0.95f), 2.5f);
+            var town = UIKit.Label(left.transform, S.State.townName.ToUpperInvariant(), 28, UIKit.Gold, TextAnchor.UpperLeft, false, FontStyle.Bold);
+            town.font = UIKit.Display;
+            town.fontStyle = FontStyle.Normal;
+            UIKit.Stroke(town, new Color(0, 0, 0, 0.7f), 1.5f);
+            UIKit.Anchor(town.gameObject, new Vector2(0, 0.5f), new Vector2(1, 1), new Vector2(68, 0), new Vector2(-14, -10));
             var barHolder = UIKit.Node("XP", left.transform);
-            UIKit.Anchor(barHolder, new Vector2(0, 0), new Vector2(1, 0.5f), new Vector2(108, 16), new Vector2(-16, -6));
+            UIKit.Anchor(barHolder, new Vector2(0, 0), new Vector2(1, 0.5f), new Vector2(68, 14), new Vector2(-16, -4));
             UIKit.HStack(barHolder, 0);
-            _xpFill = UIKit.Bar(barHolder.transform, UIKit.Brass, 26);
-            _xpText = UIKit.Label(_xpFill.transform.parent, "", 18, UIKit.Cream, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            _xpFill = UIKit.Bar(barHolder.transform, UIKit.Gold, 26, new Color(0, 0, 0, 0.55f));
+            _xpText = UIKit.Label(_xpFill.transform.parent, "", 18, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             UIKit.Stretch(_xpText.gameObject);
+            UIKit.Stroke(_xpText, new Color(0, 0, 0, 0.75f), 1.5f);
             Clickable(left.gameObject, () => OpenProgress());
 
             // Currency chips (top right)
@@ -145,24 +151,77 @@ namespace Ironhorse.Game
             UIKit.Place(chips, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -20), new Vector2(1100, 70));
             UIKit.HStack(chips, 14, 0, TextAnchor.MiddleRight);
             _coins = Chip(chips.transform, t => UIKit.CoinIcon(t, 50), 210, () => OpenWarehouse());
-            _nuggets = Chip(chips.transform, t => UIKit.NuggetIcon(t, 50), 150, () => Toast("Gold nuggets come from level-ups, goals and lucky contracts.", true));
+            _nuggets = Chip(chips.transform, t => UIKit.NuggetIcon(t, 50), 190, () => OpenShop("nuggets"), true);
             _pop = Chip(chips.transform, t => PeopleIcon(t), 170, () => OpenProgress());
             _storage = Chip(chips.transform, t => CrateIcon(t), 210, () => OpenWarehouse());
-            var gear = UIKit.Btn(chips.transform, "•••", UIKit.WoodMid, () => OpenSettings(), 36, 70, 70);
+            var gear = RoundButton(chips.transform, "round_wood", "•••", () => OpenSettings(), 78, "nav_settings");
             gear.name = "Settings";
         }
 
-        Text Chip(Transform parent, Action<Transform> icon, float width, Action onClick)
+        Text Chip(Transform parent, Action<Transform> icon, float width, Action onClick, bool plus = false)
         {
-            var bg = UIKit.Panel(parent, new Color(UIKit.Wood.r, UIKit.Wood.g, UIKit.Wood.b, 0.92f), "Chip", null, true);
+            var bg = UIKit.KitImage(parent, "pill", "Chip", 64);
             UIKit.Size(bg.gameObject, width, 64);
-            UIKit.HStack(bg.gameObject, 10, 8, TextAnchor.MiddleLeft);
+            HudShadow(bg.gameObject);
+            var h = UIKit.HStack(bg.gameObject, 8, 4, TextAnchor.MiddleLeft);
+            h.padding = new RectOffset(6, plus ? 4 : 18, 2, 2);
             icon(bg.transform);
-            var t = UIKit.Label(bg.transform, "0", 34, UIKit.Cream, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+            var t = UIKit.Label(bg.transform, "0", 34, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
             t.font = UIKit.Display;
             t.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Size(t.gameObject, -1, 50, 1);
+            UIKit.Stroke(t, new Color(0, 0, 0, 0.8f), 2f);
+            if (plus)
+            {
+                var p = UIKit.KitImage(bg.transform, "round_green", "Plus");
+                UIKit.Size(p.gameObject, 52, 52);
+                var pl = UIKit.Label(p.transform, "+", 40, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                pl.font = UIKit.Display; pl.fontStyle = FontStyle.Normal;
+                UIKit.Stretch(pl.gameObject);
+                UIKit.Stroke(pl, new Color(0.05f, 0.25f, 0.05f, 0.9f), 2f);
+            }
             Clickable(bg.gameObject, onClick);
+            return t;
+        }
+
+        static void HudShadow(GameObject go)
+        {
+            var s = go.AddComponent<Shadow>();
+            s.effectColor = new Color(0, 0, 0, 0.35f);
+            s.effectDistance = new Vector2(0, -5);
+        }
+
+        /// <summary>Kit round button art for a colour (brass-rimmed glossy disc).</summary>
+        static string RoundKit(Color c)
+        {
+            var k = UIKit.KitFor(c);
+            if (k == null) return "round_brown";
+            k = "round_" + k.Substring(4);
+            if (k == "round_orange") k = "round_gold";
+            if (k == "round_grey") k = "round_brown";
+            return UIKit.Kit(k) != null ? k : "round_brown";
+        }
+
+        /// <summary>HUD disc (top-centred in its holder) for the bottom-bar and side buttons.</summary>
+        static Image HudCircle(Transform holder, Color c, float size)
+        {
+            var img = UIKit.KitImage(holder, RoundKit(c), "Circle");
+            UIKit.Place(img.gameObject, new Vector2(0.5f, 1), new Vector2(0.5f, 1), Vector2.zero, new Vector2(size, size));
+            HudShadow(img.gameObject);
+            return img;
+        }
+
+        /// <summary>Dark pill name plate under a HUD disc, with outlined caption.</summary>
+        static Text HudPlate(Transform holder, string label, float w, float h = 44, int size = 24)
+        {
+            var plate = UIKit.KitImage(holder, "pill", "Plate", h);
+            UIKit.Place(plate.gameObject, new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(w, h));
+            var t = UIKit.Label(plate.transform, label.ToUpperInvariant(), size, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            t.font = UIKit.Display;
+            t.fontStyle = FontStyle.Normal; // the face is already bold
+            UIKit.Stretch(t.gameObject, 4);
+            UIKit.OneLine(t, 14).GetComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Stroke(t, new Color(0, 0, 0, 0.8f), 1.5f);
             return t;
         }
 
@@ -186,6 +245,38 @@ namespace Ironhorse.Game
             UIKit.Place(x1.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(54, 7)).localRotation = Quaternion.Euler(0, 0, 45);
             var x2 = UIKit.Panel(img.transform, Palette.Wood, "X", UIKit.RoundedSmall);
             UIKit.Place(x2.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(54, 7)).localRotation = Quaternion.Euler(0, 0, -45);
+        }
+
+        /// <summary>Round brass-rimmed button (kit round_* art) with a glyph or a short caption.</summary>
+        static Button RoundButton(Transform parent, string kit, string caption, Action onClick, float size, string icon = null)
+        {
+            var img = UIKit.KitImage(parent, kit, "Round");
+            UIKit.Size(img.gameObject, size, size);
+            var drop = img.gameObject.AddComponent<Shadow>();
+            drop.effectColor = new Color(0, 0, 0, 0.35f);
+            drop.effectDistance = new Vector2(0, -5);
+            if (icon != null && UIKit.IconSprite(icon) != null)
+            {
+                var ic = UIKit.Node("Icon", img.transform);
+                var ii = ic.AddComponent<Image>();
+                ii.sprite = UIKit.IconSprite(icon);
+                ii.preserveAspect = true;
+                ii.raycastTarget = false;
+                UIKit.Stretch(ic, size * 0.16f);
+            }
+            else if (caption != null)
+            {
+                var t = UIKit.Label(img.transform, caption, Mathf.RoundToInt(size * 0.42f), Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                t.font = UIKit.Display;
+                t.fontStyle = FontStyle.Normal;
+                UIKit.Stretch(t.gameObject, 4);
+                UIKit.Stroke(t, new Color(0.25f, 0.05f, 0.03f, 0.9f), 2f);
+            }
+            var b = img.gameObject.AddComponent<Button>();
+            b.transition = Selectable.Transition.None;
+            b.onClick.AddListener(() => { AudioManager.Play(Sfx.Click); onClick(); });
+            img.gameObject.AddComponent<ButtonFx>();
+            return b;
         }
 
         static void Clickable(GameObject go, Action onClick)
@@ -214,21 +305,12 @@ namespace Ironhorse.Game
         {
             var holder = UIKit.Node(label, parent);
             UIKit.Size(holder, 170, 150);
-            var circle = UIKit.Panel(holder.transform, c, "Circle", UIKit.Circle, true);
-            UIKit.Place(circle.gameObject, new Vector2(0.5f, 1), new Vector2(0.5f, 1), Vector2.zero, new Vector2(108, 108));
-            var ring = circle.gameObject.AddComponent<Outline>();
-            ring.effectColor = UIKit.Brass;
-            ring.effectDistance = new Vector2(3, -3);
+            var circle = HudCircle(holder.transform, c, 118);
             var gl = UIKit.Node("Glyph", circle.transform);
-            UIKit.Stretch(gl, 22);
+            UIKit.Stretch(gl, 16);
             UIKit.HStack(gl, 0, 0, TextAnchor.MiddleCenter);
             glyph(gl.transform);
-            var plate = UIKit.Panel(holder.transform, UIKit.Wood, "Plate", UIKit.RoundedSmall, true);
-            UIKit.Place(plate.gameObject, new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(166, 40));
-            var t = UIKit.Label(plate.transform, label.ToUpperInvariant(), 24, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
-            t.font = UIKit.Display;
-            t.fontStyle = FontStyle.Normal; // the face is already bold
-            UIKit.Stretch(t.gameObject);
+            HudPlate(holder.transform, label, 166);
             Clickable(holder, onClick);
             var badge = UIKit.Badge(circle.transform, "", UIKit.Red);
             badge.transform.parent.gameObject.SetActive(false);
@@ -238,6 +320,7 @@ namespace Ironhorse.Game
         // Tiny vector-ish glyphs made of UI shapes.
         static void TrainGlyph(Transform t)
         {
+            if (UIKit.Icon(t, "nav_trains", 84) != null) return;
             var h = UIKit.Node("Loco", t); UIKit.Size(h, 60, 46);
             Shape(h, UIKit.Cream, new Vector2(0.38f, 0.5f), new Vector2(34, 22));
             Shape(h, UIKit.Cream, new Vector2(0.78f, 0.62f), new Vector2(18, 30));
@@ -249,6 +332,7 @@ namespace Ironhorse.Game
 
         static void MapGlyph(Transform t)
         {
+            if (UIKit.Icon(t, "nav_territory", 84) != null) return;
             var h = UIKit.Node("Map", t); UIKit.Size(h, 56, 48);
             Shape(h, UIKit.Parchment, new Vector2(0.5f, 0.5f), new Vector2(54, 44));
             Shape(h, UIKit.Red, new Vector2(0.3f, 0.6f), new Vector2(12, 12), UIKit.Circle);
@@ -258,6 +342,7 @@ namespace Ironhorse.Game
 
         static void ScrollGlyph(Transform t)
         {
+            if (UIKit.Icon(t, "nav_contracts", 84) != null) return;
             var h = UIKit.Node("Scroll", t); UIKit.Size(h, 48, 56);
             Shape(h, UIKit.Parchment, new Vector2(0.5f, 0.5f), new Vector2(40, 52));
             for (int i = 0; i < 4; i++) Shape(h, UIKit.InkSoft, new Vector2(0.5f, 0.72f - i * 0.15f), new Vector2(26, 4));
@@ -265,6 +350,7 @@ namespace Ironhorse.Game
 
         static void HammerGlyph(Transform t)
         {
+            if (UIKit.Icon(t, "nav_build", 84) != null) return;
             var h = UIKit.Node("Hammer", t); UIKit.Size(h, 56, 56);
             Shape(h, Palette.WoodPale, new Vector2(0.5f, 0.42f), new Vector2(9, 44)).localRotation = Quaternion.Euler(0, 0, -35);
             Shape(h, UIKit.Cream, new Vector2(0.62f, 0.72f), new Vector2(34, 14)).localRotation = Quaternion.Euler(0, 0, -35);
@@ -272,6 +358,7 @@ namespace Ironhorse.Game
 
         static void WheelGlyph(Transform t)
         {
+            if (UIKit.Icon(t, "nav_depot", 84) != null) return;
             var h = UIKit.Node("Wheel", t); UIKit.Size(h, 56, 56);
             Shape(h, UIKit.Cream, new Vector2(0.5f, 0.5f), new Vector2(52, 52), UIKit.Circle);
             Shape(h, UIKit.WoodLight, new Vector2(0.5f, 0.5f), new Vector2(38, 38), UIKit.Circle);
@@ -288,10 +375,10 @@ namespace Ironhorse.Game
 
         void BuildGoal()
         {
-            var card = UIKit.Panel(_safe, UIKit.Parchment, "Goal", null, true);
+            var card = UIKit.KitImage(_safe, "card", "Goal");
             _goalCard = card.gameObject;
             UIKit.Place(_goalCard, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -138), new Vector2(430, 150));
-            card.gameObject.AddComponent<Outline>().effectColor = UIKit.BrassDark;
+            HudShadow(_goalCard);
             var v = UIKit.Node("V", card.transform);
             UIKit.Stretch(v, 14);
             UIKit.VStack(v, 6, 0, TextAnchor.UpperLeft);
@@ -393,35 +480,37 @@ namespace Ironhorse.Game
             UIKit.Stretch(sheet);
             sheet.AddComponent<SafeArea>();
 
-            var title_ = UIKit.Label(sheet.transform, title.ToUpperInvariant(), 64, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
-            title_.font = UIKit.Display;
-            title_.fontStyle = FontStyle.Normal; // the face is already bold
-            UIKit.Anchor(title_.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(70, -120), new Vector2(-200, -20));
-            var sh = title_.gameObject.AddComponent<Shadow>();
-            sh.effectColor = new Color(0, 0, 0, 0.6f);
-            sh.effectDistance = new Vector2(0, -4);
-            var underline = UIKit.Panel(sheet.transform, UIKit.Brass, "Underline", UIKit.RoundedSmall);
-            UIKit.Place(underline.gameObject, new Vector2(0, 1), new Vector2(0, 0.5f), new Vector2(72, -118), new Vector2(Mathf.Min(560, title.Length * 30 + 40), 6));
-
-            var close = UIKit.Btn(sheet.transform, "X", Palette.Hex(0x2A1C12), CloseWindow, 40, 92, 92);
-            UIKit.Place(close.gameObject, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-40, -24), new Vector2(92, 92));
-            if (back != null)
-            {
-                var b = UIKit.Btn(sheet.transform, "< Back", UIKit.WoodLight, () => back(), 30, 200, 92);
-                UIKit.Place(b.gameObject, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-150, -24), new Vector2(200, 92));
-            }
-
-            var frame = UIKit.Panel(sheet.transform, UIKit.Parchment, "Frame", null, true);
-            UIKit.Place(frame.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -50), new Vector2(width + 120, height - 40));
+            var frame = UIKit.KitImage(sheet.transform, "frame", "Frame");
+            UIKit.Place(frame.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -36), new Vector2(width + 120, height - 40));
             frame.gameObject.AddComponent<Button>().transition = Selectable.Transition.None; // swallow clicks
             frame.gameObject.AddComponent<TapSwallow>();
             frame.gameObject.AddComponent<WindowIntro>();
-            var edge = frame.gameObject.AddComponent<Outline>();
-            edge.effectColor = new Color(UIKit.Brass.r, UIKit.Brass.g, UIKit.Brass.b, 0.85f);
-            edge.effectDistance = new Vector2(3, -3);
+            var fdrop = frame.gameObject.AddComponent<Shadow>();
+            fdrop.effectColor = new Color(0, 0, 0, 0.45f);
+            fdrop.effectDistance = new Vector2(0, -10);
 
-            var paper = UIKit.Panel(frame.transform, UIKit.Parchment, "Paper");
-            UIKit.Anchor(paper.gameObject, Vector2.zero, Vector2.one, new Vector2(10, 10), new Vector2(-10, -10));
+            // Title on a ribbon across the frame's top edge; close (and back) buttons on its corners.
+            float ribbonW = Mathf.Clamp(title.Length * 30 + 300, 520, 900);
+            var ribbon = UIKit.KitImage(frame.transform, "ribbon", "Ribbon");
+            UIKit.Place(ribbon.gameObject, new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(0, 6), new Vector2(ribbonW, 118));
+            var title_ = UIKit.Label(ribbon.transform, title.ToUpperInvariant(), 50, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            title_.font = UIKit.Display;
+            title_.fontStyle = FontStyle.Normal; // the face is already bold
+            UIKit.Anchor(title_.gameObject, Vector2.zero, Vector2.one, new Vector2(110, 30), new Vector2(-110, -6));
+            UIKit.OneLine(title_, 28);
+            title_.GetComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Stroke(title_, new Color(0.3f, 0.07f, 0.04f, 0.95f), 2.5f);
+
+            var close = RoundButton(frame.transform, "round_red", "X", CloseWindow, 96);
+            UIKit.Place(close.gameObject, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-18, -18), new Vector2(96, 96));
+            if (back != null)
+            {
+                var b = UIKit.Btn(frame.transform, "< Back", UIKit.WoodLight, () => back(), 28, 190, 78);
+                UIKit.Place(b.gameObject, new Vector2(0, 1), new Vector2(0, 0.5f), new Vector2(20, 6), new Vector2(190, 78));
+            }
+
+            var paper = UIKit.Node("Paper", frame.transform);
+            UIKit.Anchor(paper, Vector2.zero, Vector2.one, new Vector2(18, 16), new Vector2(-18, -58));
 
             // Scrollable content
             var scrollGo = UIKit.Node("Scroll", paper.transform);
@@ -625,14 +714,17 @@ namespace Ironhorse.Game
         {
             if (_markerUsed < _markerPool.Count) return _markerPool[_markerUsed++];
             var m = new Marker();
-            var bg = UIKit.Panel(_markers, UIKit.Parchment, "Marker", UIKit.Rounded, true);
+            var bg = UIKit.KitImage(_markers, "card", "Marker");
+            bg.pixelsPerUnitMultiplier = 1.4f;
             m.Go = bg.gameObject;
             m.Bg = bg;
             UIKit.RT(m.Go).sizeDelta = new Vector2(96, 96);
-            bg.gameObject.AddComponent<Outline>().effectColor = UIKit.BrassDark;
-            var lbl = UIKit.Label(m.Go.transform, "", 20, UIKit.Ink, TextAnchor.MiddleCenter, true, FontStyle.Bold);
-            UIKit.Anchor(lbl.gameObject, new Vector2(0, 0), new Vector2(1, 0), new Vector2(-30, -30), new Vector2(30, 2));
-            lbl.gameObject.AddComponent<Outline>().effectColor = UIKit.Cream;
+            HudShadow(bg.gameObject);
+            var lbl = UIKit.Label(m.Go.transform, "", 22, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            lbl.font = UIKit.Display;
+            lbl.fontStyle = FontStyle.Normal;
+            UIKit.Anchor(lbl.gameObject, new Vector2(0, 0), new Vector2(1, 0), new Vector2(-30, -32), new Vector2(30, 0));
+            UIKit.Stroke(lbl, new Color(0.2f, 0.12f, 0.05f, 0.95f), 2f);
             m.Label = lbl;
             var barHolder = UIKit.Node("BarHolder", m.Go.transform);
             UIKit.Anchor(barHolder, new Vector2(0, 0), new Vector2(1, 0), new Vector2(8, 8), new Vector2(-8, 22));
@@ -674,7 +766,7 @@ namespace Ironhorse.Game
             m.Bar.transform.parent.parent.gameObject.SetActive(progress >= 0);
             if (progress >= 0) UIKit.SetBar(m.Bar, progress);
             m.OnClick = onClick;
-            m.Bg.color = progress >= 0 ? new Color(UIKit.Parchment.r, UIKit.Parchment.g, UIKit.Parchment.b, 0.85f) : UIKit.Parchment;
+            m.Bg.color = progress >= 0 ? new Color(1, 1, 1, 0.88f) : Color.white;
         }
 
         void UpdateMarkers()

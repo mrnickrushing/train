@@ -84,6 +84,11 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
 - Higgsfield credits are the user's money: check `higgsfield generate cost` first and never retry a
   paid job without checking `higgsfield account transactions` for a charge.
 
+- **UI kit**: `Tools/art/ui_kit.py` draws the shaded UI sprites (glossy buttons with a 3D lip, framed
+  window, cards, hero panels, pills, ribbons, round brass-rimmed buttons) into `Resources/UI/Kit`, free.
+  `UIKit.Kit(name)` 9-slices them (borders in `UIKit.KitBorder`); `UIKit.Btn` picks the button art from
+  the colour (`KitFor`), and `UIKit.Stroke` gives text the thick game-style outline. Destination postcards
+  (`ai_media.py postcard`) live in `Resources/UI/Destinations/<id>.jpg`; HUD icons are `nav_*` in Icons.
 - `Tools/art/pack_textures.py` rebuilds `Assets/Resources/Textures/*.png` from CC0 ambientCG
   materials; `Assets/Editor/ArtImport.cs` imports them as Texture2DArrays. Layer order must match
   `SurfaceKind` (`Materials.cs`) and the terrain layer list in `Terrain.shader` / `Terrain.cs`.

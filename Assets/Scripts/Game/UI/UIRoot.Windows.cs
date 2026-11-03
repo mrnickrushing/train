@@ -16,7 +16,7 @@ namespace Ironhorse.Game
 
         static GameObject Card(Transform parent, float height, Color? color = null)
         {
-            var c = UIKit.Panel(parent, color ?? UIKit.ParchmentDark, "Card");
+            var c = color.HasValue ? UIKit.Panel(parent, color.Value, "Card") : UIKit.KitImage(parent, "card", "Card", height);
             UIKit.Size(c.gameObject, -1, height);
             UIKit.HStack(c.gameObject, 18, 14, TextAnchor.MiddleLeft);
             return c.gameObject;
@@ -41,15 +41,18 @@ namespace Ironhorse.Game
 
         static void Heading(Transform parent, string text)
         {
-            var t = UIKit.Label(parent, text.ToUpperInvariant(), 24, UIKit.BrassDark, TextAnchor.MiddleLeft, true, FontStyle.Bold);
-            UIKit.Size(t.gameObject, -1, 40);
+            var t = UIKit.Label(parent, text.ToUpperInvariant(), 26, Palette.Hex(0x7A4A1E), TextAnchor.MiddleLeft, false, FontStyle.Bold);
+            t.font = UIKit.Display;
+            t.fontStyle = FontStyle.Normal;
+            UIKit.Size(t.gameObject, -1, 42);
+            t.gameObject.AddComponent<Shadow>().effectColor = new Color(1, 1, 1, 0.5f);
         }
 
         void Tabs(Transform parent, (string label, bool active, Action onClick)[] tabs)
         {
             var row = UIKit.Row(parent, 60, 10, TextAnchor.MiddleCenter);
             foreach (var t in tabs)
-                UIKit.Btn(row.transform, t.label, t.active ? UIKit.BrassDark : UIKit.WoodLight, () => { t.onClick(); RebuildWindow(); }, 22, 200, 54);
+                UIKit.Btn(row.transform, t.label, t.active ? UIKit.Brass : UIKit.WoodLight, () => { t.onClick(); RebuildWindow(); }, 24, 220, 62);
         }
 
         /// <summary>The locomotive's rendered 3D model on a rarity-colored tile (1.5:1).</summary>
@@ -131,14 +134,27 @@ namespace Ironhorse.Game
                 if (t == null) { CloseWindow(); return; }
                 var d = GameDatabase.Locomotive(t.defId);
 
-                // Header card
-                var head = Card(content, 150);
-                LocoSwatch(head.transform, d, 120);
+                // Header: the locomotive on a hero card with its stats as chips.
+                var head = UIKit.KitImage(content, d.Rarity >= Rarity.Epic ? "hero_purple" : d.Rarity == Rarity.Rare ? "hero_red" : "hero_blue", "Head", 210);
+                UIKit.Size(head.gameObject, -1, 210);
+                var hh = UIKit.HStack(head.gameObject, 24, 22, TextAnchor.MiddleLeft);
+                hh.padding = new RectOffset(26, 26, 20, 20);
+                HudShadow(head.gameObject);
+                LocoSwatch(head.transform, d, 140);
                 var col = Col(head.transform);
-                Line(col.transform, d.Name, 30, UIKit.Ink, true);
-                Line(col.transform, d.Rarity + " · " + d.Era + " era · Level " + t.level + "/" + Balance.MaxLocoLevel, 20, UIKit.RarityColor(d.Rarity));
-                Line(col.transform, "Pulls " + d.Power + " wagons · Speed " + Mathf.RoundToInt(d.Speed * Balance.LocoSpeedMultiplier(t.level)) + " · Cargo ×" + Balance.LocoCapacityMultiplier(t.level).ToString("0.00"), 20, UIKit.InkSoft);
-                Line(col.transform, d.Blurb, 18, UIKit.InkSoft);
+                var name = UIKit.Label(col.transform, d.Name.ToUpperInvariant(), 40, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+                name.font = UIKit.Display;
+                name.fontStyle = FontStyle.Normal;
+                UIKit.OneLine(name, 24);
+                UIKit.Stroke(name, new Color(0, 0, 0, 0.75f), 2.5f);
+                var chips = UIKit.Row(col.transform, 40, 8);
+                StatChip(chips.transform, "LEVEL " + t.level + "/" + Balance.MaxLocoLevel);
+                StatChip(chips.transform, "PULLS " + d.Power);
+                StatChip(chips.transform, "SPEED " + Mathf.RoundToInt(d.Speed * Balance.LocoSpeedMultiplier(t.level)));
+                StatChip(chips.transform, "CARGO ×" + Balance.LocoCapacityMultiplier(t.level).ToString("0.00"));
+                var blurb = UIKit.Label(col.transform, d.Blurb, 20, new Color(1, 0.95f, 0.85f), TextAnchor.MiddleLeft);
+                UIKit.Size(blurb.gameObject, -1, 30);
+                blurb.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.6f);
 
                 if (S.HasArrived(t))
                 {
@@ -163,27 +179,16 @@ namespace Ironhorse.Game
                 }
                 else
                 {
-                    Heading(content, "Dispatch to");
-                    foreach (var dest in GameDatabase.Destinations)
-                    {
-                        var p = S.PreviewDispatch(t, dest);
-                        var res = GameDatabase.Resource(dest.ResourceId);
-                        bool locked = !S.IsDestinationUnlocked(dest);
-                        var c = Card(content, 100, locked ? new Color(0.8f, 0.76f, 0.68f) : (Color?)null);
-                        var destIcon = UIKit.ResIcon(c.transform, dest.ResourceId, 64);
-                        if (locked) Locks.Badge(destIcon, dest.UnlockLevel, 30);
-                        var dc = Col(c.transform);
-                        Line(dc.transform, dest.Name, 24, locked ? UIKit.InkSoft : UIKit.Ink, true);
-                        string what = dest.IsTown ? "Passenger town · up to " + Balance.PassengerDemand(S.Population) + " riders from your town · fare x" + dest.Yield.ToString("0.0") : res.Name;
-                        Line(dc.transform, locked ? Locks.Text(dest.UnlockLevel) : what + " · needs " + Plural(GameSession.CargoWagonName(res.Cargo)) + " · " + Fmt.Time(p.Seconds) + " · " + p.Fuel + " fuel", 20, UIKit.InkSoft);
-                        if (!locked)
-                        {
-                            string id = dest.Id;
-                            if (p.Possible) UIKit.Btn(c.transform, "Go! +" + p.Amount, UIKit.Red, () => { var r = S.Dispatch(t.uid, id); Result(r, Sfx.Click); if (r.Ok) CloseWindow(); }, 24, 190, 62);
-                            else if (p.Reason.Contains("fuel")) UIKit.Btn(c.transform, "Get fuel", FuelOrange, () => OpenFuel(), 22, 190, 62);
-                            else Line(c.transform, p.Reason, 20, UIKit.Red).GetComponent<LayoutElement>().preferredWidth = 220;
-                        }
-                    }
+                    Heading(content, "Choose a destination");
+                    var gridGo = UIKit.Node("Destinations", content);
+                    var grid = gridGo.AddComponent<GridLayoutGroup>();
+                    grid.cellSize = new Vector2(404, 352);
+                    grid.spacing = new Vector2(16, 18);
+                    grid.childAlignment = TextAnchor.UpperCenter;
+                    grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                    grid.constraintCount = 3;
+                    gridGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                    foreach (var dest in GameDatabase.Destinations) DestinationCard(gridGo.transform, t, dest);
                 }
 
                 // Consist
@@ -226,6 +231,108 @@ namespace Ironhorse.Game
                 }
                 else Line(content, "This locomotive is fully overhauled.", 22, UIKit.Green);
             }, 1200, 900, OpenFleet);
+        }
+
+        /// <summary>
+        /// Postcard-style destination: painted scene, name banner, cargo badge and expected haul, trip time and
+        /// fuel, and one action (go, get fuel, get the right wagon, or the unlock level).
+        /// </summary>
+        void DestinationCard(Transform parent, TrainState t, DestinationDef dest)
+        {
+            var p = S.PreviewDispatch(t, dest);
+            bool locked = !S.IsDestinationUnlocked(dest);
+            var card = UIKit.KitImage(parent, "card", "Dest " + dest.Id);
+            HudShadow(card.gameObject);
+
+            var pic = UIKit.Panel(card.transform, Color.white, "Picture", UIKit.Rounded);
+            UIKit.Anchor(pic.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(10, -216), new Vector2(-10, -10));
+            pic.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            var tex = Resources.Load<Texture2D>("UI/Destinations/" + dest.Id);
+            if (tex != null)
+            {
+                var raw = UIKit.Node("Art", pic.transform).AddComponent<RawImage>();
+                raw.texture = tex;
+                raw.raycastTarget = false;
+                raw.color = locked ? new Color(0.42f, 0.4f, 0.38f) : Color.white;
+                UIKit.Stretch(raw.gameObject);
+                var fit = raw.gameObject.AddComponent<AspectRatioFitter>();
+                fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+                fit.aspectRatio = tex.width / (float)tex.height;
+            }
+            var strip = UIKit.Panel(pic.transform, new Color(0.05f, 0.03f, 0.02f, 0.62f), "Banner");
+            strip.sprite = null;
+            strip.raycastTarget = false;
+            UIKit.Anchor(strip.gameObject, Vector2.zero, new Vector2(1, 0), Vector2.zero, new Vector2(0, 52));
+            var nm = UIKit.Label(strip.transform, dest.Name.ToUpperInvariant(), 28, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+            nm.font = UIKit.Display;
+            nm.fontStyle = FontStyle.Normal;
+            UIKit.Anchor(nm.gameObject, Vector2.zero, Vector2.one, new Vector2(14, 0), new Vector2(-10, 0));
+            UIKit.OneLine(nm, 16).GetComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Stroke(nm, new Color(0, 0, 0, 0.8f), 1.5f);
+
+            var badge = UIKit.KitImage(pic.transform, "tile", "Cargo", 74);
+            UIKit.Place(badge.gameObject, new Vector2(0, 1), new Vector2(0, 1), new Vector2(10, -10), new Vector2(74, 74));
+            var bi = UIKit.Node("Icon", badge.transform);
+            UIKit.Stretch(bi, 8);
+            UIKit.HStack(bi, 0, 0, TextAnchor.MiddleCenter);
+            if (dest.IsTown && UIKit.Icon(bi.transform, "people", 58) != null) { } else UIKit.ResIcon(bi.transform, dest.ResourceId, 58);
+            if (locked)
+            {
+                var lk = UIKit.Icon(pic.transform, "lock", 96);
+                if (lk != null)
+                {
+                    UIKit.Place(lk, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 34), new Vector2(90, 90));
+                    var lv = UIKit.Label(lk.transform, "LV " + dest.UnlockLevel, 28, Color.white, TextAnchor.LowerCenter, false, FontStyle.Bold);
+                    lv.font = UIKit.Display; lv.fontStyle = FontStyle.Normal;
+                    UIKit.Anchor(lv.gameObject, new Vector2(0, 0), new Vector2(1, 0), new Vector2(-20, -28), new Vector2(20, 10));
+                    UIKit.Stroke(lv, new Color(0, 0, 0, 0.85f), 2f);
+                }
+            }
+            else if (p.Amount > 0)
+            {
+                var haul = UIKit.Label(pic.transform, "+" + p.Amount, 44, UIKit.Gold, TextAnchor.UpperRight, false, FontStyle.Bold);
+                haul.font = UIKit.Display;
+                haul.fontStyle = FontStyle.Normal;
+                UIKit.Anchor(haul.gameObject, new Vector2(0.5f, 1), new Vector2(1, 1), new Vector2(0, -64), new Vector2(-14, -8));
+                UIKit.Stroke(haul, new Color(0.22f, 0.1f, 0.02f, 0.95f), 2.5f);
+            }
+
+            // Trip facts
+            var facts = UIKit.Node("Facts", card.transform);
+            UIKit.Anchor(facts, new Vector2(0, 0), new Vector2(1, 0), new Vector2(12, 86), new Vector2(-12, 128));
+            UIKit.HStack(facts, 8, 0, TextAnchor.MiddleLeft);
+            FactPill(facts.transform, null, Fmt.Time(p.Seconds));
+            FactPill(facts.transform, tr => FuelIcon(tr, 30), p.Fuel.ToString());
+            var res = GameDatabase.Resource(dest.ResourceId);
+            var need = UIKit.Label(facts.transform, dest.IsTown ? "Riders · fare ×" + dest.Yield.ToString("0.0") : "Needs " + Plural(GameSession.CargoWagonName(res.Cargo)), 19, UIKit.InkSoft, TextAnchor.MiddleLeft);
+            UIKit.Size(need.gameObject, -1, 40, 1);
+
+            // Action
+            var act = UIKit.Node("Action", card.transform);
+            UIKit.Anchor(act, new Vector2(0, 0), new Vector2(1, 0), new Vector2(12, 12), new Vector2(-12, 80));
+            UIKit.HStack(act, 0, 0, TextAnchor.MiddleCenter).childForceExpandWidth = true;
+            string id = dest.Id;
+            if (locked) UIKit.Btn(act.transform, "Unlocks at level " + dest.UnlockLevel, UIKit.Disabled, null, 24, -1, 68, false);
+            else if (p.Possible) UIKit.Btn(act.transform, "Go!  +" + p.Amount, UIKit.Green, () => { var r = S.Dispatch(t.uid, id); Result(r, Sfx.Click); if (r.Ok) CloseWindow(); }, 30, -1, 68);
+            else if (p.Reason.Contains("fuel")) UIKit.Btn(act.transform, "Get fuel", FuelOrange, () => OpenFuel(), 28, -1, 68);
+            else UIKit.Btn(act.transform, p.Reason, UIKit.WoodLight, () => OpenDepot("wagons"), 24, -1, 68);
+            foreach (Transform c in act.transform) UIKit.Size(c.gameObject, -1, 68, 1);
+        }
+
+        /// <summary>Dark info pill with an optional icon ("1m 24s", fuel 5).</summary>
+        static void FactPill(Transform parent, Action<Transform> icon, string text)
+        {
+            var pill = UIKit.KitImage(parent, "pill", "Fact", 40);
+            var h = UIKit.HStack(pill.gameObject, 4, 0, TextAnchor.MiddleCenter);
+            h.padding = new RectOffset(icon != null ? 6 : 14, 14, 2, 2);
+            pill.gameObject.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            UIKit.Size(pill.gameObject, -1, 40);
+            if (icon != null) icon(pill.transform);
+            var t = UIKit.Label(pill.transform, text, 22, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            t.font = UIKit.Display;
+            t.fontStyle = FontStyle.Normal;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            UIKit.Size(t.gameObject, -1, 34);
         }
 
         /// <summary>Crew gauge, conveyor belt of job slots, and the controls to queue, collect, rush and extend.</summary>
