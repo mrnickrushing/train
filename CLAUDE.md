@@ -95,6 +95,10 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   needs a high alpha (about 0.9) to look about two-thirds dark; `Tools/art/ui_cutouts.py` (free) cuts the white
   backdrop off the concept renders into `Resources/UI/{Locos,Wagons,Buildings}` for their art. `UIRoot.Coach.cs` is
   Hank's first-launch tutorial (goals g1-g5, `settings.tutorialDone`).
+- **Project sites**: `World/ProjectSites.cs` builds territory projects in the valley from ordered pieces (trestle
+  cut-off across the river gorge, Fort Calder telegraph through the southern badlands); the share of goods delivered
+  decides how many stand, new ones rise when the player is back on the map. `ProjectSites.Blocks` keeps scenery off them.
+  Project cards show unfinished projects as a blueprint filled in colour by `ProjectSites.Built`.
 - `Tools/art/pack_textures.py` rebuilds `Assets/Resources/Textures/*.png` from CC0 ambientCG
   materials; `Assets/Editor/ArtImport.cs` imports them as Texture2DArrays. Layer order must match
   `SurfaceKind` (`Materials.cs`) and the terrain layer list in `Terrain.shader` / `Terrain.cs`.

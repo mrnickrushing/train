@@ -74,7 +74,11 @@ namespace Ironhorse.Game
             var card = Box(p, BCardDeep, 560, -1, "Project " + def.Id);
             Stack(card.gameObject, 10, new RectOffset(14, 14, 14, 16), TextAnchor.UpperLeft);
 
-            var photo = Photo(card.transform, Resources.Load<Texture2D>("UI/Story/scene_" + def.Id), -1, 220, locked ? new Color(0.4f, 0.4f, 0.44f) : (Color?)null);
+            var sceneTex = Resources.Load<Texture2D>("UI/Story/scene_" + def.Id);
+            float built = ProjectSites.Built(def.Id);
+            bool blueprint = !locked && !pr.done && sceneTex != null;
+            var photo = Photo(card.transform, sceneTex, -1, 220, locked ? new Color(0.4f, 0.4f, 0.44f) : blueprint ? new Color(0.36f, 0.52f, 0.82f) : (Color?)null);
+            if (blueprint) Blueprint(photo.transform.Find("Art"), sceneTex, built);
             Overlay(photo.transform, Fade(true), new Color(0.06f, 0.08f, 0.12f, 0.9f));
             var name = T(photo.transform, def.Name, 40, Color.white, TextAnchor.LowerLeft, true);
             UIKit.Anchor(name.gameObject, Vector2.zero, Vector2.one, new Vector2(16, 10), new Vector2(-16, -10));
@@ -98,6 +102,15 @@ namespace Ironhorse.Game
                 UIKit.Place(chk, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-12, -12), new Vector2(64, 64));
             }
 
+            if (ProjectSites.Instance != null && ProjectSites.Instance.HasSite(def.Id))
+            {
+                string sid = def.Id;
+                var view = Big(photo.transform, "View site", BBlue, () => { CloseWindow(); ProjectSites.Instance.Show(sid); }, 200, 62, true, 28);
+                var vle = view.GetComponent<LayoutElement>();
+                if (vle == null) vle = view.gameObject.AddComponent<LayoutElement>();
+                vle.ignoreLayout = true;
+                UIKit.Place(view.gameObject, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-10, -10), new Vector2(200, 62));
+            }
             T1(card.transform, def.Description, 28, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
             Pill(card.transform, null, "Bonus: " + def.PerkText, 28, BGold);
             Segs(card.transform, def.Stages.Length, pr.done ? def.Stages.Length : pr.stage, 0, 16);
@@ -135,6 +148,39 @@ namespace Ironhorse.Game
             bool any = S.Amount(rid) > 0;
             Big(btns.transform, "Deliver", any ? UIKit.Green : UIKit.Disabled, () => Result(S.DeliverToProject(id), Sfx.Deliver), any ? 528 : 380, 88, any, 40);
             if (!any) Big(btns.transform, "Go", BBlue, () => GoGet(rid), 136, 88, true, 40);
+        }
+
+        /// <summary>
+        /// A project still being built shows its painting as a blueprint (blue, ruled), with the built share in full
+        /// colour from the left and a gold edge where the work stands.
+        /// </summary>
+        static void Blueprint(Transform art, Texture tex, float built)
+        {
+            if (art == null) return;
+            for (int i = 1; i < 12; i++)
+            {
+                var v = UIKit.Panel(art, new Color(1, 1, 1, 0.13f), "Rule", null);
+                v.sprite = null;
+                v.raycastTarget = false;
+                UIKit.Anchor(v.gameObject, new Vector2(i / 12f, 0), new Vector2(i / 12f, 1), new Vector2(-1, 0), new Vector2(1, 0));
+                if (i < 6)
+                {
+                    var h = UIKit.Panel(art, new Color(1, 1, 1, 0.13f), "Rule", null);
+                    h.sprite = null;
+                    h.raycastTarget = false;
+                    UIKit.Anchor(h.gameObject, new Vector2(0, i / 6f), new Vector2(1, i / 6f), new Vector2(0, -1), new Vector2(0, 1));
+                }
+            }
+            if (built <= 0.001f) return;
+            var done = UIKit.Node("Built", art).AddComponent<RawImage>();
+            done.texture = tex;
+            done.uvRect = new Rect(0, 0, built, 1);
+            done.raycastTarget = false;
+            UIKit.Anchor(done.gameObject, Vector2.zero, new Vector2(built, 1), Vector2.zero, Vector2.zero);
+            var edge = UIKit.Panel(art, BGold, "Edge", null);
+            edge.sprite = null;
+            edge.raycastTarget = false;
+            UIKit.Anchor(edge.gameObject, new Vector2(built, 0), new Vector2(built, 1), new Vector2(-2, 0), new Vector2(2, 0));
         }
 
         // ================================================================ Blueprints (depot)
