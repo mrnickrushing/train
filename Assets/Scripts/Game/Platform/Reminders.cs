@@ -63,12 +63,24 @@ namespace Ironhorse.Game
             }
             double fuel = s.FullFuelIn;
             if (fuel > 600) list.Add((fuel, "Fuel's topped up", "Your coal bunkers are full. Time to send the trains out!"));
-            var done = s.State.buildings.Where(b => b.productionEndsAt > now + 60).OrderBy(b => b.productionEndsAt).FirstOrDefault();
+            // The factory whose conveyor empties first (the legacy productionEndsAt field is always 0 now).
+            var done = s.State.buildings.Where(b => b.queue.Count > 0 && b.queue[b.queue.Count - 1].endsAt > now + 60)
+                .OrderBy(b => b.queue[b.queue.Count - 1].endsAt).FirstOrDefault();
             if (done != null)
             {
                 var def = GameDatabase.Building(done.defId);
-                list.Add((done.productionEndsAt - now, (def != null ? def.Name : "Your workshop") + " is finished", "Fresh goods are ready to collect."));
+                list.Add((done.queue[done.queue.Count - 1].endsAt - now, (def != null ? def.Name : "Your workshop") + " is finished", "Fresh goods are ready to collect."));
             }
+            // Payday: a nudge later today if it's unclaimed, otherwise tomorrow morning at 10.
+            if (s.State.settings.tutorialDone)
+            {
+                double pay = s.CanClaimPayday ? Math.Min(3 * 3600, s.NextPaydayIn - 1800) : s.NextPaydayIn + 10 * 3600;
+                int streak = s.PaydayStreak;
+                if (pay > 600) list.Add((pay, "Payday in " + s.State.townName, streak > 1 ? "Your " + streak + "-day streak is on the line. Collect today's pay!" : "Your daily pay is waiting at the station."));
+            }
+            var tg = s.Telegram;
+            if (tg != null && s.TelegramLeft(tg) > 45 * 60)
+                list.Add((s.TelegramLeft(tg) - 30 * 60, "Telegram expiring!", GameSession.TelegramText(tg).Replace("in 2 hours", "in 30 minutes")));
             list.Add((24 * 3600, "The railhead is quiet", "Contracts are piling up on the board in " + s.State.townName + "."));
             return list;
         }

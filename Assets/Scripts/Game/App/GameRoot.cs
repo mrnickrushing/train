@@ -95,6 +95,7 @@ namespace Ironhorse.Game
             bool fresh = state == null;
             if (fresh) state = GameSession.NewGame(Clock.Now, Environment.TickCount);
             G.Session = new GameSession(state, Clock);
+            G.Session.UtcOffsetSeconds = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalSeconds;
             AudioManager.MusicOn = state.settings.music;
             AudioManager.SfxOn = state.settings.sfx;
             Haptics.On = state.settings.haptics;
@@ -162,7 +163,8 @@ namespace Ironhorse.Game
         void WelcomeBack(GameState state)
         {
             double away = Clock.Now - state.lastSavedAt;
-            if (away < 60) return;
+            UIRoot.Instance.QueueWelcome(); // the away summary and today's payday
+            if (away < 60 || G.Session.Away != null) return;
             int arrived = 0;
             foreach (var t in state.trains) if (!t.IsIdle && Clock.Now >= t.arrivesAt) arrived++;
             string msg = "Welcome back! You were away " + Fmt.Time(away) + ".";

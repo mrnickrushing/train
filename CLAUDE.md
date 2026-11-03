@@ -13,7 +13,7 @@ local dev tool: it is **not** in the committed `Packages/manifest.json`.
 unity pipeline install --project-path .     # once per clone (adds com.unity.pipeline locally)
 unity open . --until-ready                  # first open imports for a few minutes
 Tools/unity-recompile.sh                    # leave Play mode, refresh, recompile, list errors (exit 1 on errors)
-unity command --project-path . test run editor --timeout 600 --result-only   # 62 EditMode tests
+unity command --project-path . test run editor --timeout 600 --result-only   # 85 EditMode tests
 Tools/unity-capture.sh out.png 6 'Ironhorse.Game.UIRoot.Instance.OpenDepot("locos"); return 0;'
 ```
 
@@ -36,7 +36,7 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
 
 - Keep `com.unity.pipeline` out of `Packages/manifest.json`, and don't commit
   `Packages/packages-lock.json` or `ProjectSettings/Packages/com.unity.pipeline/`.
-- Recompile with 0 errors, 62/62 tests passing, Play mode with 0 Console errors.
+- Recompile with 0 errors, all EditMode tests passing, Play mode with 0 Console errors.
 - Commit `.meta` files with their assets.
 
 ## Gotchas
@@ -100,6 +100,12 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   Shaft by the west mesa, the resupply depot north of the yard, Silver Lake Dam above the lake, the Golden Spike plaza); the share of goods delivered
   decides how many stand, new ones rise when the player is back on the map. `ProjectSites.Blocks` keeps scenery off them.
   Project cards show unfinished projects as a blueprint filled in colour by `ProjectSites.Built`.
+- **Daily hooks**: `Core/GameSession.Hooks.cs` (tuning and content in `Core/Hooks.cs`) runs the payday streak (7-day calendar,
+  local midnight via `UtcOffsetSeconds`, day 7 pays blueprints), the away summary (`Away`, `CollectAll`), mystery crates
+  (rolled at dispatch, opened from a marker on the parked train), express telegrams (a `ContractState` with `express`, triple
+  pay, two hours, outside the contract slots), map events (traveler, tumbleweed, gold strike, bandits; none during the
+  tutorial) and the Roundhouse album (sets of owned stock give permanent perks through `CivicBonus`). Screens are in
+  `UI/UIRoot.Hooks.cs`; launch queues the away card, then payday, then any featured offer (`QueueWelcome`).
 - **Audio**: recorded music, day/night ambience beds and effects (Higgsfield Sonilo, Mirelo, Seed Audio; raw takes in
   `art-src/audio`) are trimmed, levelled and looped by `Tools/art/audio.py` (free, ffmpeg) into `Resources/Audio/*.ogg`.
   `AudioManager` loads them and falls back to its synthesized sounds for any that are missing. Seed Audio's quoted

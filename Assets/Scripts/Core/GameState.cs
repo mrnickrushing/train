@@ -58,8 +58,41 @@ namespace Ironhorse.Core
         /// <summary>Per task in the current set: true when it was swapped for a repeatable fallback at set start.</summary>
         public List<bool> taskFallback = new List<bool>();
 
+        // Daily hooks (see GameSession.Hooks.cs)
+        /// <summary>Consecutive paydays claimed; missing a day starts again at day 1.</summary>
+        public int paydayStreak;
+        /// <summary>Local day number of the last payday claimed (-1 = never).</summary>
+        public int paydayLastDay = -1;
+        /// <summary>Full 7-day weeks completed, which picks the next day-7 blueprint.</summary>
+        public int paydayWeeks;
+        public double nextExpressAt;
+        public double nextEventAt;
+        public List<MapEventState> events = new List<MapEventState>();
+        /// <summary>Dispatches since the last mystery crate (a dry spell guarantees one).</summary>
+        public int crateDry;
+        public int cratesOpened;
+        /// <summary>Every locomotive and wagon ever owned, for the Roundhouse album.</summary>
+        public List<string> album = new List<string>();
+        public List<string> albumClaimed = new List<string>();
+
         public Stats stats = new Stats();
         public Settings settings = new Settings();
+    }
+
+    public enum MapEventKind { Traveler, GoldStrike, Tumbleweed, Bandits }
+
+    /// <summary>Something happening on the map for a while: a traveler, a gold strike, tumbleweeds, bandits.</summary>
+    [Serializable]
+    public class MapEventState
+    {
+        public int uid;
+        public MapEventKind kind;
+        /// <summary>Outpost the gold strike or the bandits are at.</summary>
+        public string destinationId = "";
+        /// <summary>Random number the world uses to place it.</summary>
+        public int spot;
+        public double startsAt;
+        public double expiresAt;
     }
 
     [Serializable]
@@ -77,6 +110,12 @@ namespace Ironhorse.Core
         public int cargoAmount;
         /// <summary>Platform the train parks at (0..Balance.Platforms-1).</summary>
         public int platform;
+        /// <summary>A mystery crate rode home with this trip; it stays until tapped.</summary>
+        public bool crate;
+        /// <summary>Cargo bandits took on this trip (shown when it arrives).</summary>
+        public int robbed;
+        /// <summary>This trip went to a gold strike and brought home double.</summary>
+        public bool boom;
 
         public bool IsIdle { get { return string.IsNullOrEmpty(destinationId); } }
     }
@@ -140,6 +179,9 @@ namespace Ironhorse.Core
         public int rewardXp;
         public int rewardNuggets;
         public List<ResourceAmount> rewardParts = new List<ResourceAmount>();
+        /// <summary>Express telegram: a rush order that pays triple and disappears at <see cref="expiresAt"/>.</summary>
+        public bool express;
+        public double expiresAt;
     }
 
     [Serializable]

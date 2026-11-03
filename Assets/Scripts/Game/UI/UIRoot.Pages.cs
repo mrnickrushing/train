@@ -191,6 +191,15 @@ namespace Ironhorse.Game
             UIKit.HStack(badge, 0, 0, TextAnchor.MiddleCenter);
             if (locked) UIKit.Icon(badge.transform, "lock", 44);
             else Ico(d.IsTown ? "people" : d.ResourceId, 44)(badge.transform);
+            bool boom = S.BoomAt(d.Id), bandits = S.BanditsOn(d.Id);
+            if (!locked && (boom || bandits))
+            {
+                var ev = UIKit.Node("Event", ring.transform);
+                UIKit.Place(ev, new Vector2(0, 1), new Vector2(0.5f, 0.5f), new Vector2(6, -6), new Vector2(64, 64));
+                UIKit.HStack(ev, 0, 0, TextAnchor.MiddleCenter);
+                UIKit.Icon(ev.transform, boom ? "gold_ore" : "bandit", 64);
+                ev.AddComponent<Bob>();
+            }
             var chip = Box(pin.transform, locked ? Palette.Hex(0x4A4F5C) : BChip, -1, -1, "Name");
             UIKit.Place(chip.gameObject, new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(256, 50));
             var nm = T1(chip.transform, locked ? "Level " + d.UnlockLevel : d.Name, 28, locked ? BLabel : Color.white, TextAnchor.MiddleCenter, true);
