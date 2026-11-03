@@ -417,56 +417,105 @@ namespace Ironhorse.Game
         {
             ShowWindow("Rail Season Pass", content =>
             {
-                var head = Card(content, 150, Palette.Hex(0xD9C6E8));
+                // Hero header: season, tier, progress and the premium unlock.
+                var head = UIKit.KitImage(content, "hero_purple", "Head", 200);
+                UIKit.Size(head.gameObject, -1, 200);
+                var hh = UIKit.HStack(head.gameObject, 22, 22, TextAnchor.MiddleLeft);
+                hh.padding = new RectOffset(24, 26, 20, 20);
+                HudShadow(head.gameObject);
+                var medal = UIKit.KitImage(head.transform, "round_gold", "Tier");
+                UIKit.Size(medal.gameObject, 140, 140);
+                var mt = UIKit.Label(medal.transform, S.PassTier.ToString(), 60, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                mt.font = UIKit.Display; mt.fontStyle = FontStyle.Normal;
+                UIKit.Stretch(mt.gameObject, 8);
+                UIKit.Stroke(mt, new Color(0.36f, 0.2f, 0.02f, 0.95f), 3f);
                 var hc = Col(head.transform);
-                Line(hc.transform, "Season " + (S.CurrentSeason + 1) + " · Tier " + S.PassTier + "/" + Balance.PassTiers, 30, UIKit.Ink, true);
-                var bar = UIKit.Bar(hc.transform, Purple, 22);
+                var title = UIKit.Label(hc.transform, "SEASON " + (S.CurrentSeason + 1) + " · TIER " + S.PassTier + "/" + Balance.PassTiers, 40, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+                title.font = UIKit.Display; title.fontStyle = FontStyle.Normal;
+                UIKit.OneLine(title, 24);
+                UIKit.Stroke(title, new Color(0.12f, 0.03f, 0.2f, 0.9f), 2.5f);
+                var bar = UIKit.Bar(hc.transform, UIKit.Gold, 28, new Color(0, 0, 0, 0.45f));
                 UIKit.SetBar(bar, S.PassTier >= Balance.PassTiers ? 1 : S.PassTierProgress);
-                var ends = Line(hc.transform, "", 20, UIKit.InkSoft);
-                Action live = () => ends.text = (S.State.passXp % Balance.PassXpPerTier) + "/" + Balance.PassXpPerTier + " season XP to next tier · season ends in " + Fmt.Time(S.SeasonEndsIn);
+                var ends = UIKit.Label(hc.transform, "", 22, new Color(1, 0.94f, 1f), TextAnchor.MiddleLeft);
+                UIKit.Size(ends.gameObject, -1, 30);
+                ends.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.6f);
+                Action live = () => ends.text = (S.State.passXp % Balance.PassXpPerTier) + "/" + Balance.PassXpPerTier + " season XP to the next tier · ends in " + Fmt.Time(S.SeasonEndsIn);
                 live(); Live(live);
+                var buyCol = UIKit.Node("Buy", head.transform);
+                UIKit.VStack(buyCol, 8, 0, TextAnchor.MiddleCenter);
+                UIKit.Size(buyCol, 280, -1);
                 if (!S.State.passPremium)
-                    UIKit.Btn(head.transform, "Unlock Premium " + Store.PriceOf(Catalog.SeasonPass), Purple, () => BuyProduct(Catalog.SeasonPass), 24, 300, 80);
-                else Line(head.transform, "PREMIUM ACTIVE", 24, Purple, true).GetComponent<LayoutElement>().preferredWidth = 240;
+                {
+                    Tag(buyCol.transform, "PREMIUM TRACK", UIKit.Gold, 250);
+                    UIKit.Btn(buyCol.transform, Store.PriceOf(Catalog.SeasonPass), UIKit.Green, () => BuyProduct(Catalog.SeasonPass), 40, 270, 96);
+                }
+                else Tag(buyCol.transform, "PREMIUM ACTIVE", UIKit.Green, 260);
 
-                Line(content, "Earn season XP by dispatching trains (+" + Balance.PassXpDispatch + "), finishing contracts (+" + Balance.PassXpContract + "), producing goods and building. Premium reward at tier 30: the Sundown Express!", 20, UIKit.InkSoft);
+                Line(content, "Earn season XP by dispatching trains (+" + Balance.PassXpDispatch + "), finishing contracts (+" + Balance.PassXpContract + "), producing goods and building. Premium tier " + Balance.PassTiers + ": the Sundown Express!", 20, UIKit.InkSoft);
 
-                var hdr = UIKit.Row(content, 36, 14);
-                UIKit.Size(UIKit.Label(hdr.transform, "TIER", 20, UIKit.InkSoft, TextAnchor.MiddleCenter, true).gameObject, 90, 30);
-                UIKit.Size(UIKit.Label(hdr.transform, "FREE", 20, UIKit.InkSoft, TextAnchor.MiddleCenter, true).gameObject, -1, 30, 1);
-                UIKit.Size(UIKit.Label(hdr.transform, "PREMIUM", 20, Purple, TextAnchor.MiddleCenter, true).gameObject, -1, 30, 1);
+                var hdr = UIKit.Row(content, 44, 14);
+                UIKit.Size(UIKit.Node("Pad", hdr.transform), 110, 30);
+                TrackHeader(hdr.transform, "FREE", UIKit.Green);
+                TrackHeader(hdr.transform, "PREMIUM", Purple);
 
                 foreach (var t in Catalog.PassTiers)
                 {
                     bool reached = t.Tier <= S.PassTier;
-                    var row = Card(content, 96, reached ? Palette.Hex(0xEADFB8) : (Color?)null);
-                    var tb = UIKit.Panel(row.transform, reached ? UIKit.Brass : UIKit.Disabled, "Tier", UIKit.Circle);
-                    UIKit.Size(tb.gameObject, 70, 70);
-                    var tl = UIKit.Label(tb.transform, t.Tier.ToString(), 28, UIKit.Wood, TextAnchor.MiddleCenter, true, FontStyle.Bold);
-                    UIKit.Stretch(tl.gameObject);
+                    var row = UIKit.Row(content, 128, 14);
+                    var tb = UIKit.KitImage(row.transform, reached ? "round_gold" : "round_brown", "Tier");
+                    UIKit.Size(tb.gameObject, 110, 110);
+                    var tl = UIKit.Label(tb.transform, t.Tier.ToString(), 44, reached ? Color.white : new Color(0.85f, 0.8f, 0.74f), TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                    tl.font = UIKit.Display; tl.fontStyle = FontStyle.Normal;
+                    UIKit.Stretch(tl.gameObject, 6);
+                    UIKit.Stroke(tl, new Color(0.25f, 0.13f, 0.03f, 0.95f), 2.5f);
                     PassCell(row.transform, t, false);
                     PassCell(row.transform, t, true);
                 }
             }, 1300, 900);
         }
 
+        static void TrackHeader(Transform parent, string text, Color c)
+        {
+            var h = UIKit.Node(text, parent);
+            UIKit.Size(h, -1, 44, 1);
+            UIKit.HStack(h, 0, 0, TextAnchor.MiddleCenter);
+            Tag(h.transform, text, c, 220);
+        }
+
         void PassCell(Transform row, PassTier t, bool premium)
         {
             var g = premium ? t.Premium : t.Free;
             bool claimed = (premium ? S.State.passClaimedPremium : S.State.passClaimedFree).Contains(t.Tier);
-            var cell = UIKit.Panel(row, premium ? new Color(0.62f, 0.45f, 0.78f, 0.35f) : new Color(1, 1, 1, 0.35f), "Cell", UIKit.Rounded);
-            UIKit.Size(cell.gameObject, -1, 76, 1);
-            UIKit.HStack(cell.gameObject, 10, 8, TextAnchor.MiddleLeft);
-            var label = UIKit.Label(cell.transform, g.ToString(), 19, UIKit.Ink, TextAnchor.MiddleLeft, false, g.LocomotiveId != null ? FontStyle.Bold : FontStyle.Normal);
-            UIKit.Size(label.gameObject, -1, 60, 1);
-            if (claimed) { var c = UIKit.Label(cell.transform, "Claimed", 20, UIKit.Green, TextAnchor.MiddleCenter, true, FontStyle.Bold); UIKit.Size(c.gameObject, 110, 60); }
-            else if (S.CanClaimPass(t.Tier, premium))
-                UIKit.Btn(cell.transform, "Claim", premium ? Purple : UIKit.Green, () => Result(S.ClaimPass(t.Tier, premium), Sfx.Coin), 20, 120, 54);
-            else if (premium && !S.State.passPremium)
+            bool locked = premium && !S.State.passPremium;
+            bool reached = t.Tier <= S.PassTier;
+            var cell = UIKit.KitImage(row, premium ? "hero_purple" : "card", "Cell", 120);
+            if (!reached) cell.color = new Color(0.82f, 0.8f, 0.78f);
+            UIKit.Size(cell.gameObject, -1, 120, 1);
+            var h = UIKit.HStack(cell.gameObject, 10, 10, TextAnchor.MiddleLeft);
+            h.padding = new RectOffset(14, 14, 10, 12);
+            var tiles = UIKit.Node("Tiles", cell.transform);
+            UIKit.Size(tiles, -1, 92, 1);
+            UIKit.HStack(tiles, 8, 0, TextAnchor.MiddleLeft);
+            if (g.LocomotiveId != null) LocoSwatch(tiles.transform, GameDatabase.Locomotive(g.LocomotiveId), 62);
+            GrantTiles(tiles.transform, g, 84);
+            if (g.PassPremium || (g.LocomotiveId == null && g.Nuggets == 0 && g.Coins == 0 && g.Fuel == 0 && (g.Resources == null || g.Resources.Length == 0)))
             {
-                var lockIcon = UIKit.Panel(cell.transform, UIKit.Disabled, "Lock", UIKit.RoundedSmall);
-                UIKit.Size(lockIcon.gameObject, 34, 30);
+                var l = UIKit.Label(tiles.transform, g.ToString(), 20, premium ? Color.white : UIKit.Ink, TextAnchor.MiddleLeft);
+                UIKit.Size(l.gameObject, -1, 80, 1);
             }
+            var act = UIKit.Node("Act", cell.transform);
+            UIKit.Size(act, 150, 92);
+            UIKit.HStack(act, 0, 0, TextAnchor.MiddleCenter);
+            if (claimed)
+            {
+                var c = UIKit.Label(act.transform, "✓ CLAIMED", 26, UIKit.Green, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                c.font = UIKit.Display; c.fontStyle = FontStyle.Normal;
+                UIKit.Size(c.gameObject, 150, 60);
+                UIKit.Stroke(c, new Color(1, 1, 1, 0.7f), 1.5f);
+            }
+            else if (S.CanClaimPass(t.Tier, premium))
+                UIKit.Btn(act.transform, "Claim", premium ? UIKit.Gold : UIKit.Green, () => Result(S.ClaimPass(t.Tier, premium), Sfx.Coin), 30, 150, 76);
+            else if (locked && UIKit.Icon(act.transform, "lock", 64) != null) { }
         }
 
         // ================================================================ Fake ad (editor / dev builds)

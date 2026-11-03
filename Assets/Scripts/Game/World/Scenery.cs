@@ -23,8 +23,12 @@ namespace Ironhorse.Game
 
         // ---------------------------------------------------------------- Mesas & tunnels
 
+        /// <summary>Mesa tops (centre, usable radius, height) for scrub planted on them later.</summary>
+        static readonly List<(Vector2 c, float r, float y)> _mesaTops = new List<(Vector2, float, float)>();
+
         static void BuildMesas(Transform root)
         {
+            _mesaTops.Clear();
             var mb = new MeshBuilder();
             float mz = WorldLayout.MainZ;
             Mesa(mb, new Vector2(WorldLayout.TunnelX + 52, mz), 52, 38, 180f, 7);
@@ -58,7 +62,8 @@ namespace Ironhorse.Game
             int layers = Mathf.Clamp(Mathf.RoundToInt(height / 6f), 3, 9);
             float lh = height / layers;
             float baseY = -3;
-            Color[] bands = { Palette.RedRock, Palette.RockPale, Palette.RockDark, Palette.RedRock, Palette.Hex(0xC7845A), Palette.RockPale, Palette.RedRock, Palette.RockDark, Palette.RockPale };
+            // Weathered sandstone strata: muted reds, buffs and browns (the rock texture adds the detail).
+            Color[] bands = { Palette.Hex(0x9A5A3C), Palette.Hex(0xB98762), Palette.Hex(0x7A4630), Palette.Hex(0xA4664A), Palette.Hex(0xA8784F), Palette.Hex(0xC19A74), Palette.Hex(0x8E5034), Palette.Hex(0x6E4230), Palette.Hex(0xB08460) };
             float shrink = 1f;
             for (int l = 0; l < layers; l++)
             {
@@ -76,11 +81,54 @@ namespace Ironhorse.Game
                     poly.Add(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r);
                 }
                 float y0 = baseY + l * lh, y1 = baseY + (l + 1) * lh;
-                Color top = l == layers - 1 ? Palette.GrassDry : bands[(l + seed) % bands.Length];
+                bool topLayer = l == layers - 1;
+                Color top = topLayer ? Palette.Hex(0x8C7A4E) : MeshBuilder.Darken(bands[(l + seed) % bands.Length], 0.92f);
                 mb.Matte();
-                mb.Prism(poly, y0, y1, bands[(l + seed) % bands.Length], top, 0.025f);
+                mb.Surf = SurfaceKind.Stone;
+                if (topLayer) { mb.Prism(poly, y0, y1, bands[(l + seed) % bands.Length], top, 0.025f, skipTop: true); MesaTop(mb, poly, y1, seed); }
+                else mb.Prism(poly, y0, y1, bands[(l + seed) % bands.Length], top, 0.025f);
+                mb.Surf = SurfaceKind.Auto;
+                if (topLayer) _mesaTops.Add((c, radius * shrink * 0.7f, y1));
                 shrink *= l < 2 ? 1f : 0.965f;
             }
+        }
+
+        /// <summary>
+        /// Mesa cap: concentric rings over the top polygon, gently domed, each facet coloured from world-space noise
+        /// so it breaks into scrub, bare dirt and rock outcrops instead of one flat slab.
+        /// </summary>
+        static void MesaTop(MeshBuilder mb, List<Vector2> poly, float y, int seed)
+        {
+            const int rings = 6;
+            int n = poly.Count;
+            Vector2 center = Vector2.zero;
+            foreach (var p in poly) center += p;
+            center /= n;
+            Color scrub = Palette.Hex(0x7A7A44), dry = Palette.Hex(0x9C8656), dirt = Palette.Hex(0x9A6E4A), rock = Palette.Hex(0x86705E);
+            Vector3 P(int ring, int i)
+            {
+                float t = 1f - ring / (float)rings * 0.97f; // ring 0 = rim
+                var q = Vector2.Lerp(center, Vector2.Lerp(poly[i % n], center, 0.025f), t);
+                float bump = (Mathf.PerlinNoise(q.x * 0.09f + seed, q.y * 0.09f) - 0.5f) * 1.6f + (1 - t) * 1.2f;
+                return new Vector3(q.x, y + (ring == 0 ? 0 : bump), q.y);
+            }
+            Color Col(Vector3 a)
+            {
+                float k = Mathf.PerlinNoise(a.x * 0.07f + seed * 2.3f, a.z * 0.07f), j = Mathf.PerlinNoise(a.x * 0.31f, a.z * 0.31f + seed);
+                Color c = k < 0.38f ? Color.Lerp(scrub, dry, k / 0.38f) : k < 0.62f ? Color.Lerp(dry, dirt, (k - 0.38f) / 0.24f) : Color.Lerp(dirt, rock, (k - 0.62f) / 0.38f);
+                return MeshBuilder.Darken(c, 0.86f + j * 0.22f);
+            }
+            var keep = mb.Surf;
+            mb.Surf = SurfaceKind.Dirt;
+            for (int r = 0; r < rings; r++)
+                for (int i = 0; i < n; i++)
+                {
+                    Vector3 a = P(r, i), b = P(r, i + 1), c = P(r + 1, i + 1), d = P(r + 1, i);
+                    if (r == rings - 1) c = d = new Vector3(center.x, P(rings, 0).y, center.y);
+                    // Smooth colours blend the scrub/dirt/rock patches into each other.
+                    mb.QuadSmooth(a, d, c, b, Vector3.up, Vector3.up, Vector3.up, Vector3.up, Col(a), Col(d), Col(c), Col(b));
+                }
+            mb.Surf = keep;
         }
 
         static void Portal(MeshBuilder mb, float x, float z, int facing)
@@ -188,6 +236,21 @@ namespace Ironhorse.Game
                 else if (q < 0.55f && clump > 0.35f) Pine(Chunk(p), p, R(0.8f, 1.3f));
             }
 
+            // Scrub, junipers and the odd saguaro on the mesa tops.
+            foreach (var (mc, mr, my) in _mesaTops)
+            {
+                int n = Mathf.RoundToInt(mr * mr * 0.16f);
+                for (int i = 0; i < n; i++)
+                {
+                    float a = R(0, Mathf.PI * 2), d = Mathf.Sqrt(R()) * mr;
+                    var p = new Vector3(mc.x + Mathf.Cos(a) * d, my + 0.4f + (1 - d / mr) * 1.0f, mc.y + Mathf.Sin(a) * d);
+                    float k = R();
+                    if (k < 0.55f) Sage(Chunk(p), p, R(0.8f, 1.5f));
+                    else if (k < 0.8f) Pine(Chunk(p), p, R(0.55f, 0.85f));
+                    else if (k < 0.9f) Saguaro(Chunk(p), p, R(0.7f, 1.0f));
+                    else Rock(Chunk(p), p, R(0.8f, 2.2f));
+                }
+            }
             _instancing = false;
             foreach (var kv in chunks)
             {
@@ -288,10 +351,12 @@ namespace Ironhorse.Game
         public static void Rock(MeshBuilder mb, Vector3 p, float s)
         {
             mb.Matte();
-            Color c = Color.Lerp(Palette.RedRock, Palette.StoneDark, R());
-            mb.Push().Translate(p).RotateY(R(0, 360));
-            mb.Sphere(new Vector3(0, 0.3f * s, 0), new Vector3(1.1f, 0.7f, 0.9f) * s, 5, c, false);
+            Color c = Color.Lerp(Palette.Hex(0x7E5A44), Palette.Hex(0x8A8278), R());
+            mb.Surf = SurfaceKind.Stone;
+            mb.Push().Translate(p - Vector3.up * 0.15f * s).RotateY(R(0, 360));
+            mb.Sphere(new Vector3(0, 0.25f * s, 0), new Vector3(1.1f, 0.55f, 0.9f) * s, 7, c, false);
             mb.Pop();
+            mb.Surf = SurfaceKind.Auto;
         }
 
         static Color Shift(Color c, float amount) { return new Color(Mathf.Clamp01(c.r + amount), Mathf.Clamp01(c.g + amount * 0.6f), Mathf.Clamp01(c.b + amount * 0.3f)); }

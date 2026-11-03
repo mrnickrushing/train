@@ -198,7 +198,25 @@ namespace Ironhorse.Game
         }
 
         /// <summary>Prism with an arbitrary convex polygon footprint (mesa strata, platforms).</summary>
-        public void Prism(IList<Vector2> poly, float y0, float y1, Color side, Color top, float topInset = 0)
+        public void Prism(IList<Vector2> poly, float y0, float y1, Color side, Color top, float topInset, SurfaceKind topSurf)
+        {
+            // Sides in the current surface, cap in topSurf.
+            var keep = Surf;
+            Prism(poly, y0, y1, side, Color.clear, topInset, skipTop: true);
+            Surf = topSurf;
+            int n = poly.Count;
+            Vector2 center = Vector2.zero;
+            foreach (var p in poly) center += p;
+            center /= n;
+            for (int i = 0; i < n; i++)
+            {
+                var q0 = Vector2.Lerp(poly[i], center, topInset); var q1 = Vector2.Lerp(poly[(i + 1) % n], center, topInset);
+                Tri(new Vector3(center.x, y1, center.y), new Vector3(q1.x, y1, q1.y), new Vector3(q0.x, y1, q0.y), top);
+            }
+            Surf = keep;
+        }
+
+        public void Prism(IList<Vector2> poly, float y0, float y1, Color side, Color top, float topInset = 0, bool skipTop = false)
         {
             int n = poly.Count;
             Vector2 center = Vector2.zero;
@@ -209,7 +227,7 @@ namespace Ironhorse.Game
                 var p0 = poly[i]; var p1 = poly[(i + 1) % n];
                 var q0 = Vector2.Lerp(p0, center, topInset); var q1 = Vector2.Lerp(p1, center, topInset);
                 Quad(new Vector3(p0.x, y0, p0.y), new Vector3(q0.x, y1, q0.y), new Vector3(q1.x, y1, q1.y), new Vector3(p1.x, y0, p1.y), side);
-                Tri(new Vector3(center.x, y1, center.y), new Vector3(q1.x, y1, q1.y), new Vector3(q0.x, y1, q0.y), top);
+                if (!skipTop) Tri(new Vector3(center.x, y1, center.y), new Vector3(q1.x, y1, q1.y), new Vector3(q0.x, y1, q0.y), top);
             }
         }
 

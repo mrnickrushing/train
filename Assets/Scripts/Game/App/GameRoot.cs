@@ -221,39 +221,60 @@ namespace Ironhorse.Game
     public sealed class Clouds : MonoBehaviour
     {
         readonly System.Collections.Generic.List<Transform> _clouds = new System.Collections.Generic.List<Transform>();
+        MaterialPropertyBlock _block;
 
         void Start()
         {
             var rng = new System.Random(11);
-            for (int i = 0; i < 16; i++)
+            // Soft painted cloud sprites (UI/Fx/clouds.png, 3 variants stacked) lying flat high over the
+            // valley: from the high camera they read as drifting wisps, not solid lumps.
+            var tex = Resources.Load<Texture2D>("UI/Fx/clouds");
+            var mat = new Material(Shader.Find("Ironhorse/Smoke")) { mainTexture = tex, name = "Clouds", renderQueue = 3100 };
+            for (int i = 0; i < 9; i++)
             {
-                var mb = new MeshBuilder();
-                mb.Mat(0.05f);
-                int puffs = 4 + rng.Next(5);
-                for (int p = 0; p < puffs; p++)
-                {
-                    var c = new Vector3((float)rng.NextDouble() * 30 - 15, (float)rng.NextDouble() * 4, (float)rng.NextDouble() * 12 - 6);
-                    float r = 6 + (float)rng.NextDouble() * 7;
-                    mb.Sphere(c, new Vector3(r, r * 0.6f, r * 0.8f), 8, p % 2 == 0 ? Palette.White : new Color(0.9f, 0.9f, 0.93f));
-                }
-                var go = mb.ToObject("Cloud", transform, false); // hard-edged cloud shadows read as puddles
-                go.GetComponent<MeshRenderer>().sharedMaterial = Materials.Cloud;
-                go.transform.position = new Vector3((float)rng.NextDouble() * 900 - 450, 140 + (float)rng.NextDouble() * 40, (float)rng.NextDouble() * 700 - 250);
+                int v = rng.Next(3);
+                float w = 70 + (float)rng.NextDouble() * 60, h = w * 0.5f;
+                var mesh = new Mesh { name = "Cloud" };
+                mesh.vertices = new[] { new Vector3(-w / 2, 0, -h / 2), new Vector3(w / 2, 0, -h / 2), new Vector3(w / 2, 0, h / 2), new Vector3(-w / 2, 0, h / 2) };
+                float v0 = v / 3f, v1 = (v + 1) / 3f;
+                mesh.uv = new[] { new Vector2(0, v0), new Vector2(1, v0), new Vector2(1, v1), new Vector2(0, v1) };
+                var alpha = new Color(1, 1, 1, 0.4f + (float)rng.NextDouble() * 0.2f);
+                mesh.colors = new[] { alpha, alpha, alpha, alpha };
+                mesh.triangles = new[] { 0, 2, 1, 0, 3, 2 };
+                mesh.RecalculateBounds();
+                var go = new GameObject("Cloud");
+                go.transform.SetParent(transform, false);
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                var mr = go.AddComponent<MeshRenderer>();
+                mr.sharedMaterial = mat;
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                mr.receiveShadows = false;
+                go.transform.position = new Vector3((float)rng.NextDouble() * 900 - 450, 150 + (float)rng.NextDouble() * 40, (float)rng.NextDouble() * 700 - 250);
+                go.transform.rotation = Quaternion.Euler(0, (float)rng.NextDouble() * 40 - 20, 0);
                 _clouds.Add(go.transform);
             }
         }
 
         void Update()
         {
-            // Only part of the far, zoomed-out panorama; up close they'd fill the screen like boulders.
+            // Only part of the far, zoomed-out panorama, and kept off the middle of the view: a cloud fades
+            // out as it drifts over the point the camera looks at.
             var rig = CameraRig.Instance;
             bool show = rig == null || rig.Distance > 190;
+            Vector3 focus = rig != null ? rig.Focus : Vector3.zero;
+            float zoomFade = rig == null ? 1 : Mathf.InverseLerp(190, 300, rig.Distance);
             foreach (var c in _clouds)
             {
                 c.gameObject.SetActive(show);
                 c.position += new Vector3(Fx.Wind.x, 0, Fx.Wind.z) * 1.6f * Time.deltaTime;
                 if (c.position.x > 480) c.position -= new Vector3(960, 0, 0);
                 if (c.position.z > 470) c.position -= new Vector3(0, 0, 740);
+                if (!show) continue;
+                float d = new Vector2(c.position.x - focus.x, c.position.z - focus.z).magnitude;
+                var mr = c.GetComponent<MeshRenderer>();
+                if (_block == null) _block = new MaterialPropertyBlock();
+                _block.SetColor("_Color", new Color(1, 1, 1, zoomFade * Mathf.InverseLerp(60, 170, d)));
+                mr.SetPropertyBlock(_block);
             }
         }
     }
