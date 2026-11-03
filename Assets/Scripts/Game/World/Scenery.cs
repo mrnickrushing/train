@@ -15,7 +15,7 @@ namespace Ironhorse.Game
             _rng = new System.Random(1869);
             BuildMesas(root);
             BuildVegetation(root);
-            BuildRoads(root);
+            // Streets come from TownStreets (they change with each chapter).
             BuildTelegraph(root);
             BuildWindmills(root);
             Station.Build(root);
@@ -281,41 +281,7 @@ namespace Ironhorse.Game
 
         // ---------------------------------------------------------------- Roads
 
-        static void BuildRoads(Transform root)
-        {
-            var mb = new MeshBuilder();
-            mb.Matte();
-            mb.Surf = SurfaceKind.Gravel; // packed gravel streets
-            float x0 = WorldLayout.PlotOriginX - WorldLayout.PlotPitchX / 2, x1 = WorldLayout.PlotOriginX + (WorldLayout.PlotCols - 0.5f) * WorldLayout.PlotPitchX;
-            float z0 = WorldLayout.PlotOriginZ - WorldLayout.PlotPitchZ / 2, z1 = WorldLayout.PlotOriginZ + (WorldLayout.PlotRows - 0.5f) * WorldLayout.PlotPitchZ;
-            Color road = MeshBuilder.Darken(Palette.Road, 0.82f);
-            for (int r = 0; r <= WorldLayout.PlotRows; r++)
-            {
-                float z = z0 + r * WorldLayout.PlotPitchZ;
-                float w = r == 0 ? 7f : 2.8f; // Main Street is wide; side streets are narrow tracks
-                RoadStrip(mb, new Vector3(x0 - 2, 0, z), new Vector3(x1 + 2, 0, z), w, road);
-            }
-            for (int c = 0; c <= WorldLayout.PlotCols; c++)
-            {
-                float x = x0 + c * WorldLayout.PlotPitchX;
-                RoadStrip(mb, new Vector3(x, 0, z0), new Vector3(x, 0, z1), 2.8f, road);
-            }
-            mb.Surf = SurfaceKind.Auto;
-            // Street lamps: along Main Street, and at every other cross-street intersection.
-            for (int c = 0; c <= WorldLayout.PlotCols; c++)
-            {
-                float x = x0 + c * WorldLayout.PlotPitchX;
-                Station.Lamp(mb, new Vector3(x + 2.4f, 0, z0 - 4.2f));
-                for (int r = 2; r <= WorldLayout.PlotRows; r += 2)
-                    if ((c + r / 2) % 2 == 0) Station.Lamp(mb, new Vector3(x + 1.9f, 0, z0 + r * WorldLayout.PlotPitchZ + 1.9f));
-            }
-            mb.Surf = SurfaceKind.Gravel;
-            // Station plaza between Main Street and the depot.
-            mb.Box(new Vector3(0, 0.04f, -14.5f), new Vector3(36, 0.08f, 6), MeshBuilder.Darken(road, 0.95f));
-            mb.ToObject("Roads", root, false);
-        }
-
-        static void RoadStrip(MeshBuilder mb, Vector3 a, Vector3 b, float width, Color c)
+        public static void RoadStrip(MeshBuilder mb, Vector3 a, Vector3 b, float width, Color c)
         {
             var dir = (b - a).normalized;
             var right = Vector3.Cross(Vector3.up, dir) * width / 2;

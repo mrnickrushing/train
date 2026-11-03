@@ -159,14 +159,14 @@ namespace Ironhorse.Game
             mb.Box(p + new Vector3(0.9f, 0.22f, 0), new Vector3(0.08f, 0.45f, 0.45f), Palette.Iron);
         }
 
-        public static void Lamp(MeshBuilder mb, Vector3 p)
+        public static void Lamp(MeshBuilder mb, Vector3 p, bool light = true)
         {
             mb.Mat(0.4f, 0.4f);
             mb.Cylinder(p, p + Vector3.up * 3.6f, 0.08f, 6, Palette.Iron);
             mb.Box(p + Vector3.up * 3.7f, new Vector3(0.4f, 0.1f, 0.4f), Palette.Iron);
             mb.Lit();
             mb.Box(p + Vector3.up * 4.0f, new Vector3(0.32f, 0.5f, 0.32f), Palette.Window);
-            NightLights.AddPoint(p + Vector3.up * 3.9f);
+            if (light) NightLights.AddPoint(p + Vector3.up * 3.9f);
             mb.Mat(0.4f, 0.4f);
             mb.Cylinder(p + Vector3.up * 4.25f, p + Vector3.up * 4.55f, 0.28f, 0f, 6, Palette.Iron);
             mb.Matte();

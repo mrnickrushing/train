@@ -135,6 +135,7 @@ namespace Ironhorse.Game
             _loading.SetProgress(0.85f, "Raising the town...");
             yield return null;
             Child<TownView>("Town");
+            Child<TownStreets>("Streets");
             Child<UIRoot>("UI");
 
             yield return null; // let Start() run on everything before revealing the world

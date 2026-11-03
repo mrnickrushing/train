@@ -43,6 +43,8 @@ I = {
     "bearings": "a polished steel ball bearing ring with visible balls",
     "rods": "two crossed steel locomotive drive rods with brass bushings",
     "gauges": "a round brass steam pressure gauge with a white dial and red needle",
+    # UI
+    "lock": "a sturdy closed brass padlock with an iron shackle",
     # HUD
     "coin": "a single shiny gold coin with an embossed steam locomotive, seen slightly from the front",
     "nugget": "a big shiny gold nugget",

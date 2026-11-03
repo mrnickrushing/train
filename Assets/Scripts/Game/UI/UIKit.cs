@@ -390,6 +390,34 @@ namespace Ironhorse.Game
         }
     }
 
+    /// <summary>Locked-content badges: a padlock with the unlock level, pinned to a picture's corner.</summary>
+    public static class Locks
+    {
+        /// <summary>"Unlocks at level 9 · Chapter 4"</summary>
+        public static string Text(int level)
+        {
+            var ch = Ironhorse.Core.ChapterContent.Chapters.Find(c => level >= c.StartLevel && level < c.EndLevel);
+            return "Unlocks at level " + level + (ch != null ? " · Chapter " + ch.Number : "");
+        }
+
+        /// <summary>Greys every image under <paramref name="picture"/> and pins a padlock "LV n" badge to it.</summary>
+        public static void Badge(GameObject picture, int level, float size = 44)
+        {
+            if (picture == null) return;
+            foreach (var g in picture.GetComponentsInChildren<Graphic>())
+                if (!(g is Text)) g.color = new Color(g.color.r * 0.45f + 0.18f, g.color.g * 0.45f + 0.17f, g.color.b * 0.45f + 0.16f, g.color.a);
+            var pill = UIKit.Panel(picture.transform, new Color(0.12f, 0.08f, 0.05f, 0.92f), "Lock", UIKit.RoundedSmall);
+            pill.raycastTarget = false;
+            var rt = UIKit.Place(pill.gameObject, new Vector2(1, 0), new Vector2(1, 0), new Vector2(4, -4), new Vector2(size * 2.1f, size));
+            pill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            var icon = UIKit.Icon(pill.transform, "lock", size * 0.9f);
+            if (icon != null) UIKit.Place(icon, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(2, 0), new Vector2(size * 0.9f, size * 0.9f));
+            var t = UIKit.Label(pill.transform, "LV " + level, Mathf.RoundToInt(size * 0.5f), UIKit.Gold, TextAnchor.MiddleRight);
+            t.font = UIKit.Display;
+            UIKit.Anchor(t.gameObject, Vector2.zero, Vector2.one, new Vector2(size * 0.8f, 0), new Vector2(-6, 0));
+        }
+    }
+
     /// <summary>Signature widgets: ribbon banners, "Rewards" dividers, notepad slips and level chips.</summary>
     public static class UIDeco
     {

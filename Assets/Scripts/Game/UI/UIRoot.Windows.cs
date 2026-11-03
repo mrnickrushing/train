@@ -170,11 +170,12 @@ namespace Ironhorse.Game
                         var res = GameDatabase.Resource(dest.ResourceId);
                         bool locked = !S.IsDestinationUnlocked(dest);
                         var c = Card(content, 100, locked ? new Color(0.8f, 0.76f, 0.68f) : (Color?)null);
-                        UIKit.ResIcon(c.transform, dest.ResourceId, 64);
+                        var destIcon = UIKit.ResIcon(c.transform, dest.ResourceId, 64);
+                        if (locked) Locks.Badge(destIcon, dest.UnlockLevel, 30);
                         var dc = Col(c.transform);
                         Line(dc.transform, dest.Name, 24, locked ? UIKit.InkSoft : UIKit.Ink, true);
                         string what = dest.IsTown ? "Passenger town · up to " + Balance.PassengerDemand(S.Population) + " riders from your town · fare x" + dest.Yield.ToString("0.0") : res.Name;
-                        Line(dc.transform, locked ? "Unlocks at level " + dest.UnlockLevel : what + " · needs " + Plural(GameSession.CargoWagonName(res.Cargo)) + " · " + Fmt.Time(p.Seconds) + " · " + p.Fuel + " fuel", 20, UIKit.InkSoft);
+                        Line(dc.transform, locked ? Locks.Text(dest.UnlockLevel) : what + " · needs " + Plural(GameSession.CargoWagonName(res.Cargo)) + " · " + Fmt.Time(p.Seconds) + " · " + p.Fuel + " fuel", 20, UIKit.InkSoft);
                         if (!locked)
                         {
                             string id = dest.Id;
@@ -326,7 +327,8 @@ namespace Ironhorse.Game
             var card = UIKit.Panel(grid, UIKit.RarityColor(d.Rarity), "Loco", UIKit.RoundedGrad, true);
             UIKit.VStack(card.gameObject, 8, 12, TextAnchor.UpperCenter);
             var art = UIKit.Row(card.transform, 170, 0, TextAnchor.MiddleCenter);
-            LocoSwatch(art.transform, d, 170);
+            var sw = LocoSwatch(art.transform, d, 170);
+            if (locked) Locks.Badge(sw, d.UnlockLevel, 44);
             var plate = UIKit.Panel(card.transform, UIKit.Wood, "Plate", UIKit.Rounded);
             UIKit.Size(plate.gameObject, -1, 60);
             var name = UIKit.Label(plate.transform, d.Name.ToUpperInvariant(), 26, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
@@ -343,7 +345,7 @@ namespace Ironhorse.Game
             BlueprintRow(card.transform, d);
             if (locked)
             {
-                var l = UIKit.Label(card.transform, "UNLOCKS AT LEVEL " + d.UnlockLevel, 24, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                var l = UIKit.Label(card.transform, Locks.Text(d.UnlockLevel).ToUpperInvariant(), 24, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
                 l.font = UIKit.Display;
                 l.fontStyle = FontStyle.Normal; // the face is already bold
                 UIKit.Size(l.gameObject, -1, 60);
@@ -373,12 +375,13 @@ namespace Ironhorse.Game
             UIKit.Stretch(t.gameObject, 4);
         }
 
-        static void WagonSwatch(Transform parent, WagonDef wd)
+        static GameObject WagonSwatch(Transform parent, WagonDef wd)
         {
             var bg = UIKit.Panel(parent, UIKit.ParchmentDark * 0.92f, "Wagon", UIKit.RoundedSmall);
             UIKit.Size(bg.gameObject, 120, 76);
             var img = ModelIcons.Image(bg.transform, ModelIcons.Wagon(wd), 120, 75);
             UIKit.Stretch(img.gameObject);
+            return bg.gameObject;
         }
 
         // ================================================================ depot (shop)
@@ -416,12 +419,13 @@ namespace Ironhorse.Game
                     {
                         bool locked = !S.IsWagonUnlocked(d);
                         var c = Card(content, 96, locked ? new Color(0.8f, 0.76f, 0.68f) : (Color?)null);
-                        WagonSwatch(c.transform, d);
+                        var ws = WagonSwatch(c.transform, d);
+                        if (locked) Locks.Badge(ws, d.UnlockLevel, 30);
                         var col = Col(c.transform);
                         Line(col.transform, d.Name, 24, UIKit.Ink, true);
                         var hauls = GameDatabase.Resources.Where(r => r.Cargo == d.Cargo && !r.Manufactured).Select(r => r.Name);
                         Line(col.transform, "Capacity " + d.Capacity + " · hauls " + string.Join(", ", hauls), 20, UIKit.InkSoft);
-                        if (locked) Line(c.transform, "Level " + d.UnlockLevel, 24, UIKit.InkSoft, true).GetComponent<LayoutElement>().preferredWidth = 150;
+                        if (locked) Line(c.transform, Locks.Text(d.UnlockLevel), 22, UIKit.InkSoft, true).GetComponent<LayoutElement>().preferredWidth = 230;
                         else
                         {
                             var bc = Col(c.transform, -1, 220);
@@ -526,7 +530,17 @@ namespace Ironhorse.Game
                 {
                     bool locked = !S.IsBuildingUnlocked(d);
                     var c = Card(content, 140, locked ? new Color(0.8f, 0.76f, 0.68f) : (Color?)null);
-                    BuildingSwatch(c.transform, d);
+                    var tex = ModelIcons.Building(d);
+                    GameObject pic;
+                    if (tex != null)
+                    {
+                        var bg = UIKit.Panel(c.transform, Palette.Hex(0xCFBB92), "Pic", UIKit.Rounded);
+                        UIKit.Size(bg.gameObject, 170, 110);
+                        UIKit.Stretch(ModelIcons.Image(bg.transform, tex, 170, 106).gameObject);
+                        pic = bg.gameObject;
+                    }
+                    else pic = BuildingSwatch(c.transform, d);
+                    if (locked) Locks.Badge(pic, d.UnlockLevel, 36);
                     var col = Col(c.transform);
                     Line(col.transform, d.Name + "   (" + S.CountBuilt(d.Id) + "/" + d.MaxCount + ")", 26, UIKit.Ink, true);
                     string info = d.Blurb;
@@ -534,7 +548,7 @@ namespace Ironhorse.Game
                         info = string.Join(" + ", d.Recipe.Inputs.Select(i => i.amount + " " + GameDatabase.Resource(i.id).Name)) + "  →  " + d.Recipe.Output.amount + " " + GameDatabase.Resource(d.Recipe.Output.id).Name + "  (" + Fmt.Time(d.Recipe.Seconds) + ")";
                     Line(col.transform, info, 20, UIKit.InkSoft);
                     if (!locked) UIKit.Cost(col.transform, S, d.CostCoins, d.CostResources);
-                    if (locked) Line(c.transform, "Level " + d.UnlockLevel, 24, UIKit.InkSoft, true).GetComponent<LayoutElement>().preferredWidth = 150;
+                    if (locked) Line(c.transform, Locks.Text(d.UnlockLevel), 22, UIKit.InkSoft, true).GetComponent<LayoutElement>().preferredWidth = 230;
                     else
                     {
                         var check = S.CanConstruct(d.Id);
@@ -551,7 +565,7 @@ namespace Ironhorse.Game
             });
         }
 
-        static void BuildingSwatch(Transform parent, BuildingDef d)
+        static GameObject BuildingSwatch(Transform parent, BuildingDef d)
         {
             Color c;
             switch (d.Category)
@@ -569,6 +583,7 @@ namespace Ironhorse.Game
             UIKit.Place(roof.gameObject, new Vector2(0.5f, 0.66f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(42, 42)).localRotation = Quaternion.Euler(0, 0, 45);
             var door = UIKit.Panel(bg.transform, UIKit.Wood, "Door", UIKit.RoundedSmall);
             UIKit.Place(door.gameObject, new Vector2(0.5f, 0.3f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(12, 20));
+            return bg.gameObject;
         }
 
         // ================================================================ one building
@@ -745,7 +760,7 @@ namespace Ironhorse.Game
                     UIKit.Place(pin, new Vector2(d.MapX, d.MapY), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(200, 110));
                     UIKit.VStack(pin, 2, 0, TextAnchor.MiddleCenter);
                     var icon = UIKit.ResIcon(pin.transform, d.ResourceId, 56);
-                    if (locked) icon.GetComponent<Image>().color = UIKit.Disabled;
+                    if (locked) Locks.Badge(icon, d.UnlockLevel, 28);
                     var lbl = UIKit.Label(pin.transform, locked ? d.Name + " (Lv " + d.UnlockLevel + ")" : d.Name, 18, locked ? UIKit.InkSoft : UIKit.Ink, TextAnchor.MiddleCenter, true);
                     UIKit.Size(lbl.gameObject, 200, 40);
                     var dd = d;
