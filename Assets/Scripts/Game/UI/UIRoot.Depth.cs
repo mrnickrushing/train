@@ -65,98 +65,76 @@ namespace Ironhorse.Game
 
         // ================================================================ Foreman's orders
 
-        public void OpenForeman()
-        {
-            ShowWindow("Foreman's Orders", content =>
-            {
-                var set = S.CurrentTaskSet;
-                var head = Card(content, 170, Palette.Hex(0xC9D6E3));
-                ForemanPortrait(head.transform, 140);
-                var hc = Col(head.transform);
-                Line(hc.transform, set.Title + "   (set " + (set.Index + 1) + ")", 30, UIKit.Ink, true);
-                var bubble = UIKit.Panel(hc.transform, Color.white, "Bubble", UIKit.Rounded, true);
-                UIKit.Size(bubble.gameObject, -1, 64);
-                var q = UIKit.Label(bubble.transform, set.Quote, 22, UIKit.Ink, TextAnchor.MiddleLeft);
-                UIKit.Stretch(q.gameObject, 14);
-                Line(hc.transform, "— Hank, Dry Creek stationmaster", 18, UIKit.InkSoft);
-
-                for (int i = 0; i < set.Tasks.Length; i++)
-                {
-                    var task = set.Tasks[i];
-                    bool done = S.IsTaskDone(i);
-                    var row = Card(content, 96, done ? Palette.Hex(0xBFDDB0) : (Color?)null);
-                    var dot = UIKit.Panel(row.transform, done ? UIKit.Green : UIKit.Disabled, "Dot", UIKit.Circle);
-                    UIKit.Size(dot.gameObject, 30, 30);
-                    var label = Line(row.transform, DepthContent.Describe(task), 24, UIKit.Ink, true);
-                    label.GetComponent<LayoutElement>().flexibleWidth = 1;
-                    var barHolder = UIKit.Node("Bar", row.transform);
-                    UIKit.Size(barHolder, 280, 40);
-                    UIKit.HStack(barHolder, 0);
-                    var bar = UIKit.Bar(barHolder.transform, UIKit.Green, 34);
-                    var bt = UIKit.Label(bar.transform.parent, "", 20, UIKit.Cream, TextAnchor.MiddleCenter, true, FontStyle.Bold);
-                    UIKit.Stretch(bt.gameObject);
-                    bt.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.5f);
-                    int idx = i;
-                    Action live = () =>
-                    {
-                        int p = S.TaskProgress(idx), c = S.CurrentTaskSet.Tasks[idx].Count;
-                        UIKit.SetBar(bar, p / (float)c);
-                        bt.text = Fmt.Num(p) + " / " + Fmt.Num(c);
-                    };
-                    live(); Live(live);
-                }
-
-                Heading(content, "Reward for all three");
-                var rew = Card(content, 90);
-                Line(rew.transform, set.Reward + " · +" + (60 + 30 * set.Index) + " XP", 22).GetComponent<LayoutElement>().flexibleWidth = 1;
-                UIKit.Btn(rew.transform, "Claim", UIKit.Green, () => Result(S.ClaimTaskSet(), Sfx.LevelUp), 26, 200, 66, S.CanClaimTaskSet);
-            }, 1060, 820);
-            WindowFigure("char_foreman");
-        }
-
         // ================================================================ Territory projects (Orders window tab)
 
-        void ProjectsTab(Transform content)
+        void ProjectCard(Transform p, ProjectDef def)
         {
-            Line(content, "Big builds across the territory. Deliver goods in any amount. Each stage pays out, and finishing a project grants a permanent bonus.", 20, UIKit.InkSoft);
-            foreach (var def in DepthContent.Projects)
+            var pr = S.Progress(def.Id);
+            bool locked = !S.IsProjectUnlocked(def);
+            var card = Box(p, BCardDeep, 560, -1, "Project " + def.Id);
+            Stack(card.gameObject, 10, new RectOffset(14, 14, 14, 16), TextAnchor.UpperLeft);
+
+            var photo = Photo(card.transform, Resources.Load<Texture2D>("UI/Story/scene_" + def.Id), -1, 220, locked ? new Color(0.4f, 0.4f, 0.44f) : (Color?)null);
+            Overlay(photo.transform, Fade(true), new Color(0.06f, 0.08f, 0.12f, 0.9f));
+            var name = T(photo.transform, def.Name, 40, Color.white, TextAnchor.LowerLeft, true);
+            UIKit.Anchor(name.gameObject, Vector2.zero, Vector2.one, new Vector2(16, 10), new Vector2(-16, -10));
+            var tag = Pill(photo.transform, null, locked ? "Level " + def.UnlockLevel : pr.done ? "Complete" : "Stage " + Mathf.Min(pr.stage + 1, def.Stages.Length) + " / " + def.Stages.Length, 28, pr.done ? BGood : Color.white);
+            var tle = tag.GetComponent<LayoutElement>();
+            if (tle == null) tle = tag.AddComponent<LayoutElement>();
+            tle.ignoreLayout = true;
+            UIKit.Place(tag, new Vector2(0, 1), new Vector2(0, 1), new Vector2(12, -12), new Vector2(200, 44));
+            tag.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            if (locked)
             {
-                var pr = S.Progress(def.Id);
-                bool locked = !S.IsProjectUnlocked(def);
-                var card = UIKit.Panel(content, locked ? new Color(0.74f, 0.77f, 0.82f) : pr.done ? Palette.Hex(0xBFDDB0) : Palette.Hex(0xD9C6E8), "Project", null, true);
-                UIKit.Size(card.gameObject, -1, 290);
-                UIKit.HStack(card.gameObject, 18, 16, TextAnchor.MiddleLeft);
+                var lk = UIKit.Icon(photo.transform, "lock", 90);
+                if (lk != null) UIKit.Place(lk, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 20), new Vector2(90, 90));
+            }
+            else if (pr.done)
+            {
+                var chk = CheckBadge(photo.transform, 64);
+                var le = chk.GetComponent<LayoutElement>();
+                if (le == null) le = chk.AddComponent<LayoutElement>();
+                le.ignoreLayout = true;
+                UIKit.Place(chk, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-12, -12), new Vector2(64, 64));
+            }
 
-                var col = Col(card.transform);
-                var title = UIKit.Row(col.transform, 40, 12);
-                UIKit.Label(title.transform, def.Name, 28, UIKit.Ink, TextAnchor.MiddleLeft, true);
-                UIKit.Label(title.transform, locked ? "Level " + def.UnlockLevel : pr.done ? "COMPLETE" : Mathf.Min(pr.stage + 1, def.Stages.Length) + "/" + def.Stages.Length, 24, locked ? UIKit.InkSoft : Purple, TextAnchor.MiddleRight, true);
-                Line(col.transform, def.Description, 20, UIKit.InkSoft);
-                Line(col.transform, "Bonus: " + def.PerkText + " · Reward: " + def.Reward, 18, UIKit.Ink);
+            T1(card.transform, def.Description, 28, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
+            Pill(card.transform, null, "Bonus: " + def.PerkText, 28, BGold);
+            Segs(card.transform, def.Stages.Length, pr.done ? def.Stages.Length : pr.stage, 0, 16);
 
-                if (locked || pr.done) continue;
+            if (!locked && !pr.done)
+            {
                 var stage = def.Stages[pr.stage];
                 var res = GameDatabase.Resource(stage.ResourceId);
-                // Notepad slip for the current stage, like a job card.
-                var slip = UIDeco.Slip(card.transform, 260);
-                UIKit.Size(slip.parent.gameObject, 400, 260);
-                var top = UIKit.Row(slip, 50, 10, TextAnchor.MiddleCenter);
-                UIKit.ResIcon(top.transform, stage.ResourceId, 46);
-                var dl = UIKit.Label(top.transform, "DELIVER " + stage.Amount, 30, UIKit.Ink, TextAnchor.MiddleLeft, false, FontStyle.Bold);
-                dl.font = UIKit.Display;
-                dl.fontStyle = FontStyle.Normal; // the face is already bold
-                var barRow = UIKit.Node("Progress", slip);
-                UIKit.Size(barRow, -1, 26);
-                UIKit.HStack(barRow, 0);
-                var bar = UIKit.Bar(barRow.transform, UIKit.Green, 24, new Color(0.25f, 0.18f, 0.12f, 0.55f));
+                int have = S.Amount(stage.ResourceId);
+                var row = HBox(card.transform, 12, 0, TextAnchor.MiddleLeft, -1, 76);
+                Well(row.transform, 76, tr => UIKit.ResIcon(tr, stage.ResourceId, 52));
+                var col = VBox(row.transform, 4, 0, TextAnchor.MiddleLeft, -1, -1, 1);
+                var top = HBox(col.transform, 6, 0, TextAnchor.MiddleLeft, -1, 34);
+                UIKit.Size(T1(top.transform, "Deliver " + res.Name, 30, Color.white, TextAnchor.MiddleLeft, true).gameObject, -1, -1, 1);
+                T(top.transform, pr.delivered + " / " + stage.Amount, 30, Color.white, TextAnchor.MiddleRight, true).horizontalOverflow = HorizontalWrapMode.Overflow;
+                var bar = Track(col.transform, 18, BGreen);
                 UIKit.SetBar(bar, pr.delivered / (float)stage.Amount);
-                var bt = UIKit.Label(bar.transform.parent, pr.delivered + " / " + stage.Amount + "   (have " + S.Amount(stage.ResourceId) + ")", 18, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
-                UIKit.Stretch(bt.gameObject);
-                bt.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.5f);
-                UIDeco.Rewards(slip, S, stage.Coins, stage.Xp, 0);
-                string id = def.Id;
-                UIKit.Btn(slip, "Deliver " + res.Name, UIKit.Green, () => Result(S.DeliverToProject(id), Sfx.Deliver), 20, -1, 52, S.Amount(stage.ResourceId) > 0);
+                T(col.transform, "You have " + Fmt.Num(have), 24, have > 0 ? BGood : BBad, TextAnchor.MiddleLeft, false, UIKit.Heading);
+
+                var rw = HBox(card.transform, 8, 0, TextAnchor.MiddleLeft, -1, 48);
+                T(rw.transform, "This stage", 26, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading).horizontalOverflow = HorizontalWrapMode.Overflow;
+                if (stage.Coins > 0) Pill(rw.transform, t => UIKit.CoinIcon(t, 38), Fmt.Num(stage.Coins), 28, null, BTile);
+                if (stage.Xp > 0) Pill(rw.transform, t => UIDeco.XpIcon(t, 38), stage.Xp.ToString(), 28, null, BTile);
             }
+            var fin = HBox(card.transform, 8, 0, TextAnchor.MiddleLeft, -1, 48);
+            T(fin.transform, "Finish", 26, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading).horizontalOverflow = HorizontalWrapMode.Overflow;
+            GrantPills(fin.transform, def.Reward, 0);
+            Flex(card.transform);
+
+            if (locked) { Big(card.transform, "Unlocks at level " + def.UnlockLevel, UIKit.Disabled, null, -1, 88, false, 34); return; }
+            if (pr.done) { Big(card.transform, "Bonus active", UIKit.Disabled, null, -1, 88, false, 34); return; }
+            var st = def.Stages[pr.stage];
+            string id = def.Id, rid = st.ResourceId;
+            var btns = HBox(card.transform, 12, 0, TextAnchor.MiddleCenter, -1, 92);
+            bool any = S.Amount(rid) > 0;
+            Big(btns.transform, "Deliver", any ? UIKit.Green : UIKit.Disabled, () => Result(S.DeliverToProject(id), Sfx.Deliver), any ? 528 : 380, 88, any, 40);
+            if (!any) Big(btns.transform, "Go", BBlue, () => GoGet(rid), 136, 88, true, 40);
         }
 
         // ================================================================ Blueprints (depot)
