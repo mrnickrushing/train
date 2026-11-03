@@ -499,11 +499,9 @@ namespace Ironhorse.Game
             if (_ordersTab == "projects")
             {
                 _boardSub = "Territory projects";
-                var paper = Box(panel.transform, UIKit.Parchment, -1, -1, "Paper");
-                UIKit.Size(paper.gameObject, -1, -1, 1, 1);
-                Stack(paper.gameObject, 0, new RectOffset(6, 6, 6, 6));
-                var list = Scroller(paper.transform, "projects", false, 14, new RectOffset(14, 14, 14, 14));
-                ProjectsTab(list);
+                Pill(right, null, "Deliver any amount · each stage pays out", 30);
+                var pcards = Scroller(panel.transform, "projects", true, 16);
+                foreach (var def in DepthContent.Projects) ProjectCard(pcards, def);
                 return;
             }
 
