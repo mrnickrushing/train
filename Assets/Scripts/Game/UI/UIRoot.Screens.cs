@@ -234,7 +234,8 @@ namespace Ironhorse.Game
             var p = S.PreviewDispatch(t, sel);
             T1(info.transform, sel.Name, 38, Color.white, TextAnchor.MiddleLeft, true);
             string cargo = sel.IsTown ? "riders" : ResName(sel.ResourceId);
-            T1(info.transform, p.Possible ? "Back in " + Fmt.Time(p.Seconds) + " with " + p.Amount + " " + cargo : p.Reason, 28, p.Possible ? BLabel : BBad, TextAnchor.MiddleLeft, false, UIKit.Heading);
+            string extra = p.Boom ? " (gold strike: double!)" : p.Bandits ? " · bandits on this line!" : "";
+            T1(info.transform, p.Possible ? "Back in " + Fmt.Time(p.Seconds) + " with " + p.Amount + " " + cargo + extra : p.Reason, 28, p.Possible ? (p.Bandits ? BBad : p.Boom ? BGold : BLabel) : BBad, TextAnchor.MiddleLeft, false, UIKit.Heading);
             string id = sel.Id;
             int uid = t.uid;
             if (p.Possible)
@@ -275,6 +276,12 @@ namespace Ironhorse.Game
             string cargo = dest.IsTown ? "Riders" : ResName(dest.ResourceId);
             var chip = Pill(ph.transform, Ico(resId, 44), cargo, 26, null, new Color(0.055f, 0.075f, 0.11f, 0.82f));
             Float(chip, new Vector2(0, 1), new Vector2(10, -10));
+            if (!locked && (pv.Boom || pv.Bandits))
+            {
+                var tag = Pill(ph.transform, Ico(pv.Boom ? "gold_ore" : "bandit", 44), pv.Boom ? "GOLD STRIKE ×2" : "BANDITS!", 26, pv.Boom ? BGold : Color.white,
+                    pv.Boom ? new Color(0.24f, 0.16f, 0.02f, 0.92f) : new Color(0.5f, 0.1f, 0.06f, 0.92f));
+                Float(tag, new Vector2(0, 1), new Vector2(10, -64));
+            }
             if (sel && !locked) Float(CheckBadge(ph.transform, 54), new Vector2(1, 1), new Vector2(-10, -10));
             if (locked)
             {
@@ -506,7 +513,7 @@ namespace Ironhorse.Game
             }
 
             _boardSub = ready > 0 ? ready + " ready to deliver" : "Town orders";
-            if (S.State.contracts.Count < S.ContractSlots)
+            if (S.RegularContracts < S.ContractSlots)
             {
                 var timer = Pill(right, tr => ClockIcon(tr, 40), "", 30);
                 var tt = timer.GetComponentInChildren<Text>();
@@ -514,8 +521,8 @@ namespace Ironhorse.Game
                 live(); Live(live);
             }
             var cards = Scroller(panel.transform, "orders", true, 16);
-            foreach (var c in S.State.contracts.ToList()) OrderCard(cards, c);
-            for (int i = S.State.contracts.Count; i < S.ContractSlots; i++) EmptyOrder(cards);
+            foreach (var c in S.State.contracts.OrderBy(x => x.express ? 0 : 1).ToList()) OrderCard(cards, c);
+            for (int i = S.RegularContracts; i < S.ContractSlots; i++) EmptyOrder(cards);
             if (S.CountBuilt("telegraph") == 0) TelegraphHint(cards);
         }
 
@@ -523,17 +530,26 @@ namespace Ironhorse.Game
         {
             bool can = S.CanDeliver(c);
             int uid = c.uid;
-            var card = Box(p, BCardDeep, 540, -1, "Order");
+            var card = Box(p, c.express ? Palette.Hex(0x2E2420) : BCardDeep, 540, -1, "Order");
             Stack(card.gameObject, 10, new RectOffset(16, 16, 16, 16), TextAnchor.UpperLeft);
-
-            var head = Photo(card.transform, BackdropFor(c.requirements[0].id), -1, 140, new Color(0.7f, 0.72f, 0.78f));
-            Overlay(head.transform, Fade(false), new Color(0.12f, 0.15f, 0.22f, 0.97f));
-            var kind = T(head.transform, "Town order", 26, BLabel, TextAnchor.UpperLeft, false, UIKit.Heading);
-            UIKit.Anchor(kind.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(20, -46), new Vector2(-150, -12));
-            var who = T(head.transform, c.client, 40, BGold, TextAnchor.UpperLeft, true);
-            UIKit.Anchor(who.gameObject, new Vector2(0, 0), new Vector2(1, 1), new Vector2(20, 8), new Vector2(-150, -50));
-            var big = UIKit.ResIcon(head.transform, c.requirements[0].id, 104);
-            UIKit.Place(big, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(118, 118));
+            if (c.express)
+            {
+                var ring = card.gameObject.AddComponent<Outline>();
+                ring.effectColor = BGold;
+                ring.effectDistance = new Vector2(4, -4);
+                TelegramHead(card.transform, c);
+            }
+            else
+            {
+                var head = Photo(card.transform, BackdropFor(c.requirements[0].id), -1, 140, new Color(0.7f, 0.72f, 0.78f));
+                Overlay(head.transform, Fade(false), new Color(0.12f, 0.15f, 0.22f, 0.97f));
+                var kind = T(head.transform, "Town order", 26, BLabel, TextAnchor.UpperLeft, false, UIKit.Heading);
+                UIKit.Anchor(kind.gameObject, new Vector2(0, 1), new Vector2(1, 1), new Vector2(20, -46), new Vector2(-150, -12));
+                var who = T(head.transform, c.client, 40, BGold, TextAnchor.UpperLeft, true);
+                UIKit.Anchor(who.gameObject, new Vector2(0, 0), new Vector2(1, 1), new Vector2(20, 8), new Vector2(-150, -50));
+                var big = UIKit.ResIcon(head.transform, c.requirements[0].id, 104);
+                UIKit.Place(big, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(118, 118));
+            }
 
             float h = c.requirements.Count == 1 ? 130 : c.requirements.Count == 2 ? 96 : 76;
             foreach (var r in c.requirements) ReqRow(card.transform, r, h);
@@ -554,7 +570,7 @@ namespace Ironhorse.Game
                 string mid = c.requirements.Where(r => S.Amount(r.id) < r.amount).Select(r => r.id).FirstOrDefault() ?? c.requirements[0].id;
                 Big(btns.transform, "Go", BBlue, () => GoGet(mid), 340, 82, true, 44);
             }
-            Big(btns.transform, "Skip", UIKit.WoodLight, () => Result(S.DiscardContract(uid), Sfx.Click), 146, 82, true, 32);
+            Big(btns.transform, c.express ? "Pass" : "Skip", UIKit.WoodLight, () => Result(S.DiscardContract(uid), Sfx.Click), 146, 82, true, 32);
         }
 
         void ReqRow(Transform p, ResourceAmount r, float h)
@@ -738,7 +754,10 @@ namespace Ironhorse.Game
         {
             Big(right, "Locomotives", _depotTab == "locos" ? UIKit.Gold : UIKit.WoodLight, () => { _depotTab = "locos"; RebuildWindow(); }, 270, 76, true, 34);
             Big(right, "Wagons", _depotTab == "wagons" ? UIKit.Gold : UIKit.WoodLight, () => { _depotTab = "wagons"; RebuildWindow(); }, 200, 76, true, 34);
-            if (_depotTab == "wagons") WagonDepot(body);
+            var album = Big(right, "Album", _depotTab == "album" ? UIKit.Gold : UIKit.WoodLight, () => { _depotTab = "album"; RebuildWindow(); }, 190, 76, true, 34);
+            if (S.AlbumClaimable > 0) UIKit.Badge(album.transform, S.AlbumClaimable.ToString(), UIKit.Red);
+            if (_depotTab == "album") AlbumDepot(body);
+            else if (_depotTab == "wagons") WagonDepot(body);
             else LocoDepot(body);
         }
 
@@ -768,7 +787,7 @@ namespace Ironhorse.Game
             {
                 bool on = ld.Id == d.Id, lk = !S.IsLocoUnlocked(ld);
                 int count = S.State.trains.Count(x => x.defId == ld.Id);
-                var bg = on ? BGold : lk ? Palette.Hex(0x2B3345) : ld.Rarity >= Rarity.Epic ? Palette.Hex(0x5A3C8E) : BTile;
+                var bg = on ? BGold : lk ? Palette.Hex(0x2B3345) : ld.Rarity >= Rarity.Epic ? Palette.Hex(0x6E4A1E) : BTile;
                 var tile = UIKit.Panel(list, bg, "Loco", UIKit.RoundedGrad);
                 tile.pixelsPerUnitMultiplier = 1.6f;
                 UIKit.Size(tile.gameObject, 172, 96);

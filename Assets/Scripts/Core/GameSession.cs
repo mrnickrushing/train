@@ -67,6 +67,7 @@ namespace Ironhorse.Core
                 if (IsProductionDone(b)) _productionSeen.Add(b.uid);
             }
             FillContracts(force: State.contracts.Count == 0 && State.nextContractAt <= 0);
+            BuildAwayReport();
         }
 
         public static GameState NewGame(double now, int seed)
@@ -116,6 +117,7 @@ namespace Ironhorse.Core
             State.buildings.RemoveAll(b => GameDatabase.Building(b.defId) == null);
             RepairMonetization();
             RepairDepth();
+            RepairHooks();
         }
 
         // ---------------------------------------------------------------- Tick
@@ -130,7 +132,9 @@ namespace Ironhorse.Core
                 if (!t.IsIdle && now >= t.arrivesAt && _arrivalSeen.Add(t.uid))
                 {
                     var d = GameDatabase.Destination(t.destinationId);
-                    Notify?.Invoke(Name(t) + " is back from " + (d != null ? d.Name : "the line") + "!");
+                    var res = GameDatabase.Resource(t.cargoId);
+                    if (t.robbed > 0 && res != null) Notify?.Invoke("Bandits held up " + Name(t) + " and made off with " + t.robbed + " " + res.Name + "!");
+                    else Notify?.Invoke(Name(t) + " is back from " + (d != null ? d.Name : "the line") + (t.crate ? " with a mystery crate!" : "!"));
                     TrainArrived?.Invoke(t);
                     changed = true;
                 }
@@ -150,6 +154,7 @@ namespace Ironhorse.Core
                 }
             }
             if (FillContracts(force: false)) changed = true;
+            if (TickHooks()) changed = true;
             int season = State.passSeason;
             RollSeason();
             if (season != State.passSeason) changed = true;
@@ -248,7 +253,7 @@ namespace Ironhorse.Core
                 var d = GameDatabase.Building(b.defId);
                 if (d.Effect == fx) total += d.EffectValue * (fx == CivicEffect.ContractSlot || fx == CivicEffect.CoinCap ? 1 : Balance.BuildingLevelMultiplier(b.level));
             }
-            return total + ProjectPerk(fx);
+            return total + ProjectPerk(fx) + AlbumPerk(fx);
         }
 
         public int Population

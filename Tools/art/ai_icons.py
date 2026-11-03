@@ -2,7 +2,7 @@
 """Game icons (Higgsfield GPT Image 2.5, transparent background), one consistent style.
 
   python3 Tools/art/ai_icons.py gen [<id>...]   # generate (skips existing)
-  python3 Tools/art/ai_icons.py install         # trim, resize to 256 px -> Assets/Resources/UI/Icons/<id>.png
+  python3 Tools/art/ai_icons.py install [<id>...] # trim, resize to 256 px -> Assets/Resources/UI/Icons/<id>.png
 
 Raw files: art-src/icons/. Never regenerate an id that already exists unless you delete it first.
 """
@@ -67,24 +67,35 @@ I = {
     "shop_coins": "a big heap of shiny gold coins embossed with steam locomotives, a few coins standing on edge",
     "shop_fuel": "a large wooden railway coal bin heaped with glossy black coal next to two steel water cans",
     "shop_supplies": "a stack of three wooden supply crates with rope handles, one open showing steel ingots, tools and planks",
+    # Daily hooks (medium quality: 0.5 credits each)
+    "payday": "a brown leather money pouch tied with a cord, spilling a few shiny gold coins, with a small paper pay envelope behind it",
+    "telegram": "a folded yellowed telegram paper slip with a red urgent wax stamp, lying over a small brass telegraph key",
+    "crate_mystery": "a wooden treasure crate with iron corners, its lid slightly open with bright golden light glowing out",
+    "bandit": "the head and shoulders of a frontier outlaw wearing a black cowboy hat and a red bandana mask over his face, narrowed eyes",
+    "tumbleweed": "a round dry tan tumbleweed ball of tangled twigs with a couple of gold coins caught in it",
+    "traveler": "a worn brown leather travel suitcase with brass clasps and a cowboy hat resting on top",
+    "album": "a thick brown leather-bound collector's album with brass corners and a few old locomotive photographs sticking out of the pages",
     "foreman": "a friendly portrait of a weathered railroad foreman with a grey moustache, a brown bowler hat and a red neckerchief, head and shoulders",
 }
+
+MEDIUM = {"payday", "telegram", "crate_mystery", "bandit", "tumbleweed", "traveler", "album"}
 
 
 def gen(i):
     p = os.path.join(SRC, i + ".png")
     if os.path.exists(p):
         return print("have", p)
-    url = hf("generate", "create", "gpt_image_2_5", "--aspect_ratio", "1:1", "--quality", "high", "--resolution", "1k",
+    quality = "medium" if i in MEDIUM else "high"
+    url = hf("generate", "create", "gpt_image_2_5", "--aspect_ratio", "1:1", "--quality", quality, "--resolution", "1k",
              "--background", "transparent", "--prompt", STYLE.format(what=I[i]), "--wait")
     fetch(url, p)
     print("icon", i, url)
 
 
-def install():
+def install(ids=None):
     from PIL import Image
     os.makedirs(DST, exist_ok=True)
-    for i in I:
+    for i in ids or I:
         p = os.path.join(SRC, i + ".png")
         if not os.path.exists(p):
             continue
@@ -102,7 +113,7 @@ def install():
 if __name__ == "__main__":
     os.makedirs(SRC, exist_ok=True)
     if sys.argv[1] == "install":
-        install()
+        install(sys.argv[2:])
     else:
         for i in sys.argv[2:] or list(I):
             try:

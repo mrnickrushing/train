@@ -12,6 +12,10 @@ namespace Ironhorse.Core
         public double Seconds;
         public int Xp;
         public int Fuel;
+        /// <summary>A gold strike doubled the load.</summary>
+        public bool Boom;
+        /// <summary>Bandits are on this line.</summary>
+        public bool Bandits;
     }
 
     public sealed partial class GameSession
@@ -64,6 +68,8 @@ namespace Ironhorse.Core
             }
             p.Amount = (int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level) * d.Yield * (1 + CivicBonus(CivicEffect.Yield)));
             if (d.IsTown) p.Amount = Math.Min((int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level)), Balance.PassengerDemand(Population));
+            else if (BoomAt(d.Id)) { p.Amount *= 2; p.Boom = true; }
+            p.Bandits = BanditsOn(d.Id);
             p.Xp = Balance.XpForCargo(res, p.Amount);
             p.Fuel = FuelCost(t, d);
 
@@ -105,6 +111,7 @@ namespace Ironhorse.Core
             if (!p.Possible) return ActionResult.Fail(p.Reason);
             if (!TrySpendFuel(p.Fuel)) return ActionResult.Fail("Not enough fuel");
             AddPassXp(Balance.PassXpDispatch);
+            string crate = t.crate ? OpenCrateOn(t) : null; // never lose an unopened crate
 
             t.destinationId = d.Id;
             t.departedAt = Now;
@@ -113,9 +120,10 @@ namespace Ironhorse.Core
             t.cargoAmount = p.Amount;
             _arrivalSeen.Remove(t.uid);
             State.stats.dispatches++;
+            RollTrip(t, p);
             TrainDeparted?.Invoke(t);
             RaiseChanged();
-            return ActionResult.Success(Name(t) + " departs for " + d.Name);
+            return ActionResult.Success(Name(t) + " departs for " + d.Name + (crate != null ? ". " + crate : ""));
         }
 
         /// <summary>Unload an arrived train. If the warehouse is short on space, the rest stays aboard.</summary>

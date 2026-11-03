@@ -68,6 +68,7 @@ namespace Ironhorse.Game
             BuildBanner();
             BuildMoneyHud();
             BuildDepthHud();
+            BuildHooksHud();
             _windowLayer = UIKit.Stretch(UIKit.Node("Windows", cgo.transform));
             _popupLayer = UIKit.Stretch(UIKit.Node("Popups", cgo.transform));
             _toasts = UIKit.Anchor(UIKit.Node("Toasts", cgo.transform), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-420, -360), new Vector2(420, -150));
@@ -91,8 +92,11 @@ namespace Ironhorse.Game
             };
             S.LocomotiveAdded += t => Celebrations.Instance.Play("newloco", "New Locomotive!", GameDatabase.Locomotive(t.defId).Name + " joins your fleet.", force: true);
             S.TaskSetCompleted += ts => Celebrations.Instance.Confetti();
+            S.TelegramArrived += OnTelegram;
+            S.MapEventStarted += OnMapEvent;
+            S.AlbumSetCompleted += a => AudioManager.Play(Sfx.LevelUp);
             RefreshHud();
-            Invoke(nameof(MaybeShowFeaturedOffer), 4f);
+            Invoke(nameof(QueueOffer), 4f);
         }
 
         void Update()
@@ -114,6 +118,7 @@ namespace Ironhorse.Game
                 foreach (var a in _live.ToList()) a();
                 UpdateCoach();
             }
+            UpdateWelcome();
             UpdateMarkers();
         }
 
@@ -323,7 +328,7 @@ namespace Ironhorse.Game
             BarButton(bar.transform, "Territory", UIKit.Blue, () => OpenTerritory(), MapGlyph);
             _contractsBadge = BarButton(bar.transform, "Contracts", UIKit.Green, () => OpenContracts(), ScrollGlyph);
             BarButton(bar.transform, "Build", UIKit.BrassDark, () => OpenBuildMenu(), HammerGlyph);
-            BarButton(bar.transform, "Depot", UIKit.WoodLight, () => OpenDepot(), WheelGlyph);
+            _depotBadge = BarButton(bar.transform, "Depot", UIKit.WoodLight, () => OpenDepot(S.AlbumClaimable > 0 ? "album" : null), WheelGlyph);
             BarButton(bar.transform, "Warehouse", UIKit.WoodMid, () => OpenWarehouse(), CrateIcon);
         }
 
@@ -486,6 +491,7 @@ namespace Ironhorse.Game
             RefreshMoneyHud();
             RefreshDepthHud();
             RefreshChapterHud();
+            RefreshHooksHud();
             _level.text = S.Level.ToString();
             UIKit.SetBar(_xpFill, S.LevelProgress);
             _xpText.text = Fmt.Num(S.State.xp) + " / " + Fmt.Num(Balance.XpForNextLevel(S.Level)) + " XP";
@@ -846,6 +852,16 @@ namespace Ironhorse.Game
                         }, true);
                     }
                 }
+                foreach (var t in S.State.trains)
+                {
+                    if (!t.crate || S.IsEnRoute(t)) continue;
+                    var view = TrainManager.Instance != null ? TrainManager.Instance.View(t.uid) : null;
+                    if (view == null || !view.IsShownAtStation) continue;
+                    int uid = t.uid;
+                    var at = CratePosition(view);
+                    ShowMarker(at, "crate", h => UIKit.Icon(h, "crate_mystery", 64), "?", -1, () => OpenCrateOn(uid, at), true);
+                }
+                UpdateEventMarkers();
                 foreach (var b in S.State.buildings)
                 {
                     var view = TownView.Instance.View(b.uid);

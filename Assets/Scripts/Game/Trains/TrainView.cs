@@ -150,6 +150,9 @@ namespace Ironhorse.Game
         protected void ResetMotion() { _lastS = float.NaN; Speed = 0; }
 
         public Vector3 LeadPosition { get { return Cars.Count > 0 ? Cars[0].Root.position : transform.position; } }
+
+        /// <summary>The second or third car back (the lead when there are no wagons).</summary>
+        public Vector3 MidPosition { get { return Cars.Count > 1 ? Cars[Mathf.Min(Cars.Count - 1, 2)].Root.position : LeadPosition; } }
     }
 
     public sealed class TrainView : ConsistView, ISelectable

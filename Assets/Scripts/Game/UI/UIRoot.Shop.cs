@@ -490,6 +490,13 @@ namespace Ironhorse.Game
 
         // ================================================================ Featured offer popup
 
+        /// <summary>After the welcome cards when they're showing; otherwise only if nothing else is open.</summary>
+        void QueueOffer()
+        {
+            if (_welcome.Count > 0 || (WindowOpen && (_windowTitle == "While You Were Away" || _windowTitle == "Payday"))) _welcome.Enqueue(MaybeShowFeaturedOffer);
+            else MaybeShowFeaturedOffer();
+        }
+
         void MaybeShowFeaturedOffer()
         {
             if (WindowOpen) return;

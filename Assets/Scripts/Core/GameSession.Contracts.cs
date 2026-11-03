@@ -32,13 +32,16 @@ namespace Ironhorse.Core
             return list;
         }
 
+        /// <summary>Ordinary orders on the board (the express telegram doesn't take a slot).</summary>
+        public int RegularContracts { get { return State.contracts.Count(c => !c.express); } }
+
         bool FillContracts(bool force)
         {
-            if (State.contracts.Count >= ContractSlots) return false;
+            if (RegularContracts >= ContractSlots) return false;
             if (force)
             {
                 // Fresh board: fill every slot at once.
-                while (State.contracts.Count < ContractSlots) State.contracts.Add(GenerateContract());
+                while (RegularContracts < ContractSlots) State.contracts.Add(GenerateContract());
                 State.nextContractAt = Now + Balance.ContractRefreshSeconds;
                 return true;
             }
@@ -100,8 +103,9 @@ namespace Ironhorse.Core
             State.contracts.Remove(c);
             State.stats.contractsCompleted++;
             AddPassXp(Balance.PassXpContract);
-            // A fresh order arrives shortly after a delivery.
-            State.nextContractAt = Math.Min(State.nextContractAt, Now + 10);
+            // A fresh order arrives shortly after a delivery; the next telegram after a gap.
+            if (c.express) State.nextExpressAt = Now + Hooks.ExpressGap;
+            else State.nextContractAt = Math.Min(State.nextContractAt, Now + 10);
             ContractCompleted?.Invoke(c);
             RaiseChanged();
             return ActionResult.Success(c.client + " pays " + c.rewardCoins + " coins");
@@ -112,6 +116,12 @@ namespace Ironhorse.Core
             var c = State.contracts.FirstOrDefault(x => x.uid == uid);
             if (c == null) return ActionResult.Fail("Unknown contract");
             State.contracts.Remove(c);
+            if (c.express)
+            {
+                State.nextExpressAt = Now + Hooks.ExpressGap;
+                RaiseChanged();
+                return ActionResult.Success("Telegram declined");
+            }
             State.nextContractAt = Now + Balance.ContractRefreshSeconds;
             RaiseChanged();
             return ActionResult.Success("Contract torn up. A new one arrives in " + (int)Balance.ContractRefreshSeconds / 60 + " min");
