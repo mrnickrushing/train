@@ -47,6 +47,9 @@ workflows:
         script: |
           echo "Build number: $BUILD_NUMBER"   # Codemagic's per-workflow counter
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/Info.plist
+          # Only standard HTTPS: answers App Store Connect's export-compliance question up front.
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/Info.plist 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/Info.plist
       - &archive
         name: Archive and export signed .ipa
         script: |
@@ -140,6 +143,7 @@ workflows:
           echo "Build number: $BUILD_NUMBER"   # Codemagic's per-workflow counter
           "$UNITY_BIN" -batchmode -quit -nographics -projectPath "$CM_BUILD_DIR" \
             -buildTarget iOS -executeMethod Ironhorse.EditorTools.BuildScript.BuildIos -logFile -
+      - *build_number
       - *archive
     artifacts:
       - build/ios/ipa/*.ipa
