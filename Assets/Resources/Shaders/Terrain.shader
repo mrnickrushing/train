@@ -23,11 +23,14 @@ Shader "Ironhorse/Terrain"
         TEXTURE2D_ARRAY(_TerrainAlbedo); SAMPLER(sampler_TerrainAlbedo);
         TEXTURE2D_ARRAY(_TerrainNormal); SAMPLER(sampler_TerrainNormal);
         TEXTURE2D(_MacroTex); SAMPLER(sampler_MacroTex);
+        // Town ground mask (global, from TownStreets): R dirt road, G gravel street, B worn lot, A wheel ruts.
+        TEXTURE2D(_TownMask); SAMPLER(sampler_TownMask);
+        float4 _TownMaskRect; // xMin, zMin, 1/width, 1/height (0 = no mask)
         CBUFFER_START(UnityPerMaterial)
             float4 _MacroTex_ST;
         CBUFFER_END
         // Meters per texture tile for grass, dry grass, dirt, sand, rock, gravel.
-        static const float kTile[6] = { 4.5, 6.0, 5.0, 5.0, 9.0, 3.0 };
+        static const float kTile[6] = { 7.0, 8.0, 4.0, 5.0, 9.0, 2.6 };
         // Per layer color correction so the photo textures sit in the game's warm palette.
         static const float3 kTint[6] = { float3(0.86, 1.04, 0.66), float3(1.08, 1.04, 0.66), float3(1.0, 0.95, 0.9), float3(1.05, 1.0, 0.95), float3(1.05, 0.95, 0.9), float3(1.0, 1.0, 1.0) };
         ENDHLSL
@@ -111,6 +114,13 @@ Shader "Ironhorse/Terrain"
                 float3 blend = pow(abs(nGeo), 4); blend /= dot(blend, 1);
 
                 float w[6] = { i.w0123.x, i.w0123.y, i.w0123.z, i.w0123.w, i.w45.x, i.w45.y };
+                // Streets and lots painted into the ground: soft-edged dirt tracks, gravel, worn earth.
+                float2 muv = (pos.xz - _TownMaskRect.xy) * _TownMaskRect.zw;
+                float4 town = _TownMaskRect.z > 0 && all(muv > 0) && all(muv < 1) ? SAMPLE_TEXTURE2D(_TownMask, sampler_TownMask, muv) : 0;
+                float cover = saturate(town.r + town.g + town.b);
+                [unroll] for (int k0 = 0; k0 < 6; k0++) w[k0] *= 1 - cover;
+                w[2] += town.r + town.b; // dirt (roads and worn lots)
+                w[5] += town.g;          // gravel
                 float wsum = 0;
                 [unroll] for (int k = 0; k < 6; k++) wsum += w[k];
 
@@ -133,6 +143,7 @@ Shader "Ironhorse/Terrain"
                     albedo += alb[k3].rgb * hw; n += nrm[k3] * hw; total += hw;
                 }
                 albedo /= max(total, 1e-4); n /= max(total, 1e-4);
+                albedo *= 1 - town.a * 0.35; // packed wheel ruts
 
                 // Large-scale brightness/hue variation hides tiling from the high camera.
                 float m1 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.006).r;
@@ -149,7 +160,7 @@ Shader "Ironhorse/Terrain"
                 albedo = lerp(albedo, vcol, remainder);
 
                 float2 nxy = float2(n.a, n.g) * 2 - 1;
-                float3 normalWS = normalize(nGeo + float3(nxy.x, 0, nxy.y) * (1 - remainder) * 1.3);
+                float3 normalWS = normalize(nGeo + float3(nxy.x, 0, nxy.y) * (1 - remainder) * 0.8);
 
                 InputData inputData = (InputData)0;
                 inputData.positionWS = pos;

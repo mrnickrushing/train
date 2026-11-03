@@ -145,7 +145,6 @@ namespace Ironhorse.Game
             var a = new MeshBuilder();
             a.Matte();
             float h = WorldLayout.PlotSize / 2 - 0.3f;
-            a.Box(new Vector3(0, 0.05f, 0), new Vector3(h * 2, 0.08f, h * 2), MeshBuilder.Darken(Palette.Dirt, 1.05f));
             for (int i = 0; i < 4; i++)
             {
                 float x = i % 2 == 0 ? -h : h, z = i < 2 ? -h : h;
