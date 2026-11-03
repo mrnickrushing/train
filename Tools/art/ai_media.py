@@ -136,6 +136,53 @@ ICONS = {
 }
 
 
+POSTCARD = ("Painted vintage American frontier travel-poster illustration, wide landscape scene, semi-realistic and rich like "
+            "premium mobile tycoon game key art, warm golden late-afternoon light, strong depth. {what} A small steam train "
+            "with a plume of white smoke runs along a railroad track in the middle distance. No text, no letters, no logos, "
+            "no border, no frame, no people in the foreground.")
+DESTS = {
+    "pinecrest": "A logging camp on high pine-covered ridges: stacked logs, a timber flume, a sawdust-covered clearing and a wooden loading chute.",
+    "blackhollow": "A coal mine at the edge of grey badlands: a timber headframe, ore carts on narrow rails, black coal heaps and a smoking stack.",
+    "willowflats": "Golden wheat farmland to the horizon: a red barn, a windmill, haystacks and a small grain elevator by the track.",
+    "rattlesnake": "A dusty cattle ranch: longhorn cattle in wooden corrals, a ranch house, cowboys' horses and a cattle loading pen by the track.",
+    "ironback": "Red rock canyon cliffs streaked with iron ore: a mine portal in the cliff, ore hoppers and a wooden ore tipple.",
+    "fortcalder": "A wooden cavalry fort with a stockade, a flagpole with a flag, watchtowers and a small mail depot on open plains.",
+    "coppertop": "Green-stained copper hills with a boomtown of white canvas tents, a stamp mill and miners' shacks.",
+    "eldorado": "A rugged gold-mining gulch with a rushing creek, sluice boxes, a wooden mining town clinging to the slopes.",
+    "blackgold": "Oil fields on the open prairie: wooden oil derricks, storage tanks and black gushers against a big sky.",
+    "silversprings": "An elegant spa town in green hills: a white bathhouse with columns, steaming hot springs and a pretty station.",
+    "prosperity": "A booming brick city: a clock tower, busy streets, a grand railway station with arched windows and flags.",
+    "capitaljct": "The territorial capital: a domed capitol building, a huge railway junction with many tracks and an ornate station hall.",
+}
+
+
+def postcard(i):
+    p = os.path.join(SRC, "dest_" + i + ".png")
+    if os.path.exists(p):
+        return print("have", p)
+    url = hf("generate", "create", "gpt_image_2_5", "--aspect_ratio", "16:9", "--quality", "high", "--resolution", "1k",
+             "--background", "opaque", "--prompt", POSTCARD.format(what=DESTS[i]), "--wait")
+    fetch(url, p)
+    print("postcard", i, url)
+
+
+def postcard_install():
+    """Destination art -> Assets/Resources/UI/Destinations/<id>.jpg (768 px wide)."""
+    from PIL import Image
+    d = os.path.join(ROOT, "Assets", "Resources", "UI", "Destinations")
+    os.makedirs(d, exist_ok=True)
+    n = 0
+    for i in DESTS:
+        p = os.path.join(SRC, "dest_" + i + ".png")
+        if not os.path.exists(p):
+            continue
+        im = Image.open(p).convert("RGB")
+        im.thumbnail((768, 768))
+        im.save(os.path.join(d, i + ".jpg"), quality=86)
+        n += 1
+    print("installed", n, "postcards")
+
+
 def icon(i):
     p = os.path.join(SRC, i + ".png")
     if os.path.exists(p):
@@ -216,6 +263,11 @@ if __name__ == "__main__":
     elif cmd == "icon":            # ai_media.py icon [appicon_a ...]   (paid: 2.75 credits each)
         for i in (sys.argv[2:] or list(ICONS)):
             icon(i)
+    elif cmd == "postcard":        # ai_media.py postcard [id ...]   (paid: 1.5 credits each)
+        for i in (sys.argv[2:] or list(DESTS)):
+            postcard(i)
+    elif cmd == "postcard-install":
+        postcard_install()
     elif cmd == "icon-install":    # ai_media.py icon-install appicon_a
         icon_install(sys.argv[2])
     elif cmd == "story":

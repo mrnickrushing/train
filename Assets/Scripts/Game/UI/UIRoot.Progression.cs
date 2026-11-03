@@ -19,10 +19,10 @@ namespace Ironhorse.Game
 
         void BuildChapterHud()
         {
-            var card = UIKit.Panel(_safe, UIKit.Wood, "Chapter", UIKit.Rounded, true);
+            var card = UIKit.KitImage(_safe, "card_wood", "Chapter");
             _chapterCard = card.gameObject;
             UIKit.Place(_chapterCard, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -300), new Vector2(430, 118));
-            card.gameObject.AddComponent<Outline>().effectColor = UIKit.Brass;
+            HudShadow(card.gameObject);
             Clickable(_chapterCard, OpenTimeline);
             var v = UIKit.Node("V", card.transform);
             UIKit.Stretch(v, 12);
