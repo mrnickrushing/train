@@ -62,7 +62,9 @@ workflows:
           xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Release \
             -destination "generic/platform=iOS" -archivePath /tmp/Ironhorse.xcarchive \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic COMPILER_INDEX_STORE_ENABLE=NO \
-            "${AUTH[@]}" archive | xcpretty || { echo "xcodebuild archive failed"; exit 1; }
+            "${AUTH[@]}" archive > /tmp/xcodebuild_archive.log 2>&1 \
+            || { grep -E "error:|error -|Error Domain|No profiles|No signing|requires a provisioning|failed" /tmp/xcodebuild_archive.log | sort -u | tail -40; echo "xcodebuild archive failed (full log in artifacts)"; exit 1; }
+          tail -3 /tmp/xcodebuild_archive.log
           cat > /tmp/export_options.plist <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -77,10 +79,12 @@ workflows:
           PLIST
           mkdir -p build/ios/ipa
           xcodebuild -exportArchive -archivePath /tmp/Ironhorse.xcarchive -exportPath build/ios/ipa \
-            -exportOptionsPlist /tmp/export_options.plist "${AUTH[@]}"
+            -exportOptionsPlist /tmp/export_options.plist "${AUTH[@]}" > /tmp/xcodebuild_export.log 2>&1 \
+            || { grep -E "error|Error" /tmp/xcodebuild_export.log | tail -30; exit 1; }
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/Ironhorse.xcarchive/dSYMs/*.dSYM
+      - /tmp/xcodebuild_*.log
     publishing:
       app_store_connect: &publish
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
