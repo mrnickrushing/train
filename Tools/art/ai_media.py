@@ -123,6 +123,37 @@ def still(i):
     print("still", i, url)
 
 
+ICON_BASE = ("Premium mobile game app icon, full-bleed square artwork with NO border, NO rounded corners, NO frame and NO text. "
+             "Semi-realistic painted style like a top-grossing railroad tycoon game: rich color, crisp edges, strong silhouette and high "
+             "contrast that still reads at 60 pixels. ")
+ICONS = {
+    "appicon_a": ICON_BASE + "A crimson and polished-brass 1880s 4-4-0 steam locomotive charging straight at the viewer in a dramatic low "
+                 "three-quarter view, filling most of the frame: big glowing round headlamp, iron cowcatcher, brass bell, tall flared "
+                 "smokestack pouring white steam. Behind it a blazing golden sunset sky and a red desert mesa silhouette.",
+    "appicon_b": ICON_BASE + "The front of a crimson and gold 1880s steam locomotive, nearly head-on and centered, its big glowing "
+                 "headlamp in the middle of the icon, brass trim and a curl of white steam rising, set against a bold golden "
+                 "sunburst over a red canyon. Simple, iconic composition.",
+}
+
+
+def icon(i):
+    p = os.path.join(SRC, i + ".png")
+    if os.path.exists(p):
+        return print("have", p)
+    url = hf("generate", "create", "gpt_image_2_5", "--aspect_ratio", "1:1", "--quality", "high", "--resolution", "2k",
+             "--background", "opaque", "--prompt", ICONS[i], "--wait")
+    fetch(url, p)
+    print("icon", i, url)
+
+
+def icon_install(i):
+    """The chosen icon -> Assets/Art/AppIcon.png (1024x1024, no alpha, as the App Store requires)."""
+    from PIL import Image
+    im = Image.open(os.path.join(SRC, i + ".png")).convert("RGB").resize((1024, 1024), Image.LANCZOS)
+    im.save(os.path.join(ROOT, "Assets", "Art", "AppIcon.png"), optimize=True)
+    print("installed app icon from", i)
+
+
 def video(i):
     if "motion" not in M[i]:
         return print("no video for", i)
@@ -182,6 +213,11 @@ if __name__ == "__main__":
     if cmd == "install":
         install()
         install_story()
+    elif cmd == "icon":            # ai_media.py icon [appicon_a ...]   (paid: 2.75 credits each)
+        for i in (sys.argv[2:] or list(ICONS)):
+            icon(i)
+    elif cmd == "icon-install":    # ai_media.py icon-install appicon_a
+        icon_install(sys.argv[2])
     elif cmd == "story":
         for i in ids if sys.argv[2:] else list(CHARACTERS) + list(SCENES):
             try:

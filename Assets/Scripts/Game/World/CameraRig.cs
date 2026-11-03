@@ -9,7 +9,7 @@ namespace Ironhorse.Game
     }
 
     /// <summary>
-    /// City-builder camera: one-finger drag pans, pinch zooms, two-finger twist rotates.
+    /// City-builder camera: one-finger drag pans, pinch zooms (only).
     /// Mouse: left-drag pan, right-drag rotate, wheel zoom. Taps raycast into the world.
     /// </summary>
     public sealed class CameraRig : MonoBehaviour
@@ -34,7 +34,7 @@ namespace Ironhorse.Game
         bool _dragging, _pressOverUI, _multiTouch;
         Vector3 _lastWorldDrag;
         Vector3 _velocity;
-        float _lastPinch, _lastTwist;
+        float _lastPinch;
         float _lastTapTime = -1;
         Vector2 _lastTapPos;
         Transform _follow;
@@ -122,7 +122,7 @@ namespace Ironhorse.Game
         {
             if (Input.GetMouseButtonDown(0))
             {
-                _pressOverUI = IsPointerOverUI();
+                _pressOverUI = UIUnder(Input.mousePosition);
                 _pressPos = Input.mousePosition;
                 _pressTime = Time.unscaledTime;
                 _dragging = false;
@@ -146,62 +146,77 @@ namespace Ironhorse.Game
 
         // ---------------------------------------------------------------- touch
 
+        int _panFinger = -1;
+
         void HandleTouch()
         {
-            if (Input.touchCount == 1 && !_multiTouch)
+            if (Input.touchCount >= 2)
             {
-                var t = Input.GetTouch(0);
-                if (t.phase == TouchPhase.Began)
-                {
-                    _pressOverUI = IsPointerOverUI(t.fingerId);
-                    _pressPos = t.position;
-                    _pressTime = Time.unscaledTime;
-                    _dragging = false;
-                    _lastWorldDrag = GroundPoint(t.position);
-                    _velocity = Vector3.zero;
-                }
-                else if (t.phase == TouchPhase.Moved && !_pressOverUI)
-                {
-                    if (!_dragging && (t.position - _pressPos).magnitude > DragThreshold) { _dragging = true; _follow = null; }
-                    if (_dragging) DragTo(t.position);
-                }
-                else if (t.phase == TouchPhase.Ended)
-                {
-                    if (!_pressOverUI && !_dragging && Time.unscaledTime - _pressTime < 0.5f)
-                    {
-                        // Double-tap toggles the whole-valley overview; a single tap selects.
-                        if (Time.unscaledTime - _lastTapTime < 0.3f && (t.position - _lastTapPos).magnitude < 80f) { ToggleOverview(); _lastTapTime = -1; }
-                        else { Tap(t.position); _lastTapTime = Time.unscaledTime; _lastTapPos = t.position; }
-                    }
-                    _dragging = false;
-                }
-            }
-            else if (Input.touchCount >= 2)
-            {
+                // Pinch zooms, nothing else: the view doesn't slide or twist under two fingers.
                 var a = Input.GetTouch(0); var b = Input.GetTouch(1);
                 float pinch = (a.position - b.position).magnitude;
-                float twist = Mathf.Atan2(b.position.y - a.position.y, b.position.x - a.position.x) * Mathf.Rad2Deg;
                 if (!_multiTouch || a.phase == TouchPhase.Began || b.phase == TouchPhase.Began)
                 {
                     _multiTouch = true;
                     _dragging = false;
+                    _velocity = Vector3.zero;
                     _lastPinch = pinch;
-                    _lastTwist = twist;
-                    _lastWorldDrag = GroundPoint((a.position + b.position) / 2);
                 }
                 else
                 {
                     if (_lastPinch > 1 && pinch > 1) _distTarget *= Mathf.Pow(_lastPinch / pinch, 1.6f); // a bit faster than 1:1 to cross the valley quickly
-                    _yawTarget -= Mathf.DeltaAngle(_lastTwist, twist);
                     _lastPinch = pinch;
-                    _lastTwist = twist;
-                    var mid = GroundPoint((a.position + b.position) / 2);
-                    _focusTarget += _lastWorldDrag - mid;
-                    Focus = _focusTarget; // the grabbed ground point stays fixed in the world
                 }
+                _panFinger = -1;
+                return;
             }
-            if (Input.touchCount == 0) _multiTouch = false;
+            if (Input.touchCount == 0) { _multiTouch = false; _panFinger = -1; return; }
+
+            var t = Input.GetTouch(0);
+            if (t.phase == TouchPhase.Began || t.fingerId != _panFinger)
+            {
+                // A new finger, or the finger left over after a pinch: grab the ground under it.
+                bool fresh = t.phase == TouchPhase.Began && !_multiTouch;
+                _panFinger = t.fingerId;
+                _pressOverUI = fresh && UIUnder(t.position);
+                _pressPos = t.position;
+                _pressTime = fresh ? Time.unscaledTime : -10f; // a finger left over from a pinch never taps
+                _dragging = !fresh && !_pressOverUI;
+                _lastWorldDrag = GroundPoint(t.position);
+                _velocity = Vector3.zero;
+                _multiTouch = false;
+                if (t.phase == TouchPhase.Began) return;
+            }
+            if ((t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary) && !_pressOverUI)
+            {
+                if (!_dragging && (t.position - _pressPos).magnitude > DragThreshold) { _dragging = true; _follow = null; _lastWorldDrag = GroundPoint(t.position); }
+                if (_dragging) DragTo(t.position);
+            }
+            else if (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled)
+            {
+                if (t.phase == TouchPhase.Ended && !_pressOverUI && !_dragging && Time.unscaledTime - _pressTime < 0.5f)
+                {
+                    // Double-tap toggles the whole-valley overview; a single tap selects.
+                    if (Time.unscaledTime - _lastTapTime < 0.3f && (t.position - _lastTapPos).magnitude < 80f) { ToggleOverview(); _lastTapTime = -1; }
+                    else { Tap(t.position); _lastTapTime = Time.unscaledTime; _lastTapPos = t.position; }
+                }
+                _dragging = false;
+                _panFinger = -1;
+            }
         }
+
+        /// <summary>True when a UI element that takes input sits at this screen point (explicit raycast, any finger).</summary>
+        bool UIUnder(Vector2 screen)
+        {
+            var es = EventSystem.current;
+            if (es == null) return false;
+            var ped = new PointerEventData(es) { position = screen };
+            _uiHits.Clear();
+            es.RaycastAll(ped, _uiHits);
+            return _uiHits.Count > 0;
+        }
+
+        readonly System.Collections.Generic.List<RaycastResult> _uiHits = new System.Collections.Generic.List<RaycastResult>();
 
         float DragThreshold { get { return Mathf.Max(8f, Screen.dpi > 0 ? Screen.dpi * 0.06f : 10f); } }
 

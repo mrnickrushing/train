@@ -177,7 +177,7 @@ namespace Ironhorse.Game
             if (others > 0)
             {
                 var more = UIKit.Label(bottom.transform, "+" + others + " unlocks", 20, UIKit.Cream, TextAnchor.MiddleLeft);
-                UIKit.Size(more.gameObject, 120, 70);
+                UIKit.Size(more.gameObject, 170, 70);
             }
             UIKit.Spacer(bottom.transform);
             var rew = UIKit.Node("Reward", bottom.transform);

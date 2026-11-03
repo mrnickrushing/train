@@ -7,12 +7,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOG=~/.config/unity3d/Editor.log
 unity command --project-path "$ROOT" editor.playmode stop >/dev/null 2>&1 || true
 unity status --until-ready >/dev/null
-unity command --project-path "$ROOT" editor set_auto_tick --enable true >/dev/null  # an unfocused Editor never runs delayCall otherwise
-MARK=$(grep -c "\[Ironhorse\] iOS build" "$LOG" 2>/dev/null || true)
-unity command --project-path "$ROOT" script eval --code \
-  'UnityEditor.PlayerSettings.iOS.appleDeveloperTeamID = "PH4AKDQ4Q7"; UnityEditor.EditorApplication.delayCall += () => Ironhorse.EditorTools.BuildScript.BuildIos(); return 0;' >/dev/null
-echo "exporting..."
-until [ "$(grep -c "\[Ironhorse\] iOS build" "$LOG" 2>/dev/null || true)" -gt "$MARK" ]; do sleep 10; done
+# Synchronous: a delayCall would wait for an Editor tick that an unfocused Editor may never get.
+unity command --project-path "$ROOT" script eval --timeout 3000 --code \
+  'UnityEditor.PlayerSettings.iOS.appleDeveloperTeamID = "PH4AKDQ4Q7"; Ironhorse.EditorTools.BuildScript.BuildIos(); return 0;' >/dev/null
 grep "\[Ironhorse\] iOS build" "$LOG" | tail -1
 ! tail -50 "$LOG" | grep -q "\[Ironhorse\] iOS build failed"
 rm -f /tmp/ios-xcode.zip

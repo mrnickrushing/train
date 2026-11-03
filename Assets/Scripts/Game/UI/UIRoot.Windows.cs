@@ -451,7 +451,7 @@ namespace Ironhorse.Game
                     ("Projects", _ordersTab == "projects", () => _ordersTab = "projects"),
                 });
                 if (_ordersTab == "projects") { ProjectsTab(content); return; }
-                Line(content, "Townsfolk and outfits post orders here. Deliver goods for coins, XP, workshop parts and sometimes gold nuggets.", 20, UIKit.InkSoft);
+                Line(content, "Townsfolk post orders here. Deliver for coins, XP, parts and gold nuggets.", 20, UIKit.InkSoft);
                 var grid = UIKit.Node("Orders", content);
                 var g = grid.AddComponent<GridLayoutGroup>();
                 g.cellSize = new Vector2(370, 610);
