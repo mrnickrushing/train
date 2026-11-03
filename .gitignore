@@ -39,3 +39,4 @@ Tools/**/obj/
 
 # AI art working files (concepts, raw GLBs; large)
 /art-src/
+__pycache__/
