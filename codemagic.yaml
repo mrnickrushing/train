@@ -73,7 +73,8 @@ workflows:
           # and keeps the entitlements the App Store profile allows.
           APP=$(ls -d /tmp/Ironhorse.xcarchive/Products/Applications/*.app)
           for f in "$APP"/Frameworks/*.framework "$APP"/Frameworks/*.dylib; do [ -e "$f" ] && codesign --force --sign - "$f"; done
-          codesign --force --sign - --entitlements ios/Ironhorse.entitlements "$APP"
+          plutil -convert xml1 -o /tmp/app.entitlements ios/Ironhorse.entitlements  # Unity writes <true />, which codesign's parser rejects
+          codesign --force --sign - --entitlements /tmp/app.entitlements "$APP"
           cat > /tmp/export_options.plist <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
