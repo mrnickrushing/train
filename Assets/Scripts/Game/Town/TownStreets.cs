@@ -102,6 +102,7 @@ namespace Ironhorse.Game
                 }
             }
             var go = mb.ToObject("Streets", transform, false);
+            Station.Walkable(go);
 
             if (stage >= 2)
             {

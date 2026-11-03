@@ -160,6 +160,31 @@ def do_import(i):
             cmd += ["--flip"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     print("\n".join(l for l in r.stdout.splitlines() if "[ai]" in l) or r.stdout[-2000:] + r.stderr[-2000:])
+    rebake(i, a)
+
+
+def rebake(i, a):
+    """Bakes the full-detail colours onto the decimated mesh with clean UVs (see Tools/blender/rebake.py)."""
+    from PIL import Image
+    d = os.path.join(ROOT, "Assets", "Resources", "Models", a["cat"])
+    fbx = os.path.join(d, i + ".fbx")
+    tmp = os.path.join(ROOT, "Temp", "bake", i)
+    os.makedirs(os.path.dirname(tmp), exist_ok=True)
+    size = "2048" if a["cat"] == "Locomotives" else "512" if a.get("tree") or a.get("footprint", 9) < 4 else "1024"
+    cmd = ["blender", "-b", "--factory-startup", "-P", os.path.join(ROOT, "Tools", "blender", "rebake.py"), "--",
+           os.path.join(SRC, i + ".glb"), fbx, tmp, "--size", size, "--normal"] + (["--twin"] if a.get("twin") else [])
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    lines = [l for l in r.stdout.splitlines() if "[bake]" in l]
+    if not any("exported" in l for l in lines):
+        print("BAKE FAILED", i, (r.stdout + r.stderr)[-1500:])
+        return
+    for kind in ("albedo", "normal"):
+        Image.open(tmp + "_" + kind + ".png").convert("RGB").save(os.path.join(d, i + "_" + kind + ".jpg"), quality=90)
+    ms = os.path.join(d, i + "_ms.png")  # old-UV metal map no longer lines up
+    for f in (ms, ms + ".meta"):
+        if os.path.exists(f):
+            os.remove(f)
+    print("[bake]", i, lines[0])
 
 
 if __name__ == "__main__":

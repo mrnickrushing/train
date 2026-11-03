@@ -59,11 +59,15 @@ namespace Ironhorse.Game
                 m = new Material(template) { name = id };
                 m.SetTexture("_BaseMap", albedo);
                 m.SetColor("_BaseColor", new Color(1.14f, 1.1f, 1.04f)); // AI albedo maps run a bit dark next to the sunlit world
+                // AI metal/gloss maps vary patch by patch, so painted wood and iron show as a patchwork
+                // of sky reflections. Only locomotives (real brass and steel) keep theirs.
                 var ms = Resources.Load<Texture2D>("Models/" + key + "_ms");
+                m.SetFloat("_Metallic", 0f);
+                m.SetFloat("_Smoothness", category == Locomotives ? 0.42f : category == "People" ? 0.15f : 0.22f); // even finish: varnished paint / matte
                 if (ms != null)
                 {
                     m.SetTexture("_MetallicGlossMap", ms);
-                    m.SetFloat("_Smoothness", 0.6f); // painted wood and iron, not chrome
+                    m.SetFloat("_Smoothness", 0.6f);
                     m.EnableKeyword("_METALLICSPECGLOSSMAP");
                 }
                 var n = Resources.Load<Texture2D>("Models/" + key + "_normal");

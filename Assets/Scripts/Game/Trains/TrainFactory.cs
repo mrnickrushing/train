@@ -488,8 +488,9 @@ namespace Ironhorse.Game
                     break;
                 case CargoClass.Bulk:
                     mb.Matte();
+                    mb.Surf = SurfaceKind.Gravel; // lumpy coal / ore texture
                     for (int i = 0; i < 3; i++)
-                        mb.Sphere(new Vector3(0, a.y - 0.1f, (i - 1) * s.z / 3), new Vector3(s.x / 2, s.y, s.z / 5), 8, i == 1 ? c : MeshBuilder.Darken(c, 0.9f), false);
+                        mb.Sphere(new Vector3(0, a.y - 0.1f, (i - 1) * s.z / 3), new Vector3(s.x / 2, s.y, s.z / 5.5f), 12, i == 1 ? c : MeshBuilder.Darken(c, 0.9f), true);
                     break;
                 case CargoClass.Livestock:
                     mb.Matte();

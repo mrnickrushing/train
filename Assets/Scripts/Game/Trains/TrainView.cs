@@ -71,6 +71,17 @@ namespace Ironhorse.Game
                     var wb = ModelRegistry.RendererBounds(w.gameObject);
                     art.Wheels.Add((w, Mathf.Max(0.2f, wb.size.y / 2)));
                 }
+                // Loads for art wagons: bulk heaps sit just inside the art's rim; closed cars show none.
+                if (wagon != null && model != null)
+                {
+                    var top = b.max.y - holder.transform.position.y;
+                    if (wagon.Cargo == CargoClass.Bulk)
+                    {
+                        model.CargoAnchor = new Vector3(0, top - 0.12f, 0);
+                        model.CargoSize = new Vector3(b.size.x * 0.82f, 0.32f, b.size.z * 0.82f);
+                    }
+                    else if (wagon.Cargo != CargoClass.Flat) model.CargoSize = Vector3.zero;
+                }
                 var cargo = ModelRegistry.Anchors(artGo, "Cargo");
                 if (cargo.Count > 0) { art.ArtCargo = cargo[0].gameObject; art.ArtCargo.SetActive(false); }
                 Cars.Add(art);

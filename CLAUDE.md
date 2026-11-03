@@ -55,6 +55,13 @@ install it with `dotnet-install.sh --channel 8.0` if `dotnet --list-sdks` lacks 
   `import_ai.py` turns every model 180° before export (`turn_fbx.py` fixes older files). Verify with
   a Play-mode capture or by checking that a locomotive's Smoke anchor has positive Z.
   Budgets: locomotives 40k tris / 2K maps, wagons 15k / 1K, buildings 20k / 1K.
+  `import` welds the mesh before decimating (otherwise it cracks) and then runs
+  `Tools/blender/rebake.py`, which gives the low-poly mesh fresh UVs and bakes colour + normals from
+  the full-detail GLB (decimation wrecks the original UVs: patchy colours, white specks). Models get
+  one even finish (no per-patch metal maps).
+- **Townsfolk**: rigged AI characters (Higgsfield Multi-Image to 3D, rigging on) turned into Walk/Idle
+  loops by `Tools/blender/townsfolk.py`; check strides with `walk_strip.py`. They snap to whatever is
+  underfoot via colliders on layer 2 (`Station.Walkable`).
 - **Key art and cinematics**: `Tools/art/ai_media.py` (stills + Seedance clips) then `install`, which
   writes `Assets/StreamingAssets/Videos/*.mp4`, fallback stills in `Resources/UI/Cinematics`, the
   loading art, and VP8 copies in `Library/EditorVideos` because the Linux Editor can't decode H.264.
