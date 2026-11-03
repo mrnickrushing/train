@@ -25,6 +25,7 @@ namespace Ironhorse.Game
             public Transform T, Horse;
             public TrackPath Path;
             public float S, Speed;
+            public readonly List<Animation> Team = new List<Animation>(); // art horses (Walk clip)
         }
 
         readonly List<Walker> _walkers = new List<Walker>();
@@ -158,6 +159,7 @@ namespace Ironhorse.Game
 
         void SpawnCart(TrackPath path, float s, int i)
         {
+            if (ModelRegistry.Has("Props", "covered_wagon") && ModelRegistry.Has("Animals", "horse")) { SpawnArtCart(path, s); return; }
             var mb = new MeshBuilder();
             mb.Matte();
             Color wood = i % 2 == 0 ? Palette.Wood : Palette.PaintRed;
@@ -197,6 +199,34 @@ namespace Ironhorse.Game
             horse.transform.localPosition = new Vector3(0, 0, 3.1f);
 
             _carts.Add(new Cart { T = cart.transform, Horse = horse.transform, Path = path, S = s, Speed = R(2.6f, 3.6f) });
+        }
+
+        /// <summary>Covered wagon drawn by a walking team of two draft horses, one each side of the pole.</summary>
+        void SpawnArtCart(TrackPath path, float s)
+        {
+            var cart = new GameObject("Cart");
+            cart.transform.SetParent(transform, false);
+            var wagon = ModelRegistry.Spawn("Props", "covered_wagon", cart.transform);
+            var b = ModelRegistry.RendererBounds(wagon);
+            wagon.transform.localPosition -= new Vector3(b.center.x, 0, b.center.z);
+            var c = new Cart { T = cart.transform, Path = path, S = s, Speed = R(1.6f, 2.1f) };
+            float poleTip = b.size.z / 2;
+            foreach (float x in new[] { -0.56f, 0.56f })
+            {
+                var horse = ModelRegistry.Spawn("Animals", "horse", cart.transform);
+                horse.transform.localPosition += new Vector3(x, 0, poleTip - 1.1f);
+                foreach (var smr in horse.GetComponentsInChildren<SkinnedMeshRenderer>())
+                {
+                    smr.updateWhenOffscreen = false;
+                    smr.quality = SkinQuality.Bone2;
+                }
+                var anim = horse.GetComponentInChildren<Animation>();
+                if (anim == null) continue;
+                foreach (AnimationState st in anim) { st.wrapMode = WrapMode.Loop; st.time = R(0, st.length); }
+                anim.Play();
+                c.Team.Add(anim);
+            }
+            _carts.Add(c);
         }
 
         // ---------------------------------------------------------------- update
@@ -248,7 +278,9 @@ namespace Ironhorse.Game
                 var dir = ahead - pos;
                 dir.y = 0;
                 if (dir.sqrMagnitude > 0.001f) c.T.rotation = Quaternion.Slerp(c.T.rotation, Quaternion.LookRotation(dir.normalized), dt * 4f);
-                c.Horse.localPosition = new Vector3(0, Mathf.Abs(Mathf.Sin(c.S * 2.2f)) * 0.08f, 3.1f);
+                if (c.Horse != null) c.Horse.localPosition = new Vector3(0, Mathf.Abs(Mathf.Sin(c.S * 2.2f)) * 0.08f, 3.1f);
+                foreach (var a in c.Team)
+                    foreach (AnimationState st in a) st.speed = c.Speed / 1.4f; // one stride ≈ 1.4 m
             }
         }
     }

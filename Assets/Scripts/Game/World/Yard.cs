@@ -177,7 +177,13 @@ namespace Ironhorse.Game
                 {
                     float z = c.z + (i - (3 - row) / 2f) * 0.75f;
                     float y = 0.38f + row * 0.65f;
-                    mb.Cylinder(new Vector3(c.x - 2.4f, y, z), new Vector3(c.x + 2.4f, y, z), 0.36f, 7, Palette.Bark);
+                    float j = Mathf.Repeat(z * 13.7f + row * 3.3f, 1f) * 0.3f - 0.15f; // logs never line up exactly
+                    mb.Surf = SurfaceKind.Bark;
+                    mb.Cylinder(new Vector3(c.x - 2.4f + j, y, z), new Vector3(c.x + 2.4f + j, y, z), 0.36f, 9, Palette.Bark, false);
+                    mb.Surf = SurfaceKind.None; // pale sawn ends
+                    mb.Cylinder(new Vector3(c.x - 2.42f + j, y, z), new Vector3(c.x - 2.4f + j, y, z), 0.34f, 9, Palette.Hex(0xC9A777));
+                    mb.Cylinder(new Vector3(c.x + 2.4f + j, y, z), new Vector3(c.x + 2.42f + j, y, z), 0.34f, 9, Palette.Hex(0xC9A777));
+                    mb.Surf = SurfaceKind.Auto;
                 }
         }
 
