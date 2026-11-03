@@ -96,8 +96,9 @@ namespace Ironhorse.Game
                 // Prairie wind and birds by day, crickets by night, crossfaded with the light.
                 var cycle = DayNightCycle.Instance;
                 float night = cycle != null ? Mathf.Clamp01(cycle.Night) : 0;
-                _ambient.volume = Mathf.MoveTowards(_ambient.volume, 0.42f * (1 - night), Time.unscaledDeltaTime * 0.3f);
-                _ambientNight.volume = Mathf.MoveTowards(_ambientNight.volume, 0.42f * night, Time.unscaledDeltaTime * 0.3f);
+                // Kept well under the music: a bed you notice only when it stops.
+                _ambient.volume = Mathf.MoveTowards(_ambient.volume, 0.2f * (1 - night), Time.unscaledDeltaTime * 0.3f);
+                _ambientNight.volume = Mathf.MoveTowards(_ambientNight.volume, 0.28f * night, Time.unscaledDeltaTime * 0.3f);
                 _ambientNight.mute = !SfxOn;
             }
 
