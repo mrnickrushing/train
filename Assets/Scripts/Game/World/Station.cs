@@ -48,8 +48,8 @@ namespace Ironhorse.Game
             for (float x = -40; x <= 40; x += 16)
             {
                 Lamp(mb, new Vector3(x, 0.9f, -26.5f));
-                Lamp(mb, new Vector3(x + 8, 0.9f, island1));
-                Lamp(mb, new Vector3(x + 8, 0.9f, island2));
+                Lantern(mb, new Vector3(x + 8, 3.9f, island1));
+                Lantern(mb, new Vector3(x + 8, 3.9f, island2));
             }
             // Crates & barrels
             var rng = new System.Random(7);
@@ -154,14 +154,32 @@ namespace Ironhorse.Game
 
         static void Canopy(MeshBuilder mb, float z, float half)
         {
-            mb.Matte();
+            Color iron = Palette.Hex(0x34483D), oxide = Palette.Hex(0x5A4A42), valance = Palette.Hex(0xD8CBB0);
+            float len = half * 2 + 3;
+            mb.Mat(0.3f, 0.3f);
+            mb.Surf = SurfaceKind.None;
             for (float x = -half; x <= half; x += 6)
-                mb.Cylinder(new Vector3(x, 0.9f, z), new Vector3(x, 4.4f, z), 0.12f, 6, Palette.Hex(0x3E5A4A));
-            mb.Push().Translate(0, 4.4f, z);
-            mb.Box(new Vector3(0, 0, -0.9f), new Vector3(half * 2 + 3, 0.15f, 2.2f), Palette.RoofTin);
-            mb.Box(new Vector3(0, 0, 0.9f), new Vector3(half * 2 + 3, 0.15f, 2.2f), Palette.RoofTin);
-            mb.Box(new Vector3(0, 0.25f, 0), new Vector3(half * 2 + 3, 0.4f, 0.3f), Palette.Hex(0x3E5A4A));
-            mb.Pop();
+            {
+                // Cast-iron column with a bracket on each side holding the eaves.
+                mb.Cylinder(new Vector3(x, 0.9f, z), new Vector3(x, 4.5f, z), 0.12f, 0.1f, 8, iron);
+                mb.Box(new Vector3(x, 1.05f, z), new Vector3(0.36f, 0.3f, 0.36f), iron);
+                for (int s = -1; s <= 1; s += 2)
+                    mb.Cylinder(new Vector3(x, 3.6f, z), new Vector3(x, 4.45f, z + s * 1.7f), 0.05f, 4, iron, false);
+            }
+            mb.Box(new Vector3(0, 4.5f, z), new Vector3(len, 0.22f, 0.22f), iron); // ridge girder
+            // Pitched, corrugated tin roof, weathered to a rusty grey-brown.
+            mb.Matte();
+            mb.Surf = SurfaceKind.Tin;
+            mb.GableRoof(new Vector3(0, 4.45f, z), new Vector3(len, 0.55f, 4.4f), oxide, oxide, 0.05f);
+            // Painted dag-edge valance boards along both eaves.
+            mb.Surf = SurfaceKind.Planks;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                mb.Box(new Vector3(0, 4.3f, z + s * 2.27f), new Vector3(len + 0.1f, 0.34f, 0.05f), valance);
+                for (float x = -len / 2 + 0.15f; x < len / 2; x += 0.3f)
+                    mb.Box(new Vector3(x, 4.08f, z + s * 2.27f), new Vector3(0.14f, 0.12f, 0.05f), valance);
+            }
+            mb.Surf = SurfaceKind.Auto;
             for (float x = -half + 3; x <= half; x += 12) Bench(mb, new Vector3(x, 0.9f, z));
         }
 
@@ -172,6 +190,18 @@ namespace Ironhorse.Game
             mb.Box(p + new Vector3(0, 0.85f, 0.22f), new Vector3(2, 0.5f, 0.08f), Palette.Wood);
             mb.Box(p + new Vector3(-0.9f, 0.22f, 0), new Vector3(0.08f, 0.45f, 0.45f), Palette.Iron);
             mb.Box(p + new Vector3(0.9f, 0.22f, 0), new Vector3(0.08f, 0.45f, 0.45f), Palette.Iron);
+        }
+
+        /// <summary>Lantern hung from a canopy's ridge girder.</summary>
+        static void Lantern(MeshBuilder mb, Vector3 p)
+        {
+            mb.Mat(0.4f, 0.4f);
+            mb.Cylinder(p + Vector3.up * 0.3f, p + Vector3.up * 0.6f, 0.02f, 4, Palette.Iron, false);
+            mb.Cylinder(p + Vector3.up * 0.22f, p + Vector3.up * 0.34f, 0.2f, 0.05f, 6, Palette.Iron);
+            mb.Lit();
+            mb.Box(p, new Vector3(0.26f, 0.42f, 0.26f), Palette.Window);
+            mb.Matte();
+            NightLights.AddPoint(p);
         }
 
         public static void Lamp(MeshBuilder mb, Vector3 p, bool light = true)

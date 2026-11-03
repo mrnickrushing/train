@@ -94,6 +94,7 @@ bldg("fountain", "an original town square fountain: a round stone basin with a t
 
 # Station pieces (wide footprints: the long side runs along the tracks)
 bldg("station", "an original long frontier railway depot station, about four and a half times as long as it is deep: a central two-storey block with a clock tower and a pointed copper-green roof, two long single-storey wings with red hip roofs, cream board-and-batten walls with brown trim, a wooden platform canopy with brackets along the front, ticket windows, benches, luggage carts", base="a stone platform edge", footprint=36.0, wide=True)
+A["station"]["hero"] = True  # the centrepiece, seen up close: locomotive-grade mesh and 2K maps
 bldg("freightshed", "an original wooden railway freight shed, about twice as long as deep: red-painted plank walls, a raised wooden loading dock with sliding doors along the front, a corrugated tin roof with a deep overhang, crates and barrels on the dock", footprint=14.0, wide=True)
 
 # Vegetation (instanced thousands of times: tiny triangle budgets)
@@ -173,7 +174,8 @@ def do_import(i, out_id=None, faces=None):
                 "--remesh", str(TREE_VOXELS.get(i, (70, 36))[0 if out_id == i else 1])]
     elif a["cat"] == "Buildings":
         small = a["footprint"] < 4
-        cmd += ["--footprint", str(a["footprint"]), "--faces", "6000" if small else "20000", "--tex", "512" if small else "1024"]
+        faces = "6000" if small else "40000" if a.get("hero") else "20000"
+        cmd += ["--footprint", str(a["footprint"]), "--faces", faces, "--tex", "512" if small else "2048" if a.get("hero") else "1024"]
         if "height" in a:
             cmd += ["--height", str(a["height"])]
         if a.get("smoke"):
@@ -199,7 +201,7 @@ def rebake(i, a, src=None):
     fbx = os.path.join(d, i + ".fbx")
     tmp = os.path.join(ROOT, "Temp", "bake", i)
     os.makedirs(os.path.dirname(tmp), exist_ok=True)
-    size = "2048" if a["cat"] == "Locomotives" else "512" if a.get("tree") or a.get("footprint", 9) < 4 else "1024"
+    size = "2048" if a["cat"] == "Locomotives" or a.get("hero") else "512" if a.get("tree") or a.get("footprint", 9) < 4 else "1024"
     cmd = ["blender", "-b", "--factory-startup", "-P", os.path.join(ROOT, "Tools", "blender", "rebake.py"), "--",
            os.path.join(SRC, (src or i) + ".glb"), fbx, tmp, "--size", size, "--normal"] + (["--twin"] if a.get("twin") else [])
     r = subprocess.run(cmd, capture_output=True, text=True)

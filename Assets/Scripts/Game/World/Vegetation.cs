@@ -7,7 +7,8 @@ namespace Ironhorse.Game
     /// <summary>
     /// Draws the valley's trees and shrubs from drop-in art (Resources/Models/Trees/{kind}) with GPU
     /// instancing: instances are grouped into 80 m cells and only cells inside the camera frustum are drawn.
-    /// Kinds without art fall back to the procedural meshes in <see cref="Scenery"/>.
+    /// Kinds without art fall back to the procedural meshes in <see cref="Scenery"/>. Static scenery
+    /// models (parked yard wagons) use the same path via <see cref="AddModel"/>.
     /// </summary>
     public sealed class Vegetation : MonoBehaviour
     {
@@ -19,8 +20,11 @@ namespace Ironhorse.Game
             public Mesh Mesh, FarMesh;
             public Material Material, FarMaterial;
             public Matrix4x4 Local, FarLocal;
-            public bool SmallPlant;
+            public bool SmallPlant, FarShadows;
+            public Bounds LocalBounds; // mesh bounds after Local
             public readonly Dictionary<Vector2Int, List<Matrix4x4>> Cells = new Dictionary<Vector2Int, List<Matrix4x4>>();
+            // Far-mesh matrices when the far mesh has its own import transform (models); trees share Cells.
+            public readonly Dictionary<Vector2Int, List<Matrix4x4>> FarCells = new Dictionary<Vector2Int, List<Matrix4x4>>();
         }
 
         static readonly Dictionary<string, Kind> _kinds = new Dictionary<string, Kind>();
@@ -28,24 +32,29 @@ namespace Ironhorse.Game
         static bool _loaded;
         readonly Plane[] _planes = new Plane[6];
 
-        static Kind Get(string kind)
+        static Kind Get(string kind) { return Get("Trees", kind); }
+
+        static Kind Get(string category, string kind)
         {
             Kind k;
-            if (_kinds.TryGetValue(kind, out k)) return k;
-            var prefab = ModelRegistry.Prefab("Trees", kind);
+            string key = category + "/" + kind;
+            if (_kinds.TryGetValue(key, out k)) return k;
+            var prefab = ModelRegistry.Prefab(category, kind);
             var mf = prefab != null ? prefab.GetComponentInChildren<MeshFilter>() : null;
-            var mat = ModelRegistry.Material("Trees", kind);
+            var mat = ModelRegistry.Material(category, kind);
             if (mf != null && mf.sharedMesh != null && mat != null)
             {
                 k = new Kind { Mesh = mf.sharedMesh, Material = mat, Local = mf.transform.localToWorldMatrix }; // keeps the FBX root's axis-conversion rotation
                 k.FarMesh = k.Mesh; k.FarMaterial = mat; k.FarLocal = k.Local;
                 k.SmallPlant = kind == "sage";
-                var far = ModelRegistry.Prefab("Trees", kind + "_far");
+                k.FarShadows = category != "Trees";
+                k.LocalBounds = Transform(k.Local, k.Mesh.bounds);
+                var far = ModelRegistry.Prefab(category, kind + "_far");
                 var fmf = far != null ? far.GetComponentInChildren<MeshFilter>() : null;
-                var fmat = ModelRegistry.Material("Trees", kind + "_far");
-                if (fmf != null && fmat != null) { k.FarMesh = fmf.sharedMesh; k.FarMaterial = fmat; k.FarLocal = fmf.transform.localToWorldMatrix; }
+                var fmat = ModelRegistry.Material(category, kind + "_far") ?? mat; // a far mesh may share the near textures
+                if (fmf != null) { k.FarMesh = fmf.sharedMesh; k.FarMaterial = fmat; k.FarLocal = fmf.transform.localToWorldMatrix; }
             }
-            _kinds[kind] = k;
+            _kinds[key] = k;
             return k;
         }
 
@@ -69,6 +78,44 @@ namespace Ironhorse.Game
             _loaded = true;
         }
 
+        /// <summary>
+        /// Registers one static model instance (e.g. a parked wagon) centred on <paramref name="center"/> at ground
+        /// height <paramref name="center"/>.y. Returns the model's length along its local Z (0 when there is no art).
+        /// </summary>
+        public static float AddModel(string category, string id, Vector3 center, Quaternion rot)
+        {
+            var k = Get(category, id);
+            if (k == null) return 0;
+            var lb = k.LocalBounds;
+            var place = Matrix4x4.TRS(center, rot, Vector3.one) * Matrix4x4.Translate(new Vector3(-lb.center.x, 0, -lb.center.z));
+            var cell = new Vector2Int(Mathf.FloorToInt(center.x / CellSize), Mathf.FloorToInt(center.z / CellSize));
+            List<Matrix4x4> list;
+            if (!k.Cells.TryGetValue(cell, out list)) k.Cells[cell] = list = new List<Matrix4x4>();
+            list.Add(place * k.Local);
+            if (k.FarMesh != k.Mesh)
+            {
+                if (!k.FarCells.TryGetValue(cell, out list)) k.FarCells[cell] = list = new List<Matrix4x4>();
+                list.Add(place * k.FarLocal);
+            }
+            var b = Transform(place, lb);
+            Bounds cb;
+            if (_cellBounds.TryGetValue(cell, out cb)) { cb.Encapsulate(b); _cellBounds[cell] = cb; }
+            else _cellBounds[cell] = b;
+            _loaded = true;
+            return lb.size.z;
+        }
+
+        /// <summary>Length along local Z of a model's art, or 0 when it has none.</summary>
+        public static float ModelLength(string category, string id) { var k = Get(category, id); return k != null ? k.LocalBounds.size.z : 0; }
+
+        static Bounds Transform(Matrix4x4 m, Bounds b)
+        {
+            var r = new Bounds(m.MultiplyPoint3x4(b.center), Vector3.zero);
+            for (int i = 0; i < 8; i++)
+                r.Encapsulate(m.MultiplyPoint3x4(b.center + Vector3.Scale(b.extents, new Vector3((i & 1) * 2 - 1, (i & 2) - 1, (i & 4) / 2f - 1))));
+            return r;
+        }
+
         /// <summary>Spawns one plant as a normal object (for things that come and go, like wild lots).</summary>
         public static GameObject Spawn(string kind, Transform parent, Vector3 localPos, float scale)
         {
@@ -90,7 +137,7 @@ namespace Ironhorse.Game
             {
                 if (k == null) continue;
                 var near = new RenderParams(k.Material) { shadowCastingMode = ShadowCastingMode.On, receiveShadows = true, layer = 0 };
-                var far = new RenderParams(k.FarMaterial) { shadowCastingMode = ShadowCastingMode.Off, receiveShadows = true, layer = 0 };
+                var far = new RenderParams(k.FarMaterial) { shadowCastingMode = k.FarShadows ? ShadowCastingMode.On : ShadowCastingMode.Off, receiveShadows = true, layer = 0 };
                 var camPos = cam.transform.position;
                 foreach (var kv in k.Cells)
                 {
@@ -101,6 +148,8 @@ namespace Ironhorse.Game
                     bool close = d2 < NearDistance * NearDistance;
                     if (k.SmallPlant && d2 > 200f * 200f) continue; // shrubs vanish into the terrain texture
                     var list = kv.Value;
+                    List<Matrix4x4> farList;
+                    if (!close && k.FarCells.TryGetValue(kv.Key, out farList)) list = farList;
                     for (int start = 0; start < list.Count; start += 1023)
                         Graphics.RenderMeshInstanced(close ? near : far, close ? k.Mesh : k.FarMesh, 0, list, Mathf.Min(1023, list.Count - start), start);
                 }
@@ -109,7 +158,7 @@ namespace Ironhorse.Game
 
         void OnDestroy()
         {
-            foreach (var k in _kinds.Values) if (k != null) k.Cells.Clear();
+            foreach (var k in _kinds.Values) if (k != null) { k.Cells.Clear(); k.FarCells.Clear(); }
             _cellBounds.Clear();
             _loaded = false;
         }

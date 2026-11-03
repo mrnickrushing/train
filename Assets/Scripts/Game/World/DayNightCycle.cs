@@ -14,6 +14,8 @@ namespace Ironhorse.Game
         /// <summary>0..1, 0 = sunrise. Daylight lasts DayFraction of the cycle.</summary>
         public float Phase = 0.12f;
         public const float DayFraction = 0.68f;
+        /// <summary>Sun direction granularity in degrees (one step every couple of seconds).</summary>
+        const float SunStep = 1f;
         public float Night { get; private set; }
 
         Light _sun;
@@ -88,8 +90,12 @@ namespace Ironhorse.Game
 
             // Light direction: sun by day, moon (opposite side, fixed altitude) by night.
             Vector3 toSun = -(Quaternion.Euler(e, azimuth, 0) * Vector3.forward);
-            Quaternion lightRot = day > 0.02f ? Quaternion.Euler(Mathf.Max(e, 4f), azimuth, 0) : Quaternion.Euler(38, azimuth + 180, 0);
-            _sun.transform.rotation = lightRot;
+            // The shadow-casting light turns in small steps: re-aiming it every frame re-rasterizes the
+            // shadow map at a new angle and makes every shadow edge shimmer.
+            float le = day > 0.02f ? Mathf.Max(e, 4f) : 38f, la = day > 0.02f ? azimuth : azimuth + 180;
+            le = Mathf.Round(le / SunStep) * SunStep;
+            la = Mathf.Round(la / SunStep) * SunStep;
+            _sun.transform.rotation = Quaternion.Euler(le, la, 0);
 
             Color noon = new Color(1f, 0.95f, 0.86f), gold = new Color(1f, 0.62f, 0.36f), moon = new Color(0.62f, 0.72f, 1f);
             Color lightCol = Color.Lerp(noon, gold, golden);

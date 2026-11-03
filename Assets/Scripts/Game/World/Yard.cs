@@ -32,7 +32,9 @@ namespace Ironhorse.Game
             var mb = new MeshBuilder();
             mb.Matte();
             // Cinder ground pad
-            mb.Box(new Vector3(r.center.x, 0.02f, r.center.y), new Vector3(r.width, 0.04f, r.height), Palette.Hex(0x7E7468));
+            mb.Surf = SurfaceKind.Gravel;
+            mb.Box(new Vector3(r.center.x, 0.02f, r.center.y), new Vector3(r.width, 0.04f, r.height), Palette.Hex(0x4C4640));
+            mb.Surf = SurfaceKind.Auto;
 
             float x0 = r.xMin + 4, x1 = r.xMax - 6;
             for (int i = 0; i < WorldLayout.Sidings; i++)
@@ -60,6 +62,15 @@ namespace Ironhorse.Game
                 while (x > stop)
                 {
                     var def = GameDatabase.Wagon(wagonPool[_rng.Next(wagonPool.Length)]);
+                    float artLen = Vegetation.ModelLength(ModelRegistry.Wagons, def.Id);
+                    if (artLen > 0)
+                    {
+                        // Art wagons are drawn instanced, with a light far version (Wagons/<id>_far).
+                        Vegetation.AddModel(ModelRegistry.Wagons, def.Id, new Vector3(x - artLen / 2, WorldLayout.RailTop, z), Quaternion.Euler(0, R() < 0.5f ? 90 : -90, 0));
+                        x -= artLen + TrainFactory.Gap;
+                        if (R() < 0.12f) x -= R(6, 14);
+                        continue;
+                    }
                     var model = TrainFactory.Wagon(def);
                     float cx = x - model.Length / 2;
                     cars.Push().Translate(cx, WorldLayout.RailTop, z).RotateY(90);
@@ -96,7 +107,7 @@ namespace Ironhorse.Game
 
         static void GantryCrane(MeshBuilder mb, Vector3 c)
         {
-            Color steel = Palette.Hex(0x3E4A55), yellow = Palette.Hex(0xD9A93F);
+            Color steel = Palette.Hex(0x3E4A55), yellow = Palette.Hex(0x6E3B2E); // weathered oxide-red paint
             float span = 26f, h = 11f;
             mb.Mat(0.4f, 0.5f);
             for (int s = -1; s <= 1; s += 2)
@@ -113,7 +124,7 @@ namespace Ironhorse.Game
             for (float z = -span / 2; z < span / 2; z += 2.2f)
             {
                 mb.Push().Translate(c + new Vector3(0, h + 0.5f, z)).Rotate(Quaternion.Euler(45, 0, 0));
-                mb.Box(Vector3.zero, new Vector3(1.7f, 0.12f, 1.5f), Palette.Hex(0xB8862E));
+                mb.Box(Vector3.zero, new Vector3(1.7f, 0.12f, 1.5f), Palette.Hex(0x5A3226));
                 mb.Pop();
             }
             // Trolley, operator cab, cable and hook
@@ -178,7 +189,9 @@ namespace Ironhorse.Game
             var mb = new MeshBuilder();
             mb.Matte();
             var rr = WorldLayout.RoundhouseRect;
-            mb.Box(new Vector3(rr.center.x, 0.02f, rr.center.y), new Vector3(rr.width, 0.04f, rr.height), Palette.Hex(0x80776A));
+            mb.Surf = SurfaceKind.Gravel;
+            mb.Box(new Vector3(rr.center.x, 0.02f, rr.center.y), new Vector3(rr.width, 0.04f, rr.height), Palette.Hex(0x4E4842));
+            mb.Surf = SurfaceKind.Auto;
 
             // Turntable pit
             const float pitR = 9.5f;
