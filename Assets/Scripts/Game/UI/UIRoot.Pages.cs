@@ -107,6 +107,9 @@ namespace Ironhorse.Game
         {
             int open = GameDatabase.Destinations.Count(d => S.IsDestinationUnlocked(d));
             _boardSub = open + " of " + GameDatabase.Destinations.Count + " outposts";
+            if (S.CanCharter) Big(right, "New Territory", UIKit.Gold, OpenCharter, 300, 80, true, 34);
+            var museum = Big(right, "Museum", UIKit.WoodLight, OpenMuseum, 220, 80, true, 34);
+            if (S.ShelvesClaimable > 0) UIKit.Badge(museum.transform, S.ShelvesClaimable.ToString(), UIKit.Red);
             Big(right, "All trains", UIKit.WoodLight, OpenFleet, 280, 80, true, 34);
 
             var map = UIKit.Panel(body, Palette.Hex(0xE3CC97), "Map", UIKit.RoundedGrad);

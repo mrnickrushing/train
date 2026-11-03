@@ -33,7 +33,7 @@ namespace Ironhorse.Game
             var row = UIKit.Row(v.transform, 22, 8);
             _chapterFill = UIKit.Bar(row.transform, UIKit.Brass, 16, new Color(0, 0, 0, 0.4f));
             _chapterNext = UIKit.Label(v.transform, "", 19, UIKit.Cream, TextAnchor.MiddleLeft);
-            UIKit.Size(_chapterNext.gameObject, -1, 40);
+            UIKit.OneLine(_chapterNext, 12); // long unlock names shrink instead of spilling out of the card
             _chapterClaim = UIKit.Btn(card.transform, "Claim!", UIKit.Green, OpenTimeline, 22, 120, 50);
             UIKit.Place(_chapterClaim.gameObject, new Vector2(1, 1), new Vector2(1, 0.5f), new Vector2(-8, -4), new Vector2(120, 50));
         }

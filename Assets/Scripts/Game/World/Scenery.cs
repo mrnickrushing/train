@@ -191,7 +191,7 @@ namespace Ironhorse.Game
             for (int i = 0; i < 9000; i++)
             {
                 float x = R(ValleyTerrain.MinX + 10, ValleyTerrain.MaxX - 10), z = R(ValleyTerrain.MinZ + 10, ValleyTerrain.MaxZ - 10);
-                if (ProjectSites.Blocks(x, z)) continue; // the trestle cut-off and the Fort Calder wire
+                if (ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue; // the trestle cut-off and the Fort Calder wire
                 float wild = ValleyTerrain.Wildness(x, z);
                 float depth;
                 float water = ValleyTerrain.WaterMask(x, z, out depth);

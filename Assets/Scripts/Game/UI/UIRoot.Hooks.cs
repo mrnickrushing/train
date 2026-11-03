@@ -29,9 +29,9 @@ namespace Ironhorse.Game
             // Payday, above the Foreman on the left.
             _payday = UIKit.Node("Payday", _safe);
             UIKit.Place(_payday, new Vector2(0, 0), new Vector2(0, 0), new Vector2(24, 372), new Vector2(150, 150));
-            var tile = HudTile(_payday.transform, "Payday", t => UIKit.Icon(t, "payday", 116), 140);
+            var tile = HudTile(_payday.transform, "Daily", t => UIKit.Icon(t, "payday", 116), 140);
             _paydayCaption = tile.GetComponentInChildren<Text>();
-            Clickable(_payday, OpenPayday);
+            Clickable(_payday, () => OpenDaily(S.CanClaimPayday || S.DailyClaimable == 0 ? "payday" : "tasks"));
             _paydayBadge = UIKit.Badge(tile.transform, "!", UIKit.Red);
 
             // Telegram and territory events, down the right under the fuel gauge.
@@ -48,9 +48,10 @@ namespace Ironhorse.Game
             if (_payday == null) return;
             bool on = S.State.settings.tutorialDone || S.Level >= 3;
             _payday.SetActive(on);
-            bool can = S.CanClaimPayday;
+            bool can = S.CanClaimPayday || S.DailyClaimable > 0;
+            _paydayBadge.text = S.CanClaimPayday ? "!" : S.DailyClaimable.ToString();
             _paydayBadge.transform.parent.gameObject.SetActive(can);
-            _paydayCaption.text = can ? "PAYDAY" : Fmt.Time(S.NextPaydayIn);
+            _paydayCaption.text = can ? "DAILY" : Fmt.Time(S.NextPaydayIn);
             if (can) _payday.transform.localScale = Vector3.one * (1 + Mathf.Sin(Time.unscaledTime * 5) * 0.03f);
             else _payday.transform.localScale = Vector3.one;
             if (_depotBadge != null)
@@ -66,14 +67,16 @@ namespace Ironhorse.Game
         {
             var tg = S.Telegram;
             var events = S.State.events.Where(e => (e.kind == MapEventKind.GoldStrike || e.kind == MapEventKind.Bandits) && S.EventLeft(e) > 0).ToList();
-            string key = (tg != null ? tg.uid.ToString() : "-") + ":" + string.Join(",", events.Select(e => e.uid));
+            bool peddler = S.PeddlerHere;
+            string key = (peddler ? "P" : "") + (tg != null ? tg.uid.ToString() : "-") + ":" + string.Join(",", events.Select(e => e.uid));
             if (key != _railKey)
             {
                 _railKey = key;
                 _railLive.Clear();
                 ClearChildren(_eventRail);
                 if (tg != null) TelegramChip(_eventRail, tg);
-                foreach (var e in events.Take(2)) EventChip(_eventRail, e);
+                if (peddler) PeddlerChip(_eventRail);
+                foreach (var e in events.Take(peddler && tg != null ? 1 : 2)) EventChip(_eventRail, e);
             }
             foreach (var a in _railLive) a();
         }
@@ -113,6 +116,12 @@ namespace Ironhorse.Game
             });
         }
 
+        void PeddlerChip(Transform p)
+        {
+            var timer = RailStrip(p, "peddler", "TRAVELING PEDDLER", BGold, "3 deals at the station", OpenPeddler);
+            _railLive.Add(() => timer.text = "Leaves in " + Fmt.Time(S.PeddlerLeft));
+        }
+
         void EventChip(Transform p, MapEventState e)
         {
             var d = GameDatabase.Destination(e.destinationId);
@@ -147,7 +156,7 @@ namespace Ironhorse.Game
 
         // ================================================================ Payday
 
-        public void OpenPayday() { ShowBoard("Payday", PaydayBoard); }
+        public void OpenPayday() { OpenDaily("payday"); }
 
         void PaydayBoard(Transform body, Transform right)
         {
@@ -286,6 +295,7 @@ namespace Ironhorse.Game
             var extras = new List<string>();
             if (a.Crates > 0) extras.Add(a.Crates == 1 ? "A mystery crate is waiting on the platform!" : a.Crates + " mystery crates are waiting on the platform!");
             if (a.Robbed > 0) extras.Add("Bandits made off with " + a.Robbed + " cargo.");
+            foreach (var c in a.Curios) extras.Add("Found a curio: " + c.Name + "!");
             if (extras.Count > 0) T1(panel.transform, string.Join("  ", extras), 30, a.Robbed > 0 && a.Crates == 0 ? BBad : BGold, TextAnchor.MiddleCenter, true);
 
             var bar = HBox(panel.transform, 16, 0, TextAnchor.MiddleCenter, -1, 104);
@@ -338,7 +348,13 @@ namespace Ironhorse.Game
             var holder = UIKit.Node("Icon", art.transform);
             UIKit.Stretch(holder);
             UIKit.HStack(holder, 0, 0, TextAnchor.MiddleCenter);
-            string caption = GrantArt(holder.transform, g, 230);
+            string caption;
+            if (S.LastCrateShards != null && S.LastShardsEngineer != null)
+            {
+                EngineerPortrait(holder.transform, S.LastShardsEngineer, 230);
+                caption = S.LastCrateShards.TrimStart('+');
+            }
+            else caption = GrantArt(holder.transform, g, 230);
             if (g.Coins > 0 && g.Nuggets == 0 && g.Fuel == 0) caption += " coins";
             bool jackpot = g.Coins > 0 || g.Blueprints > 0;
             T1(panel.transform, jackpot ? "Jackpot!" : "Inside the crate:", 36, BGold, TextAnchor.MiddleCenter, true);
@@ -474,6 +490,12 @@ namespace Ironhorse.Game
             }
         }
 
+        void UpdatePeddlerMarker()
+        {
+            if (!S.PeddlerHere) return;
+            ShowMarker(PeddlerPosition, "peddler", h => UIKit.Icon(h, "peddler", 66), Fmt.Time(S.PeddlerLeft), -1, OpenPeddler, true);
+        }
+
         void ClaimMapEvent(int uid, Vector3 at)
         {
             var r = S.ClaimEvent(uid);
@@ -499,7 +521,7 @@ namespace Ironhorse.Game
         {
             int total = Hooks.AlbumSets.Sum(s => s.Count);
             int owned = Hooks.AlbumSets.Sum(s => S.AlbumOwned(s));
-            _boardSub = "Roundhouse album · " + owned + " / " + total + " collected";
+            _boardSub = "Album · " + owned + " / " + total;
             var panel = Box(body, BDeep, -1, -1, "Panel");
             UIKit.Stretch(panel.gameObject);
             Stack(panel.gameObject, 0, new RectOffset(16, 16, 16, 16));

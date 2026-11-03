@@ -77,7 +77,12 @@ namespace Ironhorse.Core
             return true;
         }
 
-        public int FuelCost(TrainState t, DestinationDef d) { return Balance.FuelCost(WagonsOf(t).Count, d); }
+        public int FuelCost(TrainState t, DestinationDef d)
+        {
+            int cost = Balance.FuelCost(WagonsOf(t).Count, d);
+            float cut = EngineerValue(t, EngineerPerk.Fuel);
+            return cut > 0 ? Math.Max(1, (int)Math.Round(cost * (1 - cut))) : cost;
+        }
 
         public int RefillCost { get { return Balance.RefillNuggets(MaxFuel - Fuel); } }
 

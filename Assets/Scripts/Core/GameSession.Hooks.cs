@@ -110,6 +110,7 @@ namespace Ironhorse.Core
                 int jobs = FinishedJobs(b);
                 if (jobs > 0 && d.Recipe != null) r.Goods.Change(d.Recipe.Output.id, d.Recipe.Output.amount * jobs);
             }
+            r.Curios.AddRange(_awayCurios);
             if (r.HasAnything) Away = r;
         }
 
@@ -148,6 +149,8 @@ namespace Ironhorse.Core
 
         /// <summary>What the last opened crate held, for the reveal.</summary>
         public Grant LastCrate { get; private set; }
+        /// <summary>"+4 Rosa Delgado shards" when the last crate held engineer shards, else null.</summary>
+        public string LastCrateShards { get; private set; }
 
         /// <summary>Called as a train departs: bandits may rob it and a crate may ride home with it.</summary>
         void RollTrip(TrainState t, DispatchPreview p)
@@ -161,6 +164,7 @@ namespace Ironhorse.Core
                 t.cargoAmount -= lost;
                 t.robbed = lost;
             }
+            RollCurio(t, rng);
             if (State.stats.dispatches <= Hooks.CrateMinDispatches) return;
             State.crateDry++;
             if (State.crateDry >= Hooks.CrateDrySpell || rng.NextDouble() < Hooks.CrateChance)
@@ -185,6 +189,13 @@ namespace Ironhorse.Core
             t.crate = false;
             State.cratesOpened++;
             LastCrate = RollCrate();
+            if (LastCrate.Coins == 0 && LastCrate.Nuggets == 0 && LastCrate.Resources.Length == 0 && LastCrate.Blueprints == 0)
+            {
+                string shards = GiveShards(3 + State.level / 4);
+                LastCrateShards = shards.TrimStart(',', ' ');
+                return "Mystery crate: " + LastCrateShards;
+            }
+            LastCrateShards = null;
             return "Mystery crate: " + Apply(LastCrate);
         }
 
@@ -193,6 +204,7 @@ namespace Ironhorse.Core
             var rng = NextRng();
             double r = rng.NextDouble();
             int lvl = State.level;
+            if (CrewUnlocked && r < 0.12) return new Grant(); // engineer shards, handed out by OpenCrateOn
             if (r < 0.45)
             {
                 string[] parts = lvl < 4 ? new[] { "rivets" } : lvl < 8 ? new[] { "rivets", "bearings" } : new[] { "bearings", "rods", "gauges" };
@@ -373,6 +385,7 @@ namespace Ironhorse.Core
                     return ActionResult.Fail("Pay for an escort to run them off");
             }
             State.events.Remove(e);
+            State.stats.eventsDone++;
             RaiseChanged();
             return ActionResult.Success(msg);
         }
@@ -387,6 +400,7 @@ namespace Ironhorse.Core
             Pay(cost, null);
             AddXp(Hooks.EscortXp(State.level));
             State.events.Remove(e);
+            State.stats.eventsDone++;
             RaiseChanged();
             return ActionResult.Success("The marshal's posse ran the bandits off the " + GameDatabase.Destination(e.destinationId).Name + " line");
         }

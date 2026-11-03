@@ -75,8 +75,68 @@ namespace Ironhorse.Core
         public List<string> album = new List<string>();
         public List<string> albumClaimed = new List<string>();
 
+        // Dispatcher's board (see GameSession.Daily.cs)
+        public int dailyDay = -1;
+        public List<DailyTask> dailyTasks = new List<DailyTask>();
+        public int dailyPoints;
+        public List<int> dailyChests = new List<int>();
+        public int weeklyWeek = -1;
+        public int weeklyPoints;
+        public List<int> weeklyChests = new List<int>();
+        // Engineers
+        public List<EngineerState> engineers = new List<EngineerState>();
+        // Traveling peddler
+        public double peddlerUntil;
+        public double nextPeddlerAt;
+        public List<DealState> deals = new List<DealState>();
+        // Full Steam combo
+        public int comboCount;
+        public double comboUntil;
+        // Frontier curios
+        public List<string> curios = new List<string>();
+        public List<string> shelvesClaimed = new List<string>();
+        // New territory charters: 1 for the first town, +1 for each charter
+        public int territory = 1;
+
         public Stats stats = new Stats();
         public Settings settings = new Settings();
+    }
+
+    public enum DailyKind { Dispatch, Contracts, Produce, Collect, Passengers, Crates, Events, Rent, EarnCoins, ProjectDeliveries }
+
+    [Serializable]
+    public class DailyTask
+    {
+        public DailyKind kind;
+        public int count;
+        /// <summary>The metric's value when the day started.</summary>
+        public int baseline;
+        public bool claimed;
+    }
+
+    [Serializable]
+    public class EngineerState
+    {
+        public string id;
+        /// <summary>0 until recruited.</summary>
+        public int level;
+        public int shards;
+        /// <summary>Locomotive they ride (0 = in the bunkhouse).</summary>
+        public int trainUid;
+    }
+
+    public enum DealKind { Goods, Parts, Blueprint, Shards, Fuel }
+
+    /// <summary>One of the traveling peddler's offers.</summary>
+    [Serializable]
+    public class DealState
+    {
+        public DealKind kind;
+        public string id = "";
+        public int amount;
+        public int coins;
+        public int nuggets;
+        public bool sold;
     }
 
     public enum MapEventKind { Traveler, GoldStrike, Tumbleweed, Bandits }
@@ -116,6 +176,10 @@ namespace Ironhorse.Core
         public int robbed;
         /// <summary>This trip went to a gold strike and brought home double.</summary>
         public bool boom;
+        /// <summary>Full Steam bonus on this trip, in percent (0 = none).</summary>
+        public int combo;
+        /// <summary>A curio found on this trip, collected when the train gets home.</summary>
+        public string curio = "";
 
         public bool IsIdle { get { return string.IsNullOrEmpty(destinationId); } }
     }
@@ -199,6 +263,8 @@ namespace Ironhorse.Core
         public int coinsEarned;
         public int passengers;
         public int projectDeliveries;
+        public int eventsDone;
+        public int rentCollections;
         public List<ResourceAmount> collected = new List<ResourceAmount>();
         public List<ResourceAmount> produced = new List<ResourceAmount>();
     }
