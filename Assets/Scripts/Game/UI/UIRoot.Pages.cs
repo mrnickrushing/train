@@ -285,6 +285,7 @@ namespace Ironhorse.Game
             T(left.transform, "Sound and alerts", 34, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
             Toggle(left.transform, "Music", null, set.music, () => { set.music = !set.music; AudioManager.MusicOn = set.music; });
             Toggle(left.transform, "Sound effects", null, set.sfx, () => { set.sfx = !set.sfx; AudioManager.SfxOn = set.sfx; });
+            Toggle(left.transform, "Vibration", null, set.haptics, () => { set.haptics = !set.haptics; Haptics.On = set.haptics; if (set.haptics) Haptics.Play(Haptic.Medium); });
             Toggle(left.transform, "Reminders", "When trains return, fuel is full or goods are ready", set.notifications, () => { set.notifications = !set.notifications; if (set.notifications) Reminders.AskOnce(); });
             T(left.transform, "Game Center", 34, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
             var gc = HBox(left.transform, 14, 0, TextAnchor.MiddleLeft, -1, 88);

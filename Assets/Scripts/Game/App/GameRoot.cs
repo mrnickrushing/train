@@ -97,6 +97,7 @@ namespace Ironhorse.Game
             G.Session = new GameSession(state, Clock);
             AudioManager.MusicOn = state.settings.music;
             AudioManager.SfxOn = state.settings.sfx;
+            Haptics.On = state.settings.haptics;
 
             _loading = LoadingScreen.Show();
             StartCoroutine(BuildWorld(state, fresh));
