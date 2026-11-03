@@ -13,7 +13,7 @@ namespace Ironhorse.Game
     /// how many stand. New pieces rise into place (camera flies over, dust, a hammer blow) once the player
     /// is back on the map.
     /// </summary>
-    public sealed class ProjectSites : MonoBehaviour
+    public sealed partial class ProjectSites : MonoBehaviour
     {
         public static ProjectSites Instance { get; private set; }
 
@@ -82,7 +82,9 @@ namespace Ironhorse.Game
             if (Cutoff.SqrDistanceXZ(x, z) < 8 * 8) return true;
             if (Mathf.Abs(z - TrestleZ) < 14 && x > SpanW - 8 && x < SpanE + 8) return true; // the gorge under the span
             if (WireRoute.SqrDistanceXZ(x, z) < 5 * 5) return true;
-            return CampRect.Contains(new Vector2(x, z)) || WireCampRect.Contains(new Vector2(x, z));
+            if (CampRect.Contains(new Vector2(x, z)) || WireCampRect.Contains(new Vector2(x, z))) return true;
+            foreach (var r in MoreSiteRects) if (r.Contains(new Vector2(x, z))) return true;
+            return false;
         }
 
         static readonly Rect CampRect = new Rect(-118, 229, 14, 12);     // trestle work camp, north-west bank
@@ -100,6 +102,10 @@ namespace Ironhorse.Game
             sh.scale = new Vector3(2.5f, 2.5f, 0.5f);
             _sites.Add(Trestle());
             _sites.Add(Telegraph());
+            _sites.Add(Mine());
+            _sites.Add(Depot());
+            _sites.Add(Dam());
+            _sites.Add(Spike());
         }
 
         void Start()
@@ -552,7 +558,11 @@ namespace Ironhorse.Game
         }
 
         /// <summary>Work camp: a canvas tent, the material pile for the job, a tool crate and a flag.</summary>
-        static void Camp(MeshBuilder mb, Vector2 c, bool timber)
+        static void Camp(MeshBuilder mb, Vector2 c, bool timber) { Camp(mb, c, timber ? CampKind.Timber : CampKind.Poles); }
+
+        enum CampKind { Timber, Poles, Stone, Crates }
+
+        static void Camp(MeshBuilder mb, Vector2 c, CampKind kind)
         {
             float g = Mathf.Max(Ground(c.x, c.y), 0);
             var o = new Vector3(c.x, g, c.y);
@@ -560,8 +570,22 @@ namespace Ironhorse.Game
             // Wall tent.
             mb.Box(o + new Vector3(-2.5f, 0.6f, 0), new Vector3(3.2f, 1.2f, 2.6f), Palette.Cream);
             mb.GableRoof(o + new Vector3(-2.5f, 1.2f, 0), new Vector3(3.4f, 1.1f, 2.8f), Palette.Hex(0xE6DCC4), Palette.Cream, 0.1f);
-            // Material pile: squared timbers for the trestle, poles and a cable drum for the telegraph.
-            if (timber)
+            // Material pile: squared timbers, poles and a cable drum, dressed stone, or freight crates.
+            if (kind == CampKind.Stone)
+            {
+                for (int row = 0; row < 2; row++)
+                    for (int i = 0; i < 3; i++)
+                        for (int j = 0; j < 2; j++)
+                            mb.Box(o + new Vector3(1.4f + i * 1.25f, 0.4f + row * 0.8f, -1.2f + j * 1.05f), new Vector3(1.15f, 0.75f, 0.95f), MeshBuilder.Darken(Palette.Stone, 0.85f + 0.06f * ((i + j + row) % 3)));
+                mb.Cylinder(o + new Vector3(4.9f, 0, 1.6f), o + new Vector3(4.9f, 4.2f, 1.6f), 0.12f, 5, Palette.WoodDark); // derrick mast
+                mb.Cylinder(o + new Vector3(4.9f, 3.9f, 1.6f), o + new Vector3(1.8f, 2.6f, 1.6f), 0.08f, 5, Palette.WoodDark);
+            }
+            else if (kind == CampKind.Crates)
+            {
+                for (int i = 0; i < 5; i++)
+                    mb.Box(o + new Vector3(1.4f + (i % 3) * 1.1f, 0.5f + (i / 3) * 1.0f, -1.0f + (i % 2) * 0.3f), new Vector3(1.0f, 0.95f, 1.0f), MeshBuilder.Darken(Palette.WoodPale, 0.85f + 0.05f * i));
+            }
+            else if (kind == CampKind.Timber)
             {
                 for (int row = 0; row < 3; row++)
                     for (int i = 0; i < 4 - row; i++)

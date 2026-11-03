@@ -96,7 +96,8 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   backdrop off the concept renders into `Resources/UI/{Locos,Wagons,Buildings}` for their art. `UIRoot.Coach.cs` is
   Hank's first-launch tutorial (goals g1-g5, `settings.tutorialDone`).
 - **Project sites**: `World/ProjectSites.cs` builds territory projects in the valley from ordered pieces (trestle
-  cut-off across the river gorge, Fort Calder telegraph through the southern badlands); the share of goods delivered
+  cut-off across the river gorge, Fort Calder telegraph through the southern badlands; `ProjectSites.More.cs`: the Deep
+  Shaft by the west mesa, the resupply depot north of the yard, Silver Lake Dam above the lake, the Golden Spike plaza); the share of goods delivered
   decides how many stand, new ones rise when the player is back on the map. `ProjectSites.Blocks` keeps scenery off them.
   Project cards show unfinished projects as a blueprint filled in colour by `ProjectSites.Built`.
 - `Tools/art/pack_textures.py` rebuilds `Assets/Resources/Textures/*.png` from CC0 ambientCG
