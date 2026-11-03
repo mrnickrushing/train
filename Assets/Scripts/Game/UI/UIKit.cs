@@ -132,7 +132,12 @@ namespace Ironhorse.Game
             var le = go.GetComponent<LayoutElement>();
             if (le == null) le = go.AddComponent<LayoutElement>();
             if (w >= 0) { le.preferredWidth = w; le.minWidth = w; }
-            if (h >= 0) { le.preferredHeight = h; le.minHeight = h; }
+            if (h >= 0)
+            {
+                le.minHeight = h;
+                // A text's height is a minimum: phone-sized text that wraps grows its row instead of overlapping.
+                le.preferredHeight = go.GetComponent<Text>() != null ? -1 : h;
+            }
             if (flexW >= 0) le.flexibleWidth = flexW;
             if (flexH >= 0) le.flexibleHeight = flexH;
             return le;
@@ -194,6 +199,13 @@ namespace Ironhorse.Game
             return img;
         }
 
+        /// <summary>On-screen size for an authored font size (see Label).</summary>
+        public static int Readable(int size)
+        {
+            float k = size <= 20 ? 1.45f : size <= 30 ? 1.35f : size <= 40 ? 1.2f : 1.08f;
+            return Mathf.RoundToInt(size * k);
+        }
+
         public static Text Label(Transform parent, string text, int size, Color color, TextAnchor align = TextAnchor.MiddleLeft, bool heading = false, FontStyle style = FontStyle.Normal)
         {
             var go = Node("Label", parent);
@@ -202,7 +214,9 @@ namespace Ironhorse.Game
             t.font = heading ? Heading : bold ? BodyBold : Body; // real bold faces, not synthesized
             if (bold || heading) style = FontStyle.Normal;
             t.text = text;
-            t.fontSize = size;
+            // Sizes are authored for a 1920x1080 canvas, which leaves body text tiny on a phone:
+            // small text is scaled up the most.
+            t.fontSize = Readable(size);
             t.color = color;
             t.alignment = align;
             t.fontStyle = style;
@@ -240,6 +254,7 @@ namespace Ironhorse.Game
             t.resizeTextForBestFit = true;
             t.resizeTextMinSize = 12;
             t.resizeTextMaxSize = t.fontSize;
+            t.verticalOverflow = VerticalWrapMode.Truncate; // lets best fit shrink a long caption to fit the button
             Stretch(t.gameObject, 8);
             var sh = t.gameObject.AddComponent<Outline>();
             sh.effectColor = new Color(0, 0, 0, 0.35f);
