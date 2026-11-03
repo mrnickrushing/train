@@ -30,14 +30,10 @@ namespace Ironhorse.EditorTools
             if (!string.IsNullOrEmpty(buildNumber)) PlayerSettings.iOS.buildNumber = buildNumber;
             var version = Environment.GetEnvironmentVariable("APP_VERSION");
             if (!string.IsNullOrEmpty(version)) PlayerSettings.bundleVersion = version;
-            // On CI, Xcode signs automatically with the App Store Connect API key (it creates the
-            // bundle id, certificate and profile itself), so the project only needs the team.
+            // On CI, Codemagic applies the fetched App Store profile (xcode-project use-profiles);
+            // the project only needs the team.
             var team = Environment.GetEnvironmentVariable("APPLE_TEAM_ID");
-            if (!string.IsNullOrEmpty(team))
-            {
-                PlayerSettings.iOS.appleDeveloperTeamID = team;
-                PlayerSettings.iOS.appleEnableAutomaticSigning = true;
-            }
+            if (!string.IsNullOrEmpty(team)) PlayerSettings.iOS.appleDeveloperTeamID = team;
 
             var options = new BuildPlayerOptions
             {
@@ -49,7 +45,11 @@ namespace Ironhorse.EditorTools
             };
             var report = BuildPipeline.BuildPlayer(options);
             Debug.Log("[Ironhorse] iOS build " + report.summary.result + " in " + report.summary.totalTime + ", " + report.summary.totalErrors + " errors");
-            if (Application.isBatchMode && report.summary.result != BuildResult.Succeeded) EditorApplication.Exit(1);
+            // A post-process failure (e.g. a platform module installed while the Editor was open) can still
+            // report Succeeded, so errors count as a failure too.
+            bool ok = report.summary.result == BuildResult.Succeeded && report.summary.totalErrors == 0;
+            if (!ok) Debug.LogError("[Ironhorse] iOS build failed");
+            if (Application.isBatchMode && !ok) EditorApplication.Exit(1);
         }
     }
 }

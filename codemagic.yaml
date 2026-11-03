@@ -1,19 +1,68 @@
 # Codemagic: build Ironhorse Frontier for iOS on a cloud Mac and ship it to TestFlight.
 #
-# Uses the team's shared settings (same as the other apps in this Codemagic team):
-#   - variable group `ios_credentials`: APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_IDENTIFIER,
-#     APP_STORE_CONNECT_ISSUER_ID (an App Store Connect API key with Admin or App Manager access)
-#   - variable group `unity_credentials`: UNITY_EMAIL, UNITY_PASSWORD and, for Unity Plus/Pro, UNITY_SERIAL.
-#     Without a serial the build signs in with the Unity ID (Unity Personal).
-# Xcode signs automatically with the API key, creating the bundle id, certificate and profile
-# itself. The App Store Connect app record (bundle id com.rushingtech.ironhorsefrontier) must
-# exist for the TestFlight upload; the .ipa is kept as an artifact either way.
+# ios-testflight (default): the Xcode project is exported from Unity on the dev machine
+#   (Tools/ios-export.sh, which uses the local Unity Personal license) and published as the
+#   `ios-latest` GitHub release asset. This workflow downloads it, signs and uploads.
+# ios-unity: runs Unity on the Mac itself. Needs a variable group `unity_credentials` with
+#   UNITY_EMAIL, UNITY_PASSWORD and UNITY_SERIAL (Unity Plus/Pro).
+#
+# Signing mirrors the team's other iOS apps (Vitality): the team App Store Connect integration
+# `CodeMagic-Team` fetches or creates the bundle id, certificate and App Store profile
+# (`fetch-signing-files --create`, with CERTIFICATE_PRIVATE_KEY from the team group
+# `ios_credentials`) and uploads to TestFlight. The App Store Connect app record
+# (bundle id com.rushingtech.ironhorsefrontier) must exist for the upload; the .ipa is kept as an
+# artifact either way.
 
 workflows:
   ios-testflight:
     name: iOS → TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: CodeMagic-Team
+    environment:
+      groups:
+        - ios_credentials
+      vars:
+        BUNDLE_ID: com.rushingtech.ironhorsefrontier
+        XCODE_PROJECT: ios/Unity-iPhone.xcodeproj
+        XCODE_SCHEME: Unity-iPhone
+        EXPORT_URL: https://github.com/mrnickrushing/train/releases/download/ios-latest/ios-xcode.zip
+      xcode: latest
+    scripts:
+      - name: Download the exported Xcode project
+        script: |
+          curl -fL --retry 3 -o /tmp/ios-xcode.zip "$EXPORT_URL"
+          rm -rf ios && unzip -q /tmp/ios-xcode.zip -d .
+          ls ios
+      - name: Set build number
+        script: |
+          echo "Build number: $BUILD_NUMBER"   # Codemagic's per-workflow counter
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/Info.plist
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+      - name: Build signed .ipa
+        script: |
+          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
+
+  ios-unity:
+    name: iOS → TestFlight (Unity on the Mac; needs Unity Plus/Pro)
     max_build_duration: 120
     instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: CodeMagic-Team
     environment:
       groups:
         - ios_credentials
@@ -28,17 +77,11 @@ workflows:
         XCODE_SCHEME: Unity-iPhone
       xcode: latest
       cocoapods: default
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
     scripts:
       - name: Check credentials
         script: |
           missing=""
-          for v in APP_STORE_CONNECT_PRIVATE_KEY APP_STORE_CONNECT_KEY_IDENTIFIER APP_STORE_CONNECT_ISSUER_ID UNITY_EMAIL UNITY_PASSWORD; do
+          for v in UNITY_EMAIL UNITY_PASSWORD; do
             [ -z "${!v}" ] && missing="$missing $v"
           done
           if [ -n "$missing" ]; then echo "Missing environment variables:$missing"; exit 1; fi
@@ -69,37 +112,19 @@ workflows:
           echo "Build number: $BUILD_NUMBER"   # Codemagic's per-workflow counter
           "$UNITY_BIN" -batchmode -quit -nographics -projectPath "$CM_BUILD_DIR" \
             -buildTarget iOS -executeMethod Ironhorse.EditorTools.BuildScript.BuildIos -logFile -
-      - name: Archive and export signed .ipa
+      - name: Set up code signing
         script: |
-          set -euo pipefail
-          KEY="/tmp/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
-          printf "%b" "$APP_STORE_CONNECT_PRIVATE_KEY" > "$KEY"
-          chmod 600 "$KEY"
-          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY"
-                -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID")
-          xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Release \
-            -destination "generic/platform=iOS" -archivePath /tmp/Ironhorse.xcarchive \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic COMPILER_INDEX_STORE_ENABLE=NO \
-            "${AUTH[@]}" archive
-          cat > /tmp/export_options.plist <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-            <dict>
-              <key>method</key><string>app-store-connect</string>
-              <key>teamID</key><string>${APPLE_TEAM_ID}</string>
-              <key>signingStyle</key><string>automatic</string>
-              <key>destination</key><string>export</string>
-            </dict>
-          </plist>
-          PLIST
-          mkdir -p build/ios/ipa
-          xcodebuild -exportArchive -archivePath /tmp/Ironhorse.xcarchive -exportPath build/ios/ipa \
-            -exportOptionsPlist /tmp/export_options.plist "${AUTH[@]}"
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+      - name: Build signed .ipa
+        script: |
+          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
       - test-results.xml
-      - /tmp/Ironhorse.xcarchive/dSYMs/*.dSYM
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
       scripts:
         - name: Return Unity license
@@ -107,8 +132,6 @@ workflows:
             "$UNITY_BIN" -batchmode -quit -nographics -returnlicense \
               -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" -logFile - || true
       app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        auth: integration
         submit_to_testflight: true
         submit_to_app_store: false

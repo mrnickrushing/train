@@ -46,23 +46,22 @@ and skipping time.
 
 ## Building for iPhone with Codemagic
 
-`codemagic.yaml` defines the `ios-testflight` workflow. It installs Unity on a cloud Mac, runs the
-tests, exports the Xcode project via `Ironhorse.EditorTools.BuildScript.BuildIos`, signs it and
-uploads it to **TestFlight**.
+`codemagic.yaml` has two workflows. Both sign with the team's App Store Connect integration
+`CodeMagic-Team` (and `CERTIFICATE_PRIVATE_KEY` from the team group `ios_credentials`), register the
+bundle id `com.rushingtech.ironhorsefrontier` and create the profile themselves, then upload to
+**TestFlight**.
 
-One-time setup (the app is already added in Codemagic as **train**, in the same team as the other apps):
+- **`ios-testflight`** (works with Unity Personal): export the Xcode project here, then build it on
+  Codemagic.
+  1. Once: `unity install-modules --editor-version 6000.0.85f1 -m ios --cm --accept-eula -y`.
+  2. `Tools/ios-export.sh` exports from the running Editor (using your local Unity license) and
+     uploads `ios-xcode.zip` to the `ios-latest` GitHub release.
+  3. Start `ios-testflight` in Codemagic (app **train**).
+- **`ios-unity`** runs Unity on the Mac itself. It needs a variable group `unity_credentials` with
+  `UNITY_EMAIL`, `UNITY_PASSWORD` and `UNITY_SERIAL` (Unity Plus/Pro).
 
-1. **App Store Connect API key:** the workflow reads `APP_STORE_CONNECT_PRIVATE_KEY`,
-   `APP_STORE_CONNECT_KEY_IDENTIFIER` and `APP_STORE_CONNECT_ISSUER_ID` from the team variable group
-   `ios_credentials` (shared with the other apps). Xcode uses the key to register the bundle id
-   `com.rushingtech.ironhorsefrontier` and create the certificate and profile itself.
-2. **Unity:** create a variable group `unity_credentials` with `UNITY_EMAIL` and `UNITY_PASSWORD`
-   (secure), plus `UNITY_SERIAL` if you have Unity Plus/Pro. Without a serial the build signs in with
-   your Unity ID (Unity Personal).
-3. **App Store Connect:** create the app record (My Apps → + → New App) with that bundle id, so
-   builds can be uploaded to TestFlight. The signed `.ipa` is kept as a build artifact either way.
-4. Start the `ios-testflight` workflow (it also runs on every push to `main`). When it finishes,
-   install from TestFlight on your iPhone.
+The App Store Connect app record must exist (My Apps → + → New App, same bundle id) for the upload;
+the signed `.ipa` is kept as a build artifact either way.
 
 ## Tests
 
