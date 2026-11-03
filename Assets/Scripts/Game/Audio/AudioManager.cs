@@ -98,6 +98,13 @@ namespace Ironhorse.Game
 
         public static void Play(Sfx s, float vol = 1)
         {
+            switch (s)
+            {
+                case Sfx.Click: Haptics.Play(Haptic.Light); break;
+                case Sfx.Coin: case Sfx.Build: case Sfx.Deliver: Haptics.Play(Haptic.Medium); break;
+                case Sfx.LevelUp: case Sfx.Bell: Haptics.Play(Haptic.Success); break;
+                case Sfx.Error: Haptics.Play(Haptic.Error); break;
+            }
             if (_i == null || !SfxOn) return;
             AudioClip c;
             if (_i._clips.TryGetValue(s, out c)) _i._ui.PlayOneShot(c, vol);
