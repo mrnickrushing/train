@@ -33,17 +33,18 @@ SFX = {
     "whistle": ("whistle.wav", 0.75, 2.60, 0.85, 0.50),
     "chuff":   ("chuff.wav",   None, 0.60, 0.85, 0.25),
 }
-# name: (source, start s, end s, crossfade s, peak, channels)
+# name: (source, start s, end s, crossfade s, peak, channels, ffmpeg filter or None)
 LOOPS = {
-    "amb_day":   ("amb_day.mp3",   0.2, 10.0, 2.0, 0.55, 1),
-    "amb_night": ("amb_night.mp3", 0.2, 10.0, 2.0, 0.55, 1),
-    "music":     ("music.m4a",     4.0, 84.0, 3.0, 0.70, 2),
+    # The day take is mostly wind: low-pass it so only a soft rustle is left, and keep it quiet.
+    "amb_day":   ("amb_day.mp3",   0.2, 10.0, 2.0, 0.30, 1, "highpass=f=90,lowpass=f=900"),
+    "amb_night": ("amb_night.mp3", 0.2, 10.0, 2.0, 0.40, 1, None),
+    "music":     ("music.m4a",     4.0, 84.0, 3.0, 0.70, 2, None),
 }
 
 
-def load(name, channels):
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", os.path.join(SRC, name), "-ac", str(channels), "-ar", str(SR), "-f", "f32le", "-"],
-                         check=True, capture_output=True).stdout
+def load(name, channels, af=None):
+    cmd = ["ffmpeg", "-v", "error", "-i", os.path.join(SRC, name)] + (["-af", af] if af else []) + ["-ac", str(channels), "-ar", str(SR), "-f", "f32le", "-"]
+    raw = subprocess.run(cmd, check=True, capture_output=True).stdout
     a = np.frombuffer(raw, dtype=np.float32).astype(np.float64)
     return a.reshape(-1, channels)
 
@@ -77,8 +78,8 @@ def sfx(name, src, start, length, peak, fade):
     return normalise(a, peak)
 
 
-def loop(src, start, end, xfade, peak, channels):
-    a = load(src, channels)
+def loop(src, start, end, xfade, peak, channels, af=None):
+    a = load(src, channels, af)
     a = a[int(start * SR):int(end * SR)].copy()
     x = int(xfade * SR)
     head, tail = a[:x].copy(), a[-x:].copy()
