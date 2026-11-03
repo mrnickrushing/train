@@ -166,6 +166,7 @@ namespace Ironhorse.Core
     {
         public bool music = true;
         public bool sfx = true;
+        public bool notifications = true; // local reminders (train arrivals, fuel, production)
         public bool tutorialDone;
     }
 

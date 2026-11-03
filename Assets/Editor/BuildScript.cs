@@ -25,6 +25,9 @@ namespace Ironhorse.EditorTools
             UrpSetup.Run();
 #endif
             AppIcon.Generate();
+#if UNITY_IOS
+            IosCapabilities.ConfigureNotifications();
+#endif
 
             var buildNumber = Environment.GetEnvironmentVariable("BUILD_NUMBER");
             if (!string.IsNullOrEmpty(buildNumber)) PlayerSettings.iOS.buildNumber = buildNumber;

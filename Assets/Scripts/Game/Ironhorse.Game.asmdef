@@ -6,7 +6,9 @@
         "UnityEngine.UI",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
-        "revenuecat.purchases-unity"
+        "revenuecat.purchases-unity",
+        "AppleAuth",
+        "Unity.Notifications.iOS"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

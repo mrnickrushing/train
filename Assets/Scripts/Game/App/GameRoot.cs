@@ -137,6 +137,7 @@ namespace Ironhorse.Game
             Child<TownView>("Town");
             Child<TownStreets>("Streets");
             Child<UIRoot>("UI");
+            Child<PlatformServices>("Apple Services");
 
             yield return null; // let Start() run on everything before revealing the world
             if (!fresh) WelcomeBack(state);
