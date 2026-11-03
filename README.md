@@ -50,20 +50,19 @@ and skipping time.
 tests, exports the Xcode project via `Ironhorse.EditorTools.BuildScript.BuildIos`, signs it and
 uploads it to **TestFlight**.
 
-One-time setup:
+One-time setup (the app is already added in Codemagic as **train**, in the same team as the other apps):
 
-1. **Apple:** you need a paid Apple Developer account. In App Store Connect, create the app with
-   bundle id `com.rushingtech.ironhorsefrontier` (or change `ProjectSetup.BundleId` and
-   `codemagic.yaml` to your own).
-2. **Codemagic → Teams → Integrations → App Store Connect:** add an API key and name it
-   `Ironhorse ASC Key`. Codemagic uses it to create signing certificates and profiles and to upload.
-3. **Codemagic → Environment variables:** create a group `unity_credentials` with `UNITY_EMAIL`,
-   `UNITY_PASSWORD` and `UNITY_SERIAL`. Codemagic's Unity workflow activates a license by serial.
-   Check Codemagic's current Unity docs for which Unity plans they support. If you only have
-   Unity Personal, Unity's own cloud builder (**Unity Build Automation**) is an alternative.
-4. In `codemagic.yaml`, set `UNITY_VERSION` and `UNITY_CHANGESET` to your editor version. Both
-   are listed on the Unity download archive.
-5. Start a build. When it finishes, install from TestFlight on your iPhone.
+1. **App Store Connect API key:** the workflow reads `APP_STORE_CONNECT_PRIVATE_KEY`,
+   `APP_STORE_CONNECT_KEY_IDENTIFIER` and `APP_STORE_CONNECT_ISSUER_ID` from the team variable group
+   `ios_credentials` (shared with the other apps). Xcode uses the key to register the bundle id
+   `com.rushingtech.ironhorsefrontier` and create the certificate and profile itself.
+2. **Unity:** create a variable group `unity_credentials` with `UNITY_EMAIL` and `UNITY_PASSWORD`
+   (secure), plus `UNITY_SERIAL` if you have Unity Plus/Pro. Without a serial the build signs in with
+   your Unity ID (Unity Personal).
+3. **App Store Connect:** create the app record (My Apps → + → New App) with that bundle id, so
+   builds can be uploaded to TestFlight. The signed `.ipa` is kept as a build artifact either way.
+4. Start the `ios-testflight` workflow (it also runs on every push to `main`). When it finishes,
+   install from TestFlight on your iPhone.
 
 ## Tests
 
