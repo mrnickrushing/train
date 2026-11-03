@@ -29,7 +29,7 @@ namespace Ironhorse.Game
             UIKit.VStack(v, 4, 0, TextAnchor.UpperLeft);
             _chapterTitle = UIKit.Label(v.transform, "", 20, UIKit.Gold, TextAnchor.MiddleLeft);
             _chapterTitle.font = UIKit.Display;
-            UIKit.Size(_chapterTitle.gameObject, -1, 26);
+            UIKit.OneLine(_chapterTitle, 16);
             var row = UIKit.Row(v.transform, 22, 8);
             _chapterFill = UIKit.Bar(row.transform, UIKit.Brass, 16, new Color(0, 0, 0, 0.4f));
             _chapterNext = UIKit.Label(v.transform, "", 19, UIKit.Cream, TextAnchor.MiddleLeft);

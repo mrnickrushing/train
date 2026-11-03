@@ -373,6 +373,7 @@ namespace Ironhorse.Game
             t.font = UIKit.Display;
             t.fontStyle = FontStyle.Normal; // the face is already bold
             UIKit.Stretch(t.gameObject, 4);
+            UIKit.OneLine(t, 12); // "UNCOMMON" shrinks to fit rather than wrapping
         }
 
         static GameObject WagonSwatch(Transform parent, WagonDef wd)

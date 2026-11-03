@@ -227,6 +227,18 @@ namespace Ironhorse.Game
             return t;
         }
 
+        /// <summary>Keeps a label on one line of fixed height, shrinking long text (down to minSize) to fit its width.</summary>
+        public static Text OneLine(Text t, int minSize)
+        {
+            t.resizeTextForBestFit = true;
+            t.resizeTextMinSize = minSize;
+            t.resizeTextMaxSize = t.fontSize;
+            t.verticalOverflow = VerticalWrapMode.Truncate;
+            var le = Size(t.gameObject, -1, Mathf.Ceil(t.fontSize * 1.2f));
+            le.preferredHeight = le.minHeight;
+            return t;
+        }
+
         public static Button Btn(Transform parent, string text, Color bg, Action onClick, int fontSize = 26, float w = -1, float h = 64, bool enabled = true)
         {
             // Chunky "3D" button: a darker base slab with the gradient face sitting on top of it.
