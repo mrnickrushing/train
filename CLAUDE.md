@@ -58,7 +58,11 @@ install it with `dotnet-install.sh --channel 8.0` if `dotnet --list-sdks` lacks 
   `import` welds the mesh before decimating (otherwise it cracks) and then runs
   `Tools/blender/rebake.py`, which gives the low-poly mesh fresh UVs and bakes colour + normals from
   the full-detail GLB (decimation wrecks the original UVs: patchy colours, white specks). Models get
-  one even finish (no per-patch metal maps).
+  one even finish (no per-patch metal maps). `A[id]["hero"]` (the station) gets 40k tris and 2K maps.
+  `Tools/blender/trim_base.py` cuts the square dirt slab Tripo puts under buildings so they stand on
+  the terrain (run it after re-importing a town building; the station, freight shed, fountain and
+  garden keep their bases). `Tools/blender/lod.py` writes `<id>_far.fbx` (same textures) for models
+  drawn in bulk: parked yard wagons go through `Vegetation.AddModel` (GPU instanced, near/far).
 - **Townsfolk**: rigged AI characters (Higgsfield Multi-Image to 3D, rigging on) turned into Walk/Idle
   loops by `Tools/blender/townsfolk.py`; check strides with `walk_strip.py`. They snap to whatever is
   underfoot via colliders on layer 2 (`Station.Walkable`).

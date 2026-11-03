@@ -43,8 +43,14 @@ namespace Ironhorse.EditorTools
                 }
                 renderer.renderingMode = RenderingMode.ForwardPlus; // dozens of night lamps without per-object limits
                 EditorUtility.SetDirty(renderer);
-                asset.shadowDistance = 230f;
+                // Sharp cascade reaches past the default camera distance (95 m); soft (PCF) edges so
+                // shadow outlines don't crawl as pixel stairs.
+                asset.shadowDistance = 200f;
                 asset.shadowCascadeCount = 2;
+                asset.cascade2Split = 0.55f;
+                var so = new SerializedObject(asset);
+                so.FindProperty("m_SoftShadowsSupported").boolValue = true;
+                so.ApplyModifiedPropertiesWithoutUndo();
                 asset.msaaSampleCount = 4;
                 asset.supportsHDR = true;
                 asset.renderScale = 1f;
