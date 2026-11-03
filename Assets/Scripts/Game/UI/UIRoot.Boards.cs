@@ -48,7 +48,7 @@ namespace Ironhorse.Game
             _boardBuilder = build;
             _scrollMemo.Clear();
 
-            var dim = UIKit.Panel(_windowLayer, new Color(0.04f, 0.05f, 0.08f, 0.72f), "Dim");
+            var dim = UIKit.Panel(_windowLayer, new Color(0.04f, 0.05f, 0.08f, 0.9f), "Dim");
             dim.sprite = null;
             UIKit.Stretch(dim.gameObject);
             _window = dim.gameObject;
