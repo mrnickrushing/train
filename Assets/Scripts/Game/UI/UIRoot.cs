@@ -397,20 +397,22 @@ namespace Ironhorse.Game
 
         void BuildGoal()
         {
-            var card = UIKit.KitImage(_safe, "card_light", "Goal");
+            var card = UIKit.KitImage(_safe, "tile_dark", "Goal");
             _goalCard = card.gameObject;
             UIKit.Place(_goalCard, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -138), new Vector2(430, 150));
             HudShadow(_goalCard);
+            Clickable(_goalCard, GoToGoal);
             var v = UIKit.Node("V", card.transform);
             UIKit.Stretch(v, 14);
             UIKit.VStack(v, 6, 0, TextAnchor.UpperLeft);
-            var hdr = UIKit.Label(v.transform, "TERRITORY GOAL", 18, UIKit.BrassDark, TextAnchor.MiddleLeft, true, FontStyle.Bold);
+            var hdr = UIKit.Label(v.transform, "TERRITORY GOAL", 18, UIKit.Gold, TextAnchor.MiddleLeft);
+            hdr.font = UIKit.Display;
             UIKit.Size(hdr.gameObject, -1, 22);
-            _goalText = UIKit.Label(v.transform, "", 22, UIKit.Ink);
+            _goalText = UIKit.Label(v.transform, "", 22, UIKit.Cream);
             UIKit.Size(_goalText.gameObject, -1, 52);
             var row = UIKit.Row(v.transform, 32, 10);
-            _goalFill = UIKit.Bar(row.transform, UIKit.Green, 20);
-            _goalProgress = UIKit.Label(row.transform, "", 20, UIKit.InkSoft, TextAnchor.MiddleRight);
+            _goalFill = UIKit.Bar(row.transform, UIKit.Green, 20, new Color(0, 0, 0, 0.4f));
+            _goalProgress = UIKit.Label(row.transform, "", 20, new Color(0.78f, 0.82f, 0.88f), TextAnchor.MiddleRight);
             UIKit.Size(_goalProgress.gameObject, 90, 30);
             _goalClaim = UIKit.Btn(card.transform, "Claim!", UIKit.Green, () =>
             {
@@ -419,6 +421,28 @@ namespace Ironhorse.Game
                 Toast(r.Message, r.Ok);
             }, 24, 140, 56);
             UIKit.Place(_goalClaim.gameObject, new Vector2(1, 0), new Vector2(1, 0.5f), new Vector2(-10, 0), new Vector2(140, 56));
+        }
+
+        /// <summary>Tapping the goal card opens the screen where that goal gets done.</summary>
+        void GoToGoal()
+        {
+            var g = S.CurrentGoal;
+            if (g == null) return;
+            switch (g.Type)
+            {
+                case GoalType.DispatchTrains: OpenFleet(); break;
+                case GoalType.CollectResource:
+                case GoalType.ProduceResource: GoGet(g.Target); break;
+                case GoalType.ConstructBuilding:
+                    var d = GameDatabase.Building(g.Target);
+                    if (d != null) _buildTab = d.Category;
+                    OpenBuildMenu();
+                    break;
+                case GoalType.ReachPopulation: _buildTab = BuildingCategory.Residential; OpenBuildMenu(); break;
+                case GoalType.CompleteContracts: _ordersTab = "orders"; OpenContracts(); break;
+                case GoalType.OwnLocomotives: OpenDepot("locos"); break;
+                default: OpenTimeline(); break;
+            }
         }
 
         void BuildBanner()
