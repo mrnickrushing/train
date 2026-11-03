@@ -111,7 +111,7 @@ namespace Ironhorse.Game
             if (x > r.xMin - 6 && x < r.xMax + 6 && z > r.yMin + 40 && z < r.yMax + 6)
             {
                 float edge = Mathf.Min(Mathf.Min(x - (r.xMin - 6), (r.xMax + 6) - x), Mathf.Min(z - (r.yMin + 40), (r.yMax + 6) - z));
-                Mix(w, 2, Mathf.Clamp01(edge / 10f) * (0.25f + n2 * 0.3f)); // worn patches, grass still shows
+                // Town ground stays green; streets and worn patches come from TownStreets' ground mask.
             }
             foreach (var yard in new[] { WorldLayout.YardRect, WorldLayout.RoundhouseRect })
             {
