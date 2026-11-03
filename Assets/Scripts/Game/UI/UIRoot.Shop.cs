@@ -116,86 +116,110 @@ namespace Ironhorse.Game
         public void OpenShop(string tab = null)
         {
             if (tab != null) _shopTab = tab;
-            ShowWindow("Trading Post", content =>
+            ShowBoard("Trading Post", ShopBoard);
+        }
+
+        void ShopBoard(Transform body, Transform right)
+        {
+            string[] names = { "Offers", "Nuggets", "Supplies", "Season" };
+            string[] ids = { "offers", "nuggets", "supplies", "season" };
+            _boardSub = names[Mathf.Max(0, Array.IndexOf(ids, _shopTab))];
+            if (_shopTab == "offers")
             {
-                // Refresh timer strip, then category tabs on the left and offer cards on the right.
-                var top = UIKit.Row(content, 50, 10, TextAnchor.MiddleRight);
-                top.SetActive(_shopTab == "offers");
-                var tlabel = UIKit.Label(top.transform, "Weekly deals refresh in", 22, UIKit.InkSoft, TextAnchor.MiddleRight, false, FontStyle.Bold);
-                UIKit.Size(tlabel.gameObject, -1, 40, 1);
-                var timer = UIKit.KitImage(top.transform, "pill_slate", "Timer", 44);
-                UIKit.Size(timer.gameObject, 190, 44);
-                var tt = UIKit.Label(timer.transform, "", 24, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
-                tt.font = UIKit.Display; tt.fontStyle = FontStyle.Normal;
-                UIKit.Stretch(tt.gameObject, 4);
-                Action live = () => tt.text = Fmt.Time(S.WeekEndsIn);
+                var timer = Pill(right, tr => ClockIcon(tr, 40), "", 30);
+                var tt = timer.GetComponentInChildren<Text>();
+                Action live = () => tt.text = "New deals in " + Fmt.Time(S.WeekEndsIn);
                 live(); Live(live);
+            }
+            else if (_shopTab == "nuggets")
+                Big(right, "Restore purchases", UIKit.WoodLight, () => Store.Current.Restore(n => Toast(n > 0 ? "Restored " + n + " purchase(s)" : "Nothing to restore", true)), 380, 80, true, 32);
 
-                var body = UIKit.Node("Body", content);
-                var bh = UIKit.HStack(body, 22, 0, TextAnchor.UpperLeft);
-                bh.childControlHeight = true;
-                body.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var row = UIKit.Node("Row", body);
+            UIKit.Stretch(row);
+            Row(row, 12, new RectOffset(0, 0, 0, 0)).childForceExpandHeight = true;
+            SideTabs(row.transform, 220, 158, new (string, Action<Transform>, bool, Action)[]
+            {
+                ("Offers", Ico("shop_nuggets_4", 96), _shopTab == "offers", () => _shopTab = "offers"),
+                ("Nuggets", Ico("shop_nuggets_3", 96), _shopTab == "nuggets", () => _shopTab = "nuggets"),
+                ("Supplies", Ico("shop_supplies", 96), _shopTab == "supplies", () => _shopTab = "supplies"),
+                ("Season", Ico("xp", 96), _shopTab == "season", () => _shopTab = "season"),
+            });
+            var panel = Box(row.transform, BTile, -1, -1, "Panel");
+            UIKit.Size(panel.gameObject, -1, -1, 1);
+            Stack(panel.gameObject, 0, new RectOffset(14, 14, 14, 14));
+            var ct = Scroller(panel.transform, "shop " + _shopTab, true, 16);
 
-                var tabs = UIKit.Node("Tabs", body.transform);
-                UIKit.VStack(tabs, 12, 0, TextAnchor.UpperCenter);
-                UIKit.Size(tabs, 196, -1);
-                ShopTab(tabs.transform, "offers", "Offers", "xp", S.StarterAvailable || S.WeeklyOffer != null);
-                ShopTab(tabs.transform, "nuggets", "Nuggets", "shop_nuggets_3", false);
-                ShopTab(tabs.transform, "supplies", "Supplies", "shop_supplies", false);
-                ShopTab(tabs.transform, "season", "Season", "nav_trains", !S.State.passPremium);
-
-                var cards = UIKit.Node("Cards", body.transform);
-                var g = cards.AddComponent<GridLayoutGroup>();
-                g.cellSize = new Vector2(314, 600);
-                g.spacing = new Vector2(18, 20);
-                g.childAlignment = TextAnchor.UpperLeft;
-                g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-                g.constraintCount = 4;
-                cards.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-                UIKit.Size(cards, 1310, -1);
-                var ct = cards.transform;
-
-                if (_shopTab == "offers")
+            if (_shopTab == "offers")
+            {
+                int n = 0;
+                foreach (var o in S.ActiveOffers().Where(o => o.ProductId != null)) { var oo = o; InCell(ct, t => OfferCard(t, oo)); n++; }
+                if (!S.HasFuelTank)
                 {
-                    foreach (var o in S.ActiveOffers().Where(o => o.ProductId != null)) OfferCard(ct, o);
-                    if (!S.HasFuelTank)
+                    var fp = Catalog.Product(Catalog.FuelTank);
+                    InCell(ct, t => ShopCard(t, fp.Title, "FOREVER", UIKit.Green, null, "blackhollow", x => Art(x, "shop_fuel", 230), null, fp.Grant, "Fuel limit +" + Balance.FuelTankBonus,
+                        Store.PriceOf(fp.Id), UIKit.Green, () => BuyProduct(fp.Id)));
+                    n++;
+                }
+                if (n == 0) NoDeals(ct);
+            }
+            else if (_shopTab == "nuggets")
+            {
+                int i = 0;
+                foreach (var p in Catalog.Products.Where(p => p.Id.StartsWith("ironhorse.nuggets_"))) { var pp = p; int k = i++; InCell(ct, t => NuggetCard(t, pp, k)); }
+                bool ad = S.AdsLeft(AdReward.Nuggets) > 0 && Ads.Current.Available;
+                InCell(ct, t => ShopCard(t, "Free Nuggets", "FREE", UIKit.Blue, null, null, x => Art(x, "shop_nuggets_1", 190), null, new Grant { Nuggets = Balance.AdNuggets },
+                    S.AdsLeft(AdReward.Nuggets) + " left today", "Watch", UIKit.Green, ad ? (Action)(() => Ads.Watch(AdReward.Nuggets, 0, r => { Result(r, Sfx.Coin); RebuildWindow(); })) : null));
+            }
+            else if (_shopTab == "supplies")
+            {
+                foreach (var o in S.ActiveOffers().Where(o => o.ProductId == null))
+                {
+                    var oo = o;
+                    InCell(ct, t =>
                     {
-                        var fp = Catalog.Product(Catalog.FuelTank);
-                        ShopCard(ct, fp.Title, "FOREVER", UIKit.Green, null, "blackhollow", t => Art(t, "shop_fuel", 230), null, fp.Grant, "Fuel limit +" + Balance.FuelTankBonus,
-                            Store.PriceOf(fp.Id), UIKit.Green, () => BuyProduct(fp.Id));
-                    }
+                        var b = ShopCard(t, oo.Title, null, UIKit.Blue, null, null, x => Art(x, SupplyArt(oo.Grant), 200), null, oo.Grant, oo.Subtitle,
+                            oo.NuggetPrice.ToString(), UIKit.Green, S.Nuggets >= oo.NuggetPrice ? (Action)(() => { Result(S.BuyNuggetOffer(oo.Id)); RebuildWindow(); }) : null);
+                        PriceLabelWithNugget(b, oo.NuggetPrice);
+                    });
                 }
-                else if (_shopTab == "nuggets")
-                {
-                    int i = 0;
-                    foreach (var p in Catalog.Products.Where(p => p.Id.StartsWith("ironhorse.nuggets_"))) NuggetCard(ct, p, i++);
-                    bool ad = S.AdsLeft(AdReward.Nuggets) > 0 && Ads.Current.Available;
-                    ShopCard(ct, "Free Nuggets", "FREE", UIKit.Blue, null, null, t => Art(t, "shop_nuggets_1", 190), null, new Grant { Nuggets = Balance.AdNuggets },
-                        S.AdsLeft(AdReward.Nuggets) + " left today", "Watch", UIKit.Green, ad ? (Action)(() => Ads.Watch(AdReward.Nuggets, 0, r => { Result(r, Sfx.Coin); RebuildWindow(); })) : null);
-                    UIKit.Btn(content, "Restore purchases", UIKit.WoodLight, () => Store.Current.Restore(n => Toast(n > 0 ? "Restored " + n + " purchase(s)" : "Nothing to restore", true)), 22, -1, 60);
-                }
-                else if (_shopTab == "supplies")
-                {
-                    foreach (var o in S.ActiveOffers().Where(o => o.ProductId == null))
-                    {
-                        var oo = o;
-                        var b = ShopCard(ct, o.Title, null, UIKit.Blue, null, null, t => Art(t, SupplyArt(oo.Grant), 200), null, o.Grant, o.Subtitle,
-                            o.NuggetPrice.ToString(), UIKit.Green, S.Nuggets >= o.NuggetPrice ? (Action)(() => { Result(S.BuyNuggetOffer(oo.Id)); RebuildWindow(); }) : null);
-                        PriceLabelWithNugget(b, o.NuggetPrice);
-                    }
-                }
-                else
-                {
-                    var sp = Catalog.Product(Catalog.SeasonPass);
-                    var final = GameDatabase.Locomotive("sundown");
-                    ShopCard(ct, "Rail Season Pass", S.State.passPremium ? "ACTIVE" : "PREMIUM", Purple, null, "silversprings",
-                        t => { if (final != null) LocoArt(t, final); }, null, new Grant(), "30 tiers of premium rewards and the Sundown Express",
-                        S.State.passPremium ? "View pass" : Store.PriceOf(sp.Id), S.State.passPremium ? UIKit.Blue : UIKit.Green,
-                        () => { if (S.State.passPremium) OpenPass(); else BuyProduct(sp.Id); });
-                    ShopCard(ct, "Season Rewards", null, UIKit.Blue, null, null, t => Art(t, "xp", 200), null, new Grant(), "Tier " + S.PassTier + "/" + Balance.PassTiers + " · see every reward",
-                        "Open", UIKit.Blue, () => OpenPass());
-                }
-            }, 1560, 900);
+            }
+            else
+            {
+                var sp = Catalog.Product(Catalog.SeasonPass);
+                var final = GameDatabase.Locomotive("sundown");
+                InCell(ct, t => ShopCard(t, "Rail Season Pass", S.State.passPremium ? "ACTIVE" : "PREMIUM", Purple, null, "silversprings",
+                    x => { if (final != null) LocoArt(x, final); }, null, new Grant(), "30 tiers of premium rewards and the Sundown Express",
+                    S.State.passPremium ? "View pass" : Store.PriceOf(sp.Id), S.State.passPremium ? UIKit.Blue : UIKit.Green,
+                    () => { if (S.State.passPremium) OpenPass(); else BuyProduct(sp.Id); }));
+                InCell(ct, t => ShopCard(t, "Season Rewards", null, UIKit.Blue, null, null, x => Art(x, "xp", 200), null, new Grant(), "Tier " + S.PassTier + "/" + Balance.PassTiers + " · see every reward",
+                    "Open", UIKit.Blue, () => OpenPass()));
+            }
+        }
+
+        /// <summary>A store card in a fixed-width cell of the board's card row.</summary>
+        static void InCell(Transform p, Action<Transform> make, float w = 340)
+        {
+            var cell = UIKit.Node("Cell", p);
+            UIKit.Size(cell, w, -1);
+            make(cell.transform);
+            foreach (Transform c in cell.transform) UIKit.Stretch(c.gameObject);
+        }
+
+        /// <summary>Offers tab once every deal is bought: when the next arrive, and where to look meanwhile.</summary>
+        void NoDeals(Transform p)
+        {
+            var card = Box(p, BCardDeep, 900, -1, "NoDeals");
+            Stack(card.gameObject, 16, new RectOffset(30, 30, 30, 30), TextAnchor.MiddleCenter);
+            var ic = HBox(card.transform, 0, 0, TextAnchor.MiddleCenter, -1, 230);
+            Art(ic.transform, "shop_nuggets_4", 220);
+            T(card.transform, "You've snapped up every deal!", 52, BGold, TextAnchor.MiddleCenter, true);
+            var tl = T(card.transform, "", 36, Color.white, TextAnchor.MiddleCenter, false, UIKit.Heading);
+            Action live = () => tl.text = "A fresh bundle arrives in " + Fmt.Time(S.WeekEndsIn) + ".";
+            live(); Live(live);
+            Flex(card.transform);
+            var btns = HBox(card.transform, 16, 0, TextAnchor.MiddleCenter, -1, 96);
+            Big(btns.transform, "Nuggets", UIKit.Green, () => { _shopTab = "nuggets"; RebuildWindow(); }, 300, 92, true, 40);
+            Big(btns.transform, "Supplies", BBlue, () => { _shopTab = "supplies"; RebuildWindow(); }, 300, 92, true, 40);
         }
 
         /// <summary>Left-hand category tab: painted icon and caption on a dark tile (light when selected).</summary>
@@ -484,109 +508,135 @@ namespace Ironhorse.Game
 
         // ================================================================ Fuel
 
-        public void OpenFuel()
+        public void OpenFuel() { ShowBoard("Coal & Water", FuelBoard, 1700, 860); }
+
+        void FuelBoard(Transform body, Transform right)
         {
-            ShowWindow("Coal & Water", content =>
+            _boardSub = "The tender";
+            var row = UIKit.Node("Row", body);
+            UIKit.Stretch(row);
+            Row(row, 12, new RectOffset(0, 0, 0, 0)).childForceExpandHeight = true;
+
+            var gauge = Box(row.transform, BCardDeep, 600, -1, "Gauge");
+            Stack(gauge.gameObject, 16, new RectOffset(26, 26, 26, 26), TextAnchor.UpperCenter);
+            var ic = HBox(gauge.transform, 0, 0, TextAnchor.MiddleCenter, -1, 200);
+            FuelIcon(ic.transform, 190);
+            var amount = T1(gauge.transform, "", 64, Color.white, TextAnchor.MiddleCenter, true);
+            var bar = Track(gauge.transform, 40, FuelOrange);
+            var timer = T1(gauge.transform, "", 32, BLabel, TextAnchor.MiddleCenter, false, UIKit.Heading);
+            Action live = () =>
             {
-                var top = Card(content, 130);
-                FuelIcon(top.transform, 96);
-                var col = Col(top.transform);
-                var amount = Line(col.transform, "", 30, UIKit.Ink, true);
-                var bar = UIKit.Bar(col.transform, FuelOrange, 24);
-                var timer = Line(col.transform, "", 20, UIKit.InkSoft);
-                Action live = () =>
-                {
-                    amount.text = S.Fuel + " / " + S.MaxFuel + " fuel";
-                    UIKit.SetBar(bar, S.Fuel / (float)S.MaxFuel);
-                    timer.text = S.Fuel >= S.MaxFuel ? "Tender is full" : "+1 every " + (int)Balance.FuelRegenSeconds + "s · full in " + Fmt.Time(S.FullFuelIn);
-                };
-                live(); Live(live);
-                Line(content, "Every dispatch burns coal and water. Heavier trains and farther outposts burn more. Leveling up refills the tender.", 20, UIKit.InkSoft);
+                amount.text = Fmt.Num(S.Fuel) + " / " + S.MaxFuel;
+                UIKit.SetBar(bar, S.Fuel / (float)S.MaxFuel);
+                timer.text = S.Fuel >= S.MaxFuel ? (S.Fuel > S.MaxFuel ? "Overfilled · no refill until it drops" : "The tender is full") : "+1 every " + (int)Balance.FuelRegenSeconds + "s · full in " + Fmt.Time(S.FullFuelIn);
+            };
+            live(); Live(live);
+            Flex(gauge.transform);
+            T(gauge.transform, "Every trip burns coal and water. Heavier trains and farther outposts burn more. Levelling up refills the tender.", 30, BLabel, TextAnchor.MiddleCenter, false, UIKit.Heading);
 
-                var refill = Card(content, 100);
-                var rc = Col(refill.transform);
-                Line(rc.transform, "Top up the tender", 24, UIKit.Ink, true);
-                Line(rc.transform, "Fill to " + S.MaxFuel + " right now", 20, UIKit.InkSoft);
-                if (S.RefillCost > 0)
-                {
-                    var b = UIKit.Btn(refill.transform, "", UIKit.Green, () => Result(S.RefillFuelWithNuggets()), 24, 200, 64, S.Nuggets >= S.RefillCost);
-                    PriceLabelWithNugget(b, S.RefillCost);
-                }
-                else Line(refill.transform, "Full!", 24, UIKit.Green, true).GetComponent<LayoutElement>().preferredWidth = 120;
+            var panel = Box(row.transform, BTile, -1, -1, "Options");
+            UIKit.Size(panel.gameObject, -1, -1, 1);
+            Stack(panel.gameObject, 14, new RectOffset(20, 20, 20, 20));
+            var refill = FuelOption(panel.transform, t => FuelIcon(t, 80), "Top up the tender", "Fill to " + S.MaxFuel + " right now");
+            if (S.RefillCost > 0) PriceBtn(refill, "Fill", UIKit.Green, t => UIKit.NuggetIcon(t, 40), S.RefillCost.ToString(), () => Result(S.RefillFuelWithNuggets()), 280, 84, S.Nuggets >= S.RefillCost, 36);
+            else Pill(refill, null, "Full", 34, BGood);
 
-                WatchAdCard(content, AdReward.Fuel, "Free coal", "+" + Balance.AdFuel + " fuel for watching a short video");
-                var supply = Catalog.Offer("n_coal");
-                var sc = Card(content, 100);
-                var scc = Col(sc.transform);
-                Line(scc.transform, supply.Title, 24, UIKit.Ink, true);
-                Line(scc.transform, supply.Subtitle + " Can overfill your tender.", 20, UIKit.InkSoft);
-                var sb = UIKit.Btn(sc.transform, "", UIKit.Green, () => Result(S.BuyNuggetOffer(supply.Id)), 24, 200, 64, S.Nuggets >= supply.NuggetPrice);
-                PriceLabelWithNugget(sb, supply.NuggetPrice);
-                if (!S.HasFuelTank) UIKit.Btn(content, "Big Tender: +" + Balance.FuelTankBonus + " max fuel forever  " + Store.PriceOf(Catalog.FuelTank), UIKit.Gold, () => OpenShop("offers"), 26, -1, 74);
-            }, 1000, 860);
+            int ads = S.AdsLeft(AdReward.Fuel);
+            var ad = FuelOption(panel.transform, Ico("shop_fuel", 80), "Free coal", "+" + Balance.AdFuel + " fuel for a short video · " + ads + " left today");
+            Big(ad, "Watch", UIKit.Green, () => Ads.Watch(AdReward.Fuel, 0, r => Result(r, Sfx.Coin)), 280, 84, ads > 0 && Ads.Current.Available, 36);
+
+            var supply = Catalog.Offer("n_coal");
+            var sc = FuelOption(panel.transform, Ico("coal", 80), supply.Title, supply.Subtitle + " Can overfill your tender.");
+            PriceBtn(sc, "Buy", UIKit.Green, t => UIKit.NuggetIcon(t, 40), supply.NuggetPrice.ToString(), () => Result(S.BuyNuggetOffer(supply.Id)), 280, 84, S.Nuggets >= supply.NuggetPrice, 36);
+
+            if (!S.HasFuelTank)
+            {
+                var tank = FuelOption(panel.transform, Ico("shop_fuel", 80), "Big Tender", "+" + Balance.FuelTankBonus + " max fuel forever");
+                Big(tank, Store.PriceOf(Catalog.FuelTank), UIKit.Gold, () => OpenShop("offers"), 280, 84, true, 36);
+            }
+        }
+
+        /// <summary>One fuel option row: icon, title and note; returns the slot for its button.</summary>
+        static Transform FuelOption(Transform p, Action<Transform> icon, string title, string note)
+        {
+            var r = Box(p, BCardDeep, -1, 132, "Option");
+            Row(r.gameObject, 18, new RectOffset(18, 18, 0, 0));
+            var ic = HBox(r.transform, 0, 0, TextAnchor.MiddleCenter, 96, 96);
+            icon(ic.transform);
+            var col = VBox(r.transform, 4, 0, TextAnchor.MiddleLeft, -1, -1, 1);
+            T1(col.transform, title, 40, Color.white, TextAnchor.MiddleLeft, true);
+            T1(col.transform, note, 28, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
+            return r.transform;
         }
 
         // ================================================================ Rail Season Pass
 
-        public void OpenPass()
+        public void OpenPass() { ShowBoard("Rail Season Pass", PassBoard); }
+
+        void PassBoard(Transform body, Transform right)
         {
-            ShowWindow("Rail Season Pass", content =>
+            _boardSub = "Season " + (S.CurrentSeason + 1);
+            var panel = Box(body, Palette.Hex(0xE6E0D4), -1, -1, "Panel");
+            UIKit.Stretch(panel.gameObject);
+            Stack(panel.gameObject, 10, new RectOffset(16, 16, 14, 10));
+            var top = panel.transform;
+            // Hero header: season, tier, progress and the premium unlock.
+            var head = UIKit.KitImage(top, "hero_purple", "Head", 200);
+            UIKit.Size(head.gameObject, -1, 200);
+            var hh = UIKit.HStack(head.gameObject, 22, 22, TextAnchor.MiddleLeft);
+            hh.padding = new RectOffset(24, 26, 20, 20);
+            HudShadow(head.gameObject);
+            var medal = UIKit.KitImage(head.transform, "round_gold", "Tier");
+            UIKit.Size(medal.gameObject, 140, 140);
+            var mt = UIKit.Label(medal.transform, S.PassTier.ToString(), 60, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+            mt.font = UIKit.Display; mt.fontStyle = FontStyle.Normal;
+            UIKit.Stretch(mt.gameObject, 8);
+            UIKit.Stroke(mt, new Color(0.36f, 0.2f, 0.02f, 0.95f), 3f);
+            var hc = Col(head.transform);
+            var title = UIKit.Label(hc.transform, "SEASON " + (S.CurrentSeason + 1) + " · TIER " + S.PassTier + "/" + Balance.PassTiers, 40, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+            title.font = UIKit.Display; title.fontStyle = FontStyle.Normal;
+            UIKit.OneLine(title, 24);
+            UIKit.Stroke(title, new Color(0.12f, 0.03f, 0.2f, 0.9f), 2.5f);
+            var bar = UIKit.Bar(hc.transform, UIKit.Gold, 28, new Color(0, 0, 0, 0.45f));
+            UIKit.SetBar(bar, S.PassTier >= Balance.PassTiers ? 1 : S.PassTierProgress);
+            var ends = UIKit.Label(hc.transform, "", 22, new Color(1, 0.94f, 1f), TextAnchor.MiddleLeft);
+            UIKit.Size(ends.gameObject, -1, 30);
+            ends.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.6f);
+            Action live = () => ends.text = (S.State.passXp % Balance.PassXpPerTier) + "/" + Balance.PassXpPerTier + " season XP to the next tier · ends in " + Fmt.Time(S.SeasonEndsIn);
+            live(); Live(live);
+            var buyCol = UIKit.Node("Buy", head.transform);
+            UIKit.VStack(buyCol, 8, 0, TextAnchor.MiddleCenter);
+            UIKit.Size(buyCol, 280, -1);
+            if (!S.State.passPremium)
             {
-                // Hero header: season, tier, progress and the premium unlock.
-                var head = UIKit.KitImage(content, "hero_purple", "Head", 200);
-                UIKit.Size(head.gameObject, -1, 200);
-                var hh = UIKit.HStack(head.gameObject, 22, 22, TextAnchor.MiddleLeft);
-                hh.padding = new RectOffset(24, 26, 20, 20);
-                HudShadow(head.gameObject);
-                var medal = UIKit.KitImage(head.transform, "round_gold", "Tier");
-                UIKit.Size(medal.gameObject, 140, 140);
-                var mt = UIKit.Label(medal.transform, S.PassTier.ToString(), 60, Color.white, TextAnchor.MiddleCenter, false, FontStyle.Bold);
-                mt.font = UIKit.Display; mt.fontStyle = FontStyle.Normal;
-                UIKit.Stretch(mt.gameObject, 8);
-                UIKit.Stroke(mt, new Color(0.36f, 0.2f, 0.02f, 0.95f), 3f);
-                var hc = Col(head.transform);
-                var title = UIKit.Label(hc.transform, "SEASON " + (S.CurrentSeason + 1) + " · TIER " + S.PassTier + "/" + Balance.PassTiers, 40, Color.white, TextAnchor.MiddleLeft, false, FontStyle.Bold);
-                title.font = UIKit.Display; title.fontStyle = FontStyle.Normal;
-                UIKit.OneLine(title, 24);
-                UIKit.Stroke(title, new Color(0.12f, 0.03f, 0.2f, 0.9f), 2.5f);
-                var bar = UIKit.Bar(hc.transform, UIKit.Gold, 28, new Color(0, 0, 0, 0.45f));
-                UIKit.SetBar(bar, S.PassTier >= Balance.PassTiers ? 1 : S.PassTierProgress);
-                var ends = UIKit.Label(hc.transform, "", 22, new Color(1, 0.94f, 1f), TextAnchor.MiddleLeft);
-                UIKit.Size(ends.gameObject, -1, 30);
-                ends.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.6f);
-                Action live = () => ends.text = (S.State.passXp % Balance.PassXpPerTier) + "/" + Balance.PassXpPerTier + " season XP to the next tier · ends in " + Fmt.Time(S.SeasonEndsIn);
-                live(); Live(live);
-                var buyCol = UIKit.Node("Buy", head.transform);
-                UIKit.VStack(buyCol, 8, 0, TextAnchor.MiddleCenter);
-                UIKit.Size(buyCol, 280, -1);
-                if (!S.State.passPremium)
-                {
-                    Tag(buyCol.transform, "PREMIUM TRACK", UIKit.Gold, 250);
-                    UIKit.Btn(buyCol.transform, Store.PriceOf(Catalog.SeasonPass), UIKit.Green, () => BuyProduct(Catalog.SeasonPass), 40, 270, 96);
-                }
-                else Tag(buyCol.transform, "PREMIUM ACTIVE", UIKit.Green, 260);
+                Tag(buyCol.transform, "PREMIUM TRACK", UIKit.Gold, 250);
+                UIKit.Btn(buyCol.transform, Store.PriceOf(Catalog.SeasonPass), UIKit.Green, () => BuyProduct(Catalog.SeasonPass), 40, 270, 96);
+            }
+            else Tag(buyCol.transform, "PREMIUM ACTIVE", UIKit.Green, 260);
 
-                Line(content, "Earn season XP by dispatching trains (+" + Balance.PassXpDispatch + "), finishing contracts (+" + Balance.PassXpContract + "), producing goods and building. Premium tier " + Balance.PassTiers + ": the Sundown Express!", 20, UIKit.InkSoft);
+            Line(top, "Earn season XP by dispatching trains (+" + Balance.PassXpDispatch + "), finishing contracts (+" + Balance.PassXpContract + "), producing goods and building. Premium tier " + Balance.PassTiers + ": the Sundown Express!", 20, UIKit.InkSoft);
 
-                var hdr = UIKit.Row(content, 44, 14);
-                UIKit.Size(UIKit.Node("Pad", hdr.transform), 110, 30);
-                TrackHeader(hdr.transform, "FREE", UIKit.Green);
-                TrackHeader(hdr.transform, "PREMIUM", Purple);
+            var hdr = UIKit.Row(top, 44, 14);
+            UIKit.Size(UIKit.Node("Pad", hdr.transform), 110, 30);
+            TrackHeader(hdr.transform, "FREE", UIKit.Green);
+            TrackHeader(hdr.transform, "PREMIUM", Purple);
 
-                foreach (var t in Catalog.PassTiers)
-                {
-                    bool reached = t.Tier <= S.PassTier;
-                    var row = UIKit.Row(content, 128, 14);
-                    var tb = UIKit.KitImage(row.transform, reached ? "round_gold" : "round_brown", "Tier");
-                    UIKit.Size(tb.gameObject, 110, 110);
-                    var tl = UIKit.Label(tb.transform, t.Tier.ToString(), 44, reached ? Color.white : new Color(0.85f, 0.8f, 0.74f), TextAnchor.MiddleCenter, false, FontStyle.Bold);
-                    tl.font = UIKit.Display; tl.fontStyle = FontStyle.Normal;
-                    UIKit.Stretch(tl.gameObject, 6);
-                    UIKit.Stroke(tl, new Color(0.25f, 0.13f, 0.03f, 0.95f), 2.5f);
-                    PassCell(row.transform, t, false);
-                    PassCell(row.transform, t, true);
-                }
-            }, 1300, 900);
+            // Open at the current tier, where the next claims are (1 = top of the list).
+            if (!_scrollMemo.ContainsKey("pass")) _scrollMemo["pass"] = new Vector2(0, 1 - Mathf.Clamp01((S.PassTier - 2) / (float)(Balance.PassTiers - 3)));
+            var list = Scroller(top, "pass", false, 10);
+            foreach (var t in Catalog.PassTiers)
+            {
+                bool reached = t.Tier <= S.PassTier;
+                var row = UIKit.Row(list, 128, 14);
+                var tb = UIKit.KitImage(row.transform, reached ? "round_gold" : "round_brown", "Tier");
+                UIKit.Size(tb.gameObject, 110, 110);
+                var tl = UIKit.Label(tb.transform, t.Tier.ToString(), 44, reached ? Color.white : new Color(0.85f, 0.8f, 0.74f), TextAnchor.MiddleCenter, false, FontStyle.Bold);
+                tl.font = UIKit.Display; tl.fontStyle = FontStyle.Normal;
+                UIKit.Stretch(tl.gameObject, 6);
+                UIKit.Stroke(tl, new Color(0.25f, 0.13f, 0.03f, 0.95f), 2.5f);
+                PassCell(row.transform, t, false);
+                PassCell(row.transform, t, true);
+            }
         }
 
         static void TrackHeader(Transform parent, string text, Color c)
