@@ -25,6 +25,13 @@ Look at the screenshot before calling a visual change done.
 The simulation tests also run without Unity: `dotnet test Tools/CoreTests` (needs the .NET 8 SDK;
 install it with `dotnet-install.sh --channel 8.0` if `dotnet --list-sdks` lacks 8.x).
 
+## iPhone builds (TestFlight)
+
+`Tools/ios-export.sh` exports the Xcode project from the running Editor (iOS Build Support module,
+local Unity Personal license) and uploads it as the `ios-latest` GitHub release asset; then start the
+Codemagic workflow `ios-testflight` (app **train**), which signs with the team integration
+`CodeMagic-Team` and uploads to TestFlight. See README → "Building for iPhone with Codemagic".
+
 ## Before committing
 
 - Keep `com.unity.pipeline` out of `Packages/manifest.json`, and don't commit
