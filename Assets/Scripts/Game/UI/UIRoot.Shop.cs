@@ -498,12 +498,60 @@ namespace Ironhorse.Game
 
         public void ShowOfferPopup(OfferDef o)
         {
-            ShowWindow("Special Offer", content =>
+            ShowBoard("Special Offer", (body, right) => OfferBoard(body, right, o), 1800, 820);
+        }
+
+        void OfferBoard(Transform body, Transform right, OfferDef o)
+        {
+            // Revalidate on every rebuild: once bought (or expired) the offer must not stay purchasable.
+            if (!S.ActiveOffers().Any(x => x.Id == o.Id)) { CloseWindow(); return; }
+            var p = Catalog.Product(o.ProductId);
+            var loco = p.Grant.LocomotiveId != null ? GameDatabase.Locomotive(p.Grant.LocomotiveId) : null;
+            _boardSub = o.Schedule == OfferSchedule.Starter ? "One time only" : o.Badge == "LEGENDARY" ? "Legendary" : "This week only";
+            if (o.Schedule == OfferSchedule.Weekly)
             {
-                // Revalidate on every rebuild: once bought (or expired) the offer must not stay purchasable.
-                if (!S.ActiveOffers().Any(x => x.Id == o.Id)) { CloseWindow(); return; }
-                OfferCard(content, o);
-            }, 1300, 460);
+                var timer = Pill(right, tr => ClockIcon(tr, 40), "", 30);
+                var tt = timer.GetComponentInChildren<Text>();
+                Action live = () => tt.text = "Ends in " + Fmt.Time(S.WeekEndsIn);
+                live(); Live(live);
+            }
+
+            var row = UIKit.Node("Row", body);
+            UIKit.Stretch(row);
+            Row(row, 12, new RectOffset(0, 0, 0, 0)).childForceExpandHeight = true;
+            string scene;
+            OfferScenes.TryGetValue(o.Id, out scene);
+            var hero = Photo(row.transform, scene != null ? Postcard(scene) : null, -1, -1);
+            UIKit.Size(hero.gameObject, -1, -1, 1);
+            if (scene == null) hero.color = Palette.Hex(0x2B3549);
+            Overlay(hero.transform, Fade(true), new Color(0.05f, 0.07f, 0.11f, 0.75f));
+            var art = UIKit.Node("Art", hero.transform);
+            UIKit.Anchor(art, new Vector2(0, 0), new Vector2(1, 0.85f), new Vector2(20, 10), new Vector2(-20, 0));
+            UIKit.HStack(art, 0, 0, TextAnchor.LowerCenter);
+            if (loco != null) LocoArt(art.transform, loco, 820, 400);
+            else Art(art.transform, "shop_nuggets_4", 380);
+            if (!string.IsNullOrEmpty(o.Badge) && o.Badge != "LEGENDARY")
+            {
+                ValueSeal(hero.transform, o.Badge);
+                var sl = hero.transform.Find("Seal");
+                UIKit.Place(sl.gameObject, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-96, -96), new Vector2(170, 170));
+            }
+
+            var col = Box(row.transform, BCardDeep, 640, -1, "Details");
+            Stack(col.gameObject, 14, new RectOffset(26, 26, 24, 24), TextAnchor.UpperLeft);
+            T(col.transform, o.Title, 52, BGold, TextAnchor.MiddleLeft, true);
+            T(col.transform, o.Subtitle, 32, Color.white, TextAnchor.UpperLeft, false, UIKit.Heading);
+            T(col.transform, "You get", 32, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
+            if (loco != null)
+            {
+                var lr = Box(col.transform, BChip, -1, 84, "Loco");
+                Row(lr.gameObject, 12, new RectOffset(10, 16, 0, 0));
+                LocoArt(lr.transform, loco, 130, 70);
+                T1(lr.transform, loco.Name, 36, Color.white, TextAnchor.MiddleLeft, true);
+            }
+            GrantTiles(col.transform, p.Grant, 104);
+            Flex(col.transform);
+            Big(col.transform, Store.PriceOf(p.Id), UIKit.Green, () => BuyProduct(p.Id), -1, 112, true, 56);
         }
 
         // ================================================================ Fuel
