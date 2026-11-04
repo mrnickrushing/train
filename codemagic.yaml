@@ -79,3 +79,90 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+
+  thetrail-testflight:
+    # The Trail (mrnickrushing/thetrail) builds here because this app holds the App Store Connect
+    # key (ios_credentials, team-wide). Downloads the thetrail export, not this repo's.
+    name: The Trail iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_credentials
+      vars:
+        BUNDLE_ID: com.rushingtech.theogtrail
+        APPLE_TEAM_ID: PH4AKDQ4Q7
+        XCODE_PROJECT: ios/Unity-iPhone.xcodeproj
+        XCODE_SCHEME: Unity-iPhone
+        EXPORT_URL: https://github.com/mrnickrushing/thetrail/releases/download/ios-latest/ios-xcode.zip
+      xcode: latest
+    scripts:
+      - name: Check App Store Connect key
+        script: |
+          missing=""
+          for v in APP_STORE_CONNECT_PRIVATE_KEY APP_STORE_CONNECT_KEY_IDENTIFIER APP_STORE_CONNECT_ISSUER_ID; do
+            [ -z "${!v}" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then echo "Missing in variable group ios_credentials:$missing"; exit 1; fi
+      - name: Download the exported Xcode project
+        script: |
+          if [ -n "${GITHUB_TOKEN:-}" ]; then
+            # Private repository: resolve the asset through the API.
+            ASSET=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
+              https://api.github.com/repos/mrnickrushing/thetrail/releases/tags/ios-latest \
+              | python3 -c "import sys,json; print([a['url'] for a in json.load(sys.stdin)['assets'] if a['name']=='ios-xcode.zip'][0])")
+            curl -fL --retry 3 -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/octet-stream" -o /tmp/ios-xcode.zip "$ASSET"
+          else
+            curl -fL --retry 3 -o /tmp/ios-xcode.zip "$EXPORT_URL"
+          fi
+          rm -rf ios && unzip -q /tmp/ios-xcode.zip -d .
+          ls ios
+      - name: Set build number
+        script: |
+          echo "Build number: $BUILD_NUMBER"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/Info.plist 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/Info.plist
+      - name: Archive and export signed .ipa
+        script: |
+          set -euo pipefail
+          KEY="/tmp/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
+          printf "%b" "$APP_STORE_CONNECT_PRIVATE_KEY" > "$KEY"
+          chmod 600 "$KEY"
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY"
+                -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID")
+          xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Release \
+            -destination "generic/platform=iOS" -archivePath /tmp/TheTrail.xcarchive \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            "${AUTH[@]}" archive > /tmp/xcodebuild_archive.log 2>&1 \
+            || { grep -E "error:|error -|Error Domain|No profiles|No signing|failed" /tmp/xcodebuild_archive.log | sort -u | tail -40; echo "xcodebuild archive failed (full log in artifacts)"; exit 1; }
+          tail -3 /tmp/xcodebuild_archive.log
+          cat > /tmp/export_options.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>method</key><string>app-store-connect</string>
+              <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+              <key>signingStyle</key><string>automatic</string>
+              <key>destination</key><string>export</string>
+            </dict>
+          </plist>
+          PLIST
+          mkdir -p build/ios/ipa
+          xcodebuild -exportArchive -archivePath /tmp/TheTrail.xcarchive -exportPath build/ios/ipa \
+            -exportOptionsPlist /tmp/export_options.plist "${AUTH[@]}" > /tmp/xcodebuild_export.log 2>&1 \
+            || { grep -E "error|Error" /tmp/xcodebuild_export.log | tail -30; exit 1; }
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/TheTrail.xcarchive/dSYMs/*.dSYM
+      - /tmp/xcodebuild_*.log
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: false
+        submit_to_app_store: false
+
