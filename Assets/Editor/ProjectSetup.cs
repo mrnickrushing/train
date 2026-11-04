@@ -62,12 +62,16 @@ namespace Ironhorse.EditorTools
             }
         }
 
+        /// <summary>The marketing version (CFBundleShortVersionString). It must match the App Store version in App Store
+        /// Connect, or the build can't be submitted; bump both together.</summary>
+        public const string AppVersion = "1.0";
+
         public static void ApplyPlayerSettings()
         {
             PlayerSettings.companyName = "Rushing Technologies";
             PlayerSettings.productName = ProductName;
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, BundleId);
-            PlayerSettings.bundleVersion = "0.1.0";
+            PlayerSettings.bundleVersion = AppVersion;
             // Linear lighting for URP; the world shader converts sRGB vertex colors itself.
             PlayerSettings.colorSpace = ColorSpace.Linear;
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
