@@ -87,6 +87,7 @@ namespace Ironhorse.Core
                 lastSavedAt = now,
                 rngSeed = seed,
                 unlockedPlots = Balance.StartPlots,
+                platforms = Balance.StartPlatforms,
             };
             var starter = new TrainState { uid = s.nextUid++, defId = "dusty", platform = 0 };
             s.trains.Add(starter);
@@ -126,6 +127,7 @@ namespace Ironhorse.Core
             RepairDepth();
             RepairHooks();
             RepairFrontier();
+            RepairPlatforms();
         }
 
         // ---------------------------------------------------------------- Tick
@@ -165,6 +167,7 @@ namespace Ironhorse.Core
             if (FillContracts(force: false)) changed = true;
             if (TickHooks()) changed = true;
             if (TickFrontier()) changed = true;
+            if (TickPlatforms()) changed = true;
             int season = State.passSeason;
             RollSeason();
             if (season != State.passSeason) changed = true;

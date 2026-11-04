@@ -20,6 +20,10 @@ namespace Ironhorse.Core
         public int xp;
         public int level = 1;
         public int warehouseLevel = 1;
+        /// <summary>Platforms laid at the station (0 in saves from before platforms were laid one at a time).</summary>
+        public int platforms;
+        /// <summary>When the track crew finishes the next platform (0 = no work under way).</summary>
+        public double platformReadyAt;
         public int unlockedPlots;
         public int nextUid = 1;
         public int rngSeed;
@@ -171,7 +175,7 @@ namespace Ironhorse.Core
         public double arrivesAt;
         public string cargoId = "";
         public int cargoAmount;
-        /// <summary>Platform the train parks at (0..Balance.Platforms-1).</summary>
+        /// <summary>Platform the train parks at (0..platforms-1).</summary>
         public int platform;
         /// <summary>A mystery crate rode home with this trip; it stays until tapped.</summary>
         public bool crate;

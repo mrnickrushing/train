@@ -12,26 +12,16 @@ namespace Ironhorse.Game
         {
             var mb = new MeshBuilder();
 
-            // Track for every platform, drawn only through the station + ladders; main lines once.
-            for (int i = 0; i < Balance.Platforms; i++)
-            {
-                var path = WorldLayout.PlatformPath(i);
-                float a = path.Project(new Vector3(-121, 0, WorldLayout.MainZ));
-                float b = path.Project(new Vector3(121, 0, WorldLayout.MainZ));
-                TrackBuilder.Build(mb, path, a, b);
-            }
+            // Main lines; the platform tracks (laid one at a time) belong to StationPlatforms.
             TrackBuilder.Build(mb, WorldLayout.MainLineWest);
             TrackBuilder.Build(mb, WorldLayout.MainLineEast);
 
-            // Side platform in front of the depot + island platforms.
+            // Side platform in front of the depot + the first island platform (the second comes with platform 4).
             float half = WorldLayout.PlatformHalfLength;
             TrackBuilder.Platform(mb, -24.9f, 4.6f, half);
             float island1 = (WorldLayout.PlatformZ(1) + WorldLayout.PlatformZ(2)) / 2;
-            float island2 = (WorldLayout.PlatformZ(3) + WorldLayout.PlatformZ(4)) / 2;
             TrackBuilder.Platform(mb, island1, 2.4f, half - 4);
-            TrackBuilder.Platform(mb, island2, 2.4f, half - 4);
             Canopy(mb, island1, half - 10);
-            Canopy(mb, island2, half - 10);
 
             // Drop-in art (Resources/Models/Buildings/station, freightshed) replaces the procedural versions.
             var depotArt = ModelRegistry.Spawn(ModelRegistry.Buildings, "station", root);
@@ -49,7 +39,6 @@ namespace Ironhorse.Game
             {
                 Lamp(mb, new Vector3(x, 0.9f, -26.5f));
                 Lantern(mb, new Vector3(x + 8, 3.9f, island1));
-                Lantern(mb, new Vector3(x + 8, 3.9f, island2));
             }
             // Crates & barrels
             var rng = new System.Random(7);
@@ -152,7 +141,7 @@ namespace Ironhorse.Game
             mb.Box(p + new Vector3(0, 0, side * 0.08f), new Vector3(w, 0.08f, 0.03f), Palette.Hex(0x4A2F20));
         }
 
-        static void Canopy(MeshBuilder mb, float z, float half)
+        internal static void Canopy(MeshBuilder mb, float z, float half)
         {
             Color iron = Palette.Hex(0x34483D), oxide = Palette.Hex(0x5A4A42), valance = Palette.Hex(0xD8CBB0);
             float len = half * 2 + 3;
@@ -193,7 +182,7 @@ namespace Ironhorse.Game
         }
 
         /// <summary>Lantern hung from a canopy's ridge girder.</summary>
-        static void Lantern(MeshBuilder mb, Vector3 p)
+        internal static void Lantern(MeshBuilder mb, Vector3 p)
         {
             mb.Mat(0.4f, 0.4f);
             mb.Cylinder(p + Vector3.up * 0.3f, p + Vector3.up * 0.6f, 0.02f, 4, Palette.Iron, false);

@@ -338,6 +338,7 @@ namespace Ironhorse.Game
             }
             T(list, "Danger zone", 34, BBad, TextAnchor.MiddleLeft, false, UIKit.Heading);
             Big(list, "Start a new railroad (erase save)", UIKit.Red, ConfirmReset, -1, 80, true, 32);
+            Tag(Big(list, "Delete account and data", UIKit.Red, ConfirmDeleteAccount, -1, 80, true, 32).gameObject, "settings.delete");
             T(list, "Ironhorse Frontier · version " + Application.version, 26, BLabel, TextAnchor.MiddleCenter, false, UIKit.Heading);
         }
 

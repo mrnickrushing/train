@@ -304,10 +304,15 @@ namespace Ironhorse.Core
             if (g.LocomotiveId != null)
             {
                 var d = GameDatabase.Locomotive(g.LocomotiveId);
+                // A bought engine never waits for track: if every platform is taken, the crew lays the next one now.
+                if (State.trains.Count >= FleetCapacity && State.platforms < Balance.Platforms)
+                {
+                    OpenPlatform();
+                    extra = " (and platform " + State.platforms + " was laid for it)";
+                }
                 if (State.trains.Count < FleetCapacity)
                 {
-                    int platform = Enumerable.Range(0, Balance.Platforms).First(p => State.trains.All(t => t.platform != p));
-                    var granted = new TrainState { uid = NewUid(), defId = d.Id, platform = platform };
+                    var granted = new TrainState { uid = NewUid(), defId = d.Id, platform = FreePlatform() };
                     State.trains.Add(granted);
                     RaiseLocomotiveAdded(granted);
                 }

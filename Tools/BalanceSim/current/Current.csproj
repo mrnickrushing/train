@@ -6,7 +6,7 @@
     <LangVersion>9.0</LangVersion>
     <Nullable>disable</Nullable>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <DefineConstants>$(DefineConstants);HOOKS</DefineConstants>
+    <DefineConstants>$(DefineConstants);HOOKS;PLATFORMS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../../Assets/Scripts/Core/**/*.cs" />

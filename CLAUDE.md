@@ -13,7 +13,7 @@ local dev tool: it is **not** in the committed `Packages/manifest.json`.
 unity pipeline install --project-path .     # once per clone (adds com.unity.pipeline locally)
 unity open . --until-ready                  # first open imports for a few minutes
 Tools/unity-recompile.sh                    # leave Play mode, refresh, recompile, list errors (exit 1 on errors)
-unity command --project-path . test run editor --timeout 600 --result-only   # 98 EditMode tests
+unity command --project-path . test run editor --timeout 600 --result-only   # EditMode tests
 Tools/unity-capture.sh out.png 6 'Ironhorse.Game.UIRoot.Instance.OpenDepot("locos"); return 0;'
 ```
 
@@ -114,6 +114,10 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   Full Steam combos (trains sent within 60 s haul up to 25% more; bonuses pay goods, not XP), curios (one per destination, rolled at dispatch, shown in
   `World/Museum.cs` west of Main Street) and new-territory charters (after the Golden Spike: the town restarts, stock and
   collections stay, `GameRoot.Reload` rebuilds the world). Screens: `UI/UIRoot.Frontier.cs`.
+- **Platforms**: `Core/GameSession.Platforms.cs` (tuning in `Balance.Platform*`): a new railroad has 3 platforms, one locomotive
+  each; platforms 4-6 cost coins plus factory goods and a track-crew timer (rushable). Old saves keep a platform for every
+  engine. A bought locomotive that finds the station full gets a platform laid for it. `SellLocomotive` frees a platform
+  (half price + a quarter of overhauls; wagons to the depot). The tracks and the work site are `World/Platforms.cs`.
 - **Balance simulator**: `Tools/BalanceSim` runs a bot that plays the game logic for a month of five short daily sessions
   and prints level, coins, nuggets and blueprints (and where each came from). `dotnet run --project Tools/BalanceSim/current
   -c Release -- 30 3` (days, seeds); `baseline` runs the same bot on the logic from before the daily hooks (extract it first,

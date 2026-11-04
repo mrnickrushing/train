@@ -197,10 +197,9 @@ namespace Ironhorse.Core
             var d = GameDatabase.Locomotive(locoId);
             if (d == null || d.Blueprints <= 0) return ActionResult.Fail("No blueprints exist for that locomotive");
             if (BlueprintsOf(d.Id) < d.Blueprints) return ActionResult.Fail("Need " + (d.Blueprints - BlueprintsOf(d.Id)) + " more blueprints");
-            if (State.trains.Count >= FleetCapacity) return ActionResult.Fail("All platforms are full");
+            if (State.trains.Count >= FleetCapacity) return ActionResult.Fail(FullText);
             State.blueprints.Change(d.Id, -d.Blueprints);
-            int platform = Enumerable.Range(0, Balance.Platforms).First(p => State.trains.All(t => t.platform != p));
-            var built = new TrainState { uid = NewUid(), defId = d.Id, platform = platform };
+            var built = new TrainState { uid = NewUid(), defId = d.Id, platform = FreePlatform() };
             State.trains.Add(built);
             RaiseLocomotiveAdded(built);
             AddXp(200);
