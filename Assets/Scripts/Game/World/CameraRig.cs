@@ -114,6 +114,23 @@ namespace Ironhorse.Game
             transform.rotation = rot;
             float ground = ValleyTerrain.Height(transform.position.x, transform.position.z) + 4f;
             if (transform.position.y < ground) transform.position = new Vector3(transform.position.x, ground, transform.position.z);
+            if (_shakeLeft > 0)
+            {
+                _shakeLeft -= Time.unscaledDeltaTime;
+                float a = _shakeAmp * Mathf.Clamp01(_shakeLeft / _shakeTime);
+                float t = Time.unscaledTime * 32;
+                transform.position += transform.right * (Mathf.PerlinNoise(t, 0.3f) - 0.5f) * 2 * a + transform.up * (Mathf.PerlinNoise(0.7f, t) - 0.5f) * 2 * a;
+            }
+        }
+
+        float _shakeLeft, _shakeTime = 1, _shakeAmp;
+
+        /// <summary>A short rumble that dies away (world units at its start). Stronger shakes win over weaker ones.</summary>
+        public void Shake(float amplitude, float seconds)
+        {
+            if (_shakeLeft > 0 && _shakeAmp * (_shakeLeft / _shakeTime) > amplitude) return;
+            _shakeAmp = amplitude;
+            _shakeTime = _shakeLeft = Mathf.Max(0.05f, seconds);
         }
 
         // ---------------------------------------------------------------- mouse

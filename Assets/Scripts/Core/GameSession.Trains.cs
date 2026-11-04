@@ -26,6 +26,17 @@ namespace Ironhorse.Core
     {
         public TrainState Train(int uid) { return State.trains.FirstOrDefault(t => t.uid == uid); }
 
+        /// <summary>The name without the wheel arrangement ("Dusty", "Prairie Lark"), for tight spots.</summary>
+        public static string ShortName(TrainState t)
+        {
+            string n = Name(t);
+            if (!string.IsNullOrEmpty(t.nickname)) return n;
+            var parts = n.Split(' ');
+            for (int i = 1; i < parts.Length; i++)
+                if (parts[i].Length >= 5 && char.IsDigit(parts[i][0]) && parts[i].IndexOf('-') > 0) return string.Join(" ", parts, 0, i);
+            return n;
+        }
+
         public static string Name(TrainState t)
         {
             if (!string.IsNullOrEmpty(t.nickname)) return t.nickname;

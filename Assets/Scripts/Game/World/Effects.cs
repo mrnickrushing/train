@@ -149,5 +149,50 @@ namespace Ironhorse.Game
             _sparkle.transform.position = worldPos;
             _sparkle.Emit(count);
         }
+
+        static ParticleSystem _drain, _kick;
+
+        /// <summary>
+        /// A train pulling out: steam jetting sideways from the cylinder cocks (steam engines) and dust kicked up
+        /// off the ballast under the lead wheels. <paramref name="lead"/> is the cylinders at rail level,
+        /// <paramref name="forward"/> the direction of travel.
+        /// </summary>
+        public static void Departure(Vector3 lead, Vector3 forward, bool steam)
+        {
+            if (_drain == null) _drain = Quiet(FxKind.Steam);
+            if (_kick == null) _kick = Quiet(FxKind.Dust);
+            forward.y = 0;
+            forward = forward.sqrMagnitude > 0.001f ? forward.normalized : Vector3.forward;
+            var right = Vector3.Cross(Vector3.up, forward);
+            var p = new ParticleSystem.EmitParams();
+            if (steam)
+                for (int i = 0; i < 48; i++)
+                {
+                    float side = (i & 1) == 0 ? 1 : -1;
+                    p.position = lead + right * side * 1.3f + Vector3.up * 0.8f + forward * Random.Range(-1f, 0.8f);
+                    p.velocity = right * side * Random.Range(4f, 8f) + Vector3.up * Random.Range(0.4f, 1.6f) - forward * Random.Range(0f, 1.5f);
+                    p.startSize = Random.Range(1f, 1.8f);
+                    p.startLifetime = Random.Range(1.2f, 2.2f);
+                    _drain.Emit(p, 1);
+                }
+            p = new ParticleSystem.EmitParams();
+            for (int i = 0; i < 14; i++)
+            {
+                p.position = lead + right * Random.Range(-2f, 2f) + Vector3.up * 0.2f - forward * Random.Range(0f, 6f);
+                p.velocity = right * Random.Range(-1.2f, 1.2f) + Vector3.up * Random.Range(0.3f, 1f);
+                _kick.Emit(p, 1);
+            }
+        }
+
+        /// <summary>A shared world-space system that only emits on demand.</summary>
+        static ParticleSystem Quiet(FxKind kind)
+        {
+            var ps = Create(kind, null, Vector3.zero);
+            var em = ps.emission;
+            em.rateOverTime = 0;
+            var main = ps.main;
+            main.maxParticles = 300;
+            return ps;
+        }
     }
 }

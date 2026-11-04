@@ -74,6 +74,7 @@ namespace Ironhorse.Game
             BuildDepthHud();
             BuildHooksHud();
             BuildComboHud();
+            BuildNextStep();
             _windowLayer = UIKit.Stretch(UIKit.Node("Windows", cgo.transform));
             _popupLayer = UIKit.Stretch(UIKit.Node("Popups", cgo.transform));
             _toasts = UIKit.Anchor(UIKit.Node("Toasts", cgo.transform), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(-420, -360), new Vector2(420, -150));
@@ -129,6 +130,7 @@ namespace Ironhorse.Game
             }
             UpdateWelcome();
             UpdateMarkers();
+            AnimateNextStep();
         }
 
         // ================================================================ HUD
@@ -503,6 +505,7 @@ namespace Ironhorse.Game
             RefreshChapterHud();
             RefreshHooksHud();
             RefreshComboHud();
+            RefreshNextStep();
             _level.text = S.Level.ToString();
             UIKit.SetBar(_xpFill, S.LevelProgress);
             _xpText.text = Fmt.Num(S.State.xp) + " / " + Fmt.Num(Balance.XpForNextLevel(S.Level)) + " XP";

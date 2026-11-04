@@ -202,6 +202,22 @@ namespace Ironhorse.Game
             ResetMotion();
         }
 
+        /// <summary>The big moment of sending a train: a chuff of smoke, steam and dust, and a nudge you can feel.</summary>
+        void PullOut()
+        {
+            if (Smoke != null) Smoke.Emit(30);
+            // Direction of travel from the consist itself; the cylinders sit under the smokestack.
+            var fwd = Cars.Count > 1 ? Cars[0].Root.position - Cars[1].Root.position : (Cars.Count > 0 ? Cars[0].Root.forward : transform.forward);
+            var lead = LeadPosition;
+            var at = Smoke != null ? new Vector3(Smoke.transform.position.x, lead.y, Smoke.transform.position.z) : lead;
+            Fx.Departure(at, fwd, IsSteam);
+            var rig = CameraRig.Instance;
+            if (rig == null) return;
+            float d = Vector3.Distance(new Vector3(LeadPosition.x, 0, LeadPosition.z), rig.Focus);
+            if (d < rig.Distance * 1.2f) rig.Shake(Mathf.Lerp(0.5f, 0.15f, d / (rig.Distance * 1.2f)), 0.45f);
+            Haptics.Play(Haptic.Medium);
+        }
+
         public void OnTapped()
         {
             AudioManager.Play(Sfx.Click);
@@ -244,7 +260,12 @@ namespace Ironhorse.Game
             }
             if (phase != Current)
             {
-                if (phase == Phase.Departing && Current == Phase.Parked) { AudioManager.Whistle(LeadPosition); if (Smoke != null) Smoke.Emit(12); }
+                if (phase == Phase.Departing && Current == Phase.Parked)
+                {
+                    AudioManager.Whistle(LeadPosition);
+                    if (Smoke != null) Smoke.Emit(12);
+                    if (s.Now - t.departedAt < 2) PullOut(); // just sent, not a trip resumed on launch
+                }
                 if (phase == Phase.Arriving) ResetMotion();
                 if (phase == Phase.Arrived && Current == Phase.Arriving) AudioManager.Whistle(LeadPosition, 0.6f);
                 Current = phase;
