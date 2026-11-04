@@ -4,6 +4,14 @@ using System.Linq;
 
 namespace Ironhorse.Core
 {
+    /// <summary>A one-time store transaction as the store reports it (unix seconds).</summary>
+    public readonly struct StoreReceipt
+    {
+        public readonly string ProductId, TransactionId;
+        public readonly double PurchasedAt;
+        public StoreReceipt(string productId, string transactionId, double purchasedAt) { ProductId = productId; TransactionId = transactionId; PurchasedAt = purchasedAt; }
+    }
+
     public sealed partial class GameSession
     {
         public event Action<string> PurchaseGranted;
@@ -12,6 +20,8 @@ namespace Ironhorse.Core
         {
             if (State.ownedProducts == null) State.ownedProducts = new List<string>();
             if (State.transactions == null) State.transactions = new List<string>();
+            if (State.pendingPurchases == null) State.pendingPurchases = new List<PendingPurchase>();
+            State.pendingPurchases.RemoveAll(p => p == null || Catalog.Product(p.productId) == null);
             if (State.offerPurchases == null) State.offerPurchases = new List<string>();
             if (State.passClaimedFree == null) State.passClaimedFree = new List<int>();
             if (State.passClaimedPremium == null) State.passClaimedPremium = new List<int>();
@@ -214,15 +224,12 @@ namespace Ironhorse.Core
         {
             var p = Catalog.Product(productId);
             if (p == null) return ActionResult.Fail("Unknown product " + productId);
+            State.pendingPurchases.RemoveAll(m => m.productId == p.Id); // the store answered for this purchase
             if (!string.IsNullOrEmpty(transactionId) && State.transactions.Contains(transactionId)) return ActionResult.Fail("Already delivered");
             if (p.Kind == ProductKind.NonConsumable && Owns(p.Id)) return ActionResult.Fail("Already owned");
             if (p.Id == Catalog.SeasonPass && State.passPremium) return ActionResult.Fail("Premium Pass already active this season");
 
-            if (!string.IsNullOrEmpty(transactionId))
-            {
-                State.transactions.Add(transactionId);
-                if (State.transactions.Count > 2000) State.transactions.RemoveAt(0); // store transactions are finished once delivered and never replayed after this long
-            }
+            if (!string.IsNullOrEmpty(transactionId)) State.transactions.Add(transactionId); // kept for good: a few bytes a purchase
             if (p.Kind == ProductKind.NonConsumable) State.ownedProducts.Add(p.Id);
             var weekly = Catalog.Offers.FirstOrDefault(o => o.ProductId == p.Id && o.Schedule == OfferSchedule.Weekly);
             if (weekly != null) State.offerPurchases.Add(weekly.Id + "@" + WeekIndex);
@@ -233,6 +240,54 @@ namespace Ironhorse.Core
         }
 
         /// <summary>Re-grants non-consumables reported by the store's restore flow.</summary>
+        // ---------------------------------------------------------------- crash-proof delivery
+        //
+        // The store finishes (charges) a purchase before the game hears about it. If the app dies in
+        // between, or the reward isn't saved yet, the player has paid for nothing. So a marker is saved
+        // before the purchase sheet opens; while it stands, the newest store transaction for that product
+        // made after it is delivered. Only purchases this device started are recovered: a signed-in
+        // player's purchases from another device stay with that device's railroad.
+
+        /// <summary>How long an unanswered purchase is watched for (covers Ask to Buy approvals).</summary>
+        public const double PendingPurchaseSeconds = 3 * 86400;
+        /// <summary>Tolerated difference between this device's clock and the store's purchase time.</summary>
+        public const double PurchaseClockSlack = 60;
+
+        public bool HasPendingPurchases { get { return State.pendingPurchases.Count > 0; } }
+
+        /// <summary>Records that a purchase is about to start. Save the game before opening the store.</summary>
+        public void BeginPurchase(string productId)
+        {
+            State.pendingPurchases.RemoveAll(m => m.productId == productId);
+            State.pendingPurchases.Add(new PendingPurchase { productId = productId, startedAt = Now });
+        }
+
+        /// <summary>The player cancelled: nothing was charged, nothing to recover.</summary>
+        public void EndPurchase(string productId) { State.pendingPurchases.RemoveAll(m => m.productId == productId); }
+
+        /// <summary>
+        /// Delivers purchases this device started whose reward never landed, from the store's list of
+        /// one-time transactions. Returns the messages of what was delivered (empty when nothing was).
+        /// </summary>
+        public List<string> ReconcilePurchases(IEnumerable<StoreReceipt> receipts)
+        {
+            var delivered = new List<string>();
+            State.pendingPurchases.RemoveAll(m => Now - m.startedAt > PendingPurchaseSeconds);
+            if (State.pendingPurchases.Count == 0 || receipts == null) return delivered;
+            var list = receipts.Where(r => !string.IsNullOrEmpty(r.ProductId)).ToList();
+            foreach (var m in State.pendingPurchases.ToList())
+            {
+                var hit = list.Where(r => r.ProductId == m.productId && r.PurchasedAt >= m.startedAt - PurchaseClockSlack
+                                          && (string.IsNullOrEmpty(r.TransactionId) || !State.transactions.Contains(r.TransactionId)))
+                              .OrderByDescending(r => r.PurchasedAt).FirstOrDefault();
+                if (hit.ProductId == null) continue; // not charged (yet): keep watching
+                var r2 = GrantPurchase(m.productId, string.IsNullOrEmpty(hit.TransactionId) ? null : hit.TransactionId);
+                State.pendingPurchases.RemoveAll(x => x.productId == m.productId);
+                if (r2.Ok) delivered.Add(r2.Message);
+            }
+            return delivered;
+        }
+
         public int RestoreNonConsumables(IEnumerable<string> ownedProductIds)
         {
             int n = 0;
@@ -254,14 +309,14 @@ namespace Ironhorse.Core
 
         public int AdsLeft(AdReward r)
         {
-            if (State.adDay != Today) return Balance.AdDailyLimit(r);
+            if (Today > State.adDay) return Balance.AdDailyLimit(r);
             return Math.Max(0, Balance.AdDailyLimit(r) - State.adCounts.Get(r.ToString()));
         }
 
         /// <summary>Call after the ad network confirms the user watched a rewarded ad.</summary>
         public ActionResult RewardAd(AdReward r, int trainUid = 0)
         {
-            if (State.adDay != Today) { State.adDay = Today; State.adCounts.Clear(); }
+            if (Today > State.adDay) { State.adDay = Today; State.adCounts.Clear(); }
             if (AdsLeft(r) <= 0) return ActionResult.Fail("No more of these today. Come back tomorrow!");
             string msg;
             switch (r)

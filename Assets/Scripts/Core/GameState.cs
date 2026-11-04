@@ -43,6 +43,8 @@ namespace Ironhorse.Core
         public double fuelAt;               // last time fuel was settled
         public List<string> ownedProducts = new List<string>();
         public List<string> transactions = new List<string>();
+        /// <summary>Store purchases opened on this device whose reward isn't saved yet (see ReconcilePurchases).</summary>
+        public List<PendingPurchase> pendingPurchases = new List<PendingPurchase>();
         public List<string> offerPurchases = new List<string>();
         public int passSeason = -1;
         public int passXp;
@@ -263,6 +265,13 @@ namespace Ironhorse.Core
     {
         public string goalId;
         public bool claimed;
+    }
+
+    [Serializable]
+    public class PendingPurchase
+    {
+        public string productId;
+        public double startedAt;
     }
 
     [Serializable]

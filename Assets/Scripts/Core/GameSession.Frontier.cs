@@ -44,19 +44,19 @@ namespace Ironhorse.Core
         int LocalWeek { get { return (int)Math.Floor((LocalDay + 3) / 7.0); } } // weeks start on Monday
 
         /// <summary>Seconds until the weekly chests reset (Monday, local midnight).</summary>
-        public double WeeklyResetIn { get { return ((LocalWeek + 1) * 7 - 3) * 86400.0 - (Now + UtcOffsetSeconds); } }
+        public double WeeklyResetIn { get { return ((Math.Max(LocalWeek, State.weeklyWeek) + 1) * 7 - 3) * 86400.0 - (Now + UtcOffsetSeconds); } }
 
         bool TickDaily()
         {
             bool changed = false;
-            if (State.weeklyWeek != LocalWeek)
+            if (LocalWeek > State.weeklyWeek)
             {
                 State.weeklyWeek = LocalWeek;
                 State.weeklyPoints = 0;
                 State.weeklyChests.Clear();
                 changed = true;
             }
-            if (State.dailyDay != LocalDay)
+            if (LocalDay > State.dailyDay)
             {
                 NewDailyBoard();
                 changed = true;

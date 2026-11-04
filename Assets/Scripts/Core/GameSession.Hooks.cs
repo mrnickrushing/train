@@ -12,7 +12,9 @@ namespace Ironhorse.Core
         public event Action<MapEventState> MapEventStarted;
         public event Action<AlbumSetDef> AlbumSetCompleted;
 
-        /// <summary>The player's time zone offset, so the payday day turns over at local midnight.</summary>
+        /// <summary>The player's time zone offset, so the payday day turns over at local midnight.
+        /// It changes with daylight saving and travel; every daily reset only ever moves forward, so a
+        /// smaller offset (flying west, clocks going back) can't hand out the same day twice.</summary>
         public double UtcOffsetSeconds { get; set; }
 
         void RepairHooks()
@@ -23,6 +25,19 @@ namespace Ironhorse.Core
             foreach (var e in State.events) if (e.destinationId == null) e.destinationId = "";
             State.events.RemoveAll(e => (e.kind == MapEventKind.GoldStrike || e.kind == MapEventKind.Bandits) && GameDatabase.Destination(e.destinationId) == null);
             RecordAlbum(false);
+            RepairDays();
+        }
+
+        /// <summary>Daily markers more than two days ahead (the widest time-zone gap) come from a clock that
+        /// was set forward; pull them back so the player isn't locked out of payday and tasks.</summary>
+        void RepairDays()
+        {
+            int ahead = LocalDay + 2;
+            if (State.paydayLastDay > ahead) State.paydayLastDay = LocalDay;
+            if (State.crateDay > ahead) State.crateDay = LocalDay;
+            if (State.dailyDay > ahead) State.dailyDay = LocalDay - 1; // a fresh board at once
+            if (State.weeklyWeek > LocalWeek + 1) State.weeklyWeek = LocalWeek;
+            if (State.adDay > Today + 1) State.adDay = -1;
         }
 
         bool TickHooks()
@@ -38,9 +53,9 @@ namespace Ironhorse.Core
         int LocalDay { get { return (int)Math.Floor((Now + UtcOffsetSeconds) / 86400.0); } }
 
         /// <summary>Seconds until the next payday (local midnight).</summary>
-        public double NextPaydayIn { get { return (LocalDay + 1) * 86400.0 - (Now + UtcOffsetSeconds); } }
+        public double NextPaydayIn { get { return (Math.Max(LocalDay, State.paydayLastDay) + 1) * 86400.0 - (Now + UtcOffsetSeconds); } }
 
-        public bool CanClaimPayday { get { return State.paydayLastDay != LocalDay; } }
+        public bool CanClaimPayday { get { return LocalDay > State.paydayLastDay; } }
 
         bool StreakAlive { get { return State.paydayLastDay >= LocalDay - 1 && State.paydayLastDay >= 0; } }
 
@@ -55,7 +70,7 @@ namespace Ironhorse.Core
         {
             get
             {
-                if (State.paydayLastDay == LocalDay) return (State.paydayStreak - 1) % Hooks.PaydayDays + 1;
+                if (State.paydayLastDay >= LocalDay) return (State.paydayStreak - 1) % Hooks.PaydayDays + 1;
                 return PaydayStreak % Hooks.PaydayDays + 1;
             }
         }
@@ -166,7 +181,7 @@ namespace Ironhorse.Core
             }
             RollCurio(t, rng);
             if (State.stats.dispatches <= Hooks.CrateMinDispatches) return;
-            if (State.crateDay != LocalDay) { State.crateDay = LocalDay; State.cratesToday = 0; }
+            if (LocalDay > State.crateDay) { State.crateDay = LocalDay; State.cratesToday = 0; }
             if (State.cratesToday >= Hooks.CratesPerDay) return;
             State.crateDry++;
             if (State.crateDry >= Hooks.CrateDrySpell || rng.NextDouble() < Hooks.CrateChance)
