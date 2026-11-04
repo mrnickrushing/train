@@ -153,6 +153,15 @@ Shader "Ironhorse/Terrain"
                 float macro = (m1 * 0.65 + m2 * 0.35) - 0.5;
                 albedo *= 1 + macro * 0.45;
                 albedo = lerp(albedo, albedo * float3(1.06, 1.0, 0.86), saturate(macro * 2));
+                // Grass only: an independent noise swings meadows between sun-cured gold and deeper green, and a fine
+                // clump pattern breaks up the flat lawn look. Dirt, roads and rock (not green) are left alone.
+                float green = saturate((albedo.g - max(albedo.r, albedo.b)) * 10);
+                float m3 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.011 + float2(0.61, 0.13)).r - 0.5;
+                float m4 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.085 + float2(0.21, 0.77)).r - 0.5;
+                float3 cured = albedo * float3(1.2, 1.04, 0.66);
+                float3 lush = albedo * float3(0.8, 0.97, 0.82);
+                albedo = lerp(albedo, m3 > 0 ? cured : lush, saturate(abs(m3) * 2.4) * green * 0.8);
+                albedo *= 1 + m4 * 0.22 * green;
 
                 float3 vcol = i.color.rgb;
                 #if !defined(UNITY_COLORSPACE_GAMMA)

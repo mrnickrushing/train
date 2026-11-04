@@ -59,6 +59,10 @@ namespace Ironhorse.Game
                 m = new Material(template) { name = id };
                 m.SetTexture("_BaseMap", albedo);
                 m.SetColor("_BaseColor", new Color(1.14f, 1.1f, 1.04f)); // AI albedo maps run a bit dark next to the sunlit world
+                // Per-model corrections: the boulders' sandstone came out hot orange in the sun, and the new lumber
+                // on construction sites a little too yellow next to the weathered town.
+                if (id == "boulders") m.SetColor("_BaseColor", new Color(0.8f, 0.68f, 0.62f));
+                if (id == "construction_site") m.SetColor("_BaseColor", new Color(1.0f, 0.92f, 0.84f));
                 // AI metal/gloss maps vary patch by patch, so painted wood and iron show as a patchwork
                 // of sky reflections. Only locomotives (real brass and steel) keep theirs.
                 var ms = Resources.Load<Texture2D>("Models/" + key + "_ms");

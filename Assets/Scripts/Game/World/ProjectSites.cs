@@ -503,11 +503,12 @@ namespace Ironhorse.Game
             mb.Matte();
             mb.Surf = SurfaceKind.WoodGrain;
             var top = foot + Vector3.up * PoleH;
-            mb.Cylinder(foot + Vector3.down * 0.3f, top + Vector3.up * 0.3f, 0.19f, 0.14f, 6, Palette.WoodDark, true);
+            var pole = Palette.Hex(0x6E5A44); // weathered pine, not black: reads as a pole from the game camera
+            mb.Cylinder(foot + Vector3.down * 0.3f, top + Vector3.up * 0.3f, 0.27f, 0.19f, 7, pole, true);
             foreach (float y in new[] { -0.2f, -1.0f })
             {
                 var c = top + Vector3.up * y;
-                mb.Cylinder(c - right * 1.25f, c + right * 1.25f, 0.09f, 4, Palette.Wood);
+                mb.Cylinder(c - right * 1.25f, c + right * 1.25f, 0.12f, 5, MeshBuilder.Darken(pole, 0.9f));
                 mb.Mat(0.6f);
                 foreach (float k in new[] { -1.05f, -0.4f, 0.4f, 1.05f })
                     mb.Cylinder(c + right * k, c + right * k + Vector3.up * 0.26f, 0.07f, 0.05f, 6, Palette.Hex(0x7FB3A6), true); // glass insulators

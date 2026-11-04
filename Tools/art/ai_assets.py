@@ -98,6 +98,17 @@ A["station"]["hero"] = True  # the centrepiece, seen up close: locomotive-grade 
 bldg("freightshed", "an original wooden railway freight shed, about twice as long as deep: red-painted plank walls, a raised wooden loading dock with sliding doors along the front, a corrugated tin roof with a deep overhang, crates and barrels on the dock", footprint=14.0, wide=True)
 
 # Town life props (vehicle-style side views; the horse is rigged and animated by Tools/blender/horse.py)
+# Construction site shown on a plot while a building goes up (replaces the old procedural scaffold).
+bldg("construction_site", "an original 1880s frontier building construction site: the bare timber framing of a two-storey house "
+     "half built (raw pine studs, joists and rafters, no walls yet on the upper floor), wooden scaffolding with plank walkways and "
+     "ladders around two sides, a tall wooden gin-pole hoist with a rope and pulley lifting a beam, neat stacks of fresh lumber, "
+     "a pile of red bricks, a sawhorse with a hand saw, nail kegs and a wheelbarrow", base="bare packed dirt with sawdust", footprint=11.0)
+# Scattered desert boulders (replace the procedural rocks).
+A["boulders"] = dict(cat="Props", length=6.0, faces=4000, front="none", prompt=(
+    "Game asset reference render of a natural cluster of three weathered desert boulders of different sizes: rounded red-brown "
+    "and buff sandstone with cracks, layered strata, wind-worn hollows and a few small loose stones, slightly elevated three-quarter "
+    "view, isolated on a plain flat white background, the whole cluster visible and nothing cropped, no ground plane. Semi-realistic, "
+    "richly detailed like a premium mobile tycoon game, clean studio lighting with soft shadows. No text, no plants, no people."))
 A["horse"] = dict(cat="Props", length=2.8, faces=6000, front="auto", animal=True, prompt=VEHICLE.format(what="a single sturdy chestnut-brown draft horse in a dark leather work harness with a collar and blinkers, standing square and calm with all four legs straight and clearly separated, head forward, tail hanging down").replace("vehicle", "animal").replace("no rails, no ground", "no cart, no rider, no ground").replace("No text, no numbers, no logos, no people.", "No text, no people."))
 A["covered_wagon"] = dict(cat="Props", length=6.2, faces=6000, front="auto", prompt=VEHICLE.format(what="an original 1870s prairie covered wagon with NO horses: a white weathered canvas bonnet stretched over wooden hoops, a blue-grey painted wooden box body, red spoked wooden wheels with iron tyres (larger at the back), a wooden tongue pole sticking out at the front, a water barrel and a toolbox strapped to the side"))
 
