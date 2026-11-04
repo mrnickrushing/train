@@ -6,14 +6,19 @@ using UnityEngine;
 
 namespace Ironhorse.Game
 {
+    public enum PurchaseOutcome { Paid, Cancelled, Failed }
+
     /// <summary>Real-money store abstraction. The game only talks to this interface.</summary>
     public interface IStore
     {
         bool Ready { get; }
         /// <summary>Localized price ("$4.99", "4,99 €") or null if unknown.</summary>
         string Price(string productId);
-        void Purchase(string productId, Action<bool, string> done);
+        /// <summary>Calls back with the outcome and the transaction id (Paid, may be null) or a message.</summary>
+        void Purchase(string productId, Action<PurchaseOutcome, string> done);
         void Restore(Action<int> done);
+        /// <summary>The account's one-time transactions, for <see cref="GameSession.ReconcilePurchases"/> (null if unavailable).</summary>
+        void Receipts(Action<List<StoreReceipt>> done);
         /// <summary>Ties purchases to a signed-in account (Sign in with Apple user id), or null to go anonymous.</summary>
         void Identify(string appUserId);
     }
@@ -52,15 +57,50 @@ namespace Ironhorse.Game
             return def != null ? def.FallbackPrice : "?";
         }
 
-        /// <summary>Buys a product and grants it through the simulation (idempotent per transaction).</summary>
+        /// <summary>
+        /// Buys a product and grants it through the simulation (idempotent per transaction). A pending
+        /// marker is saved first, so a purchase charged while the app dies is delivered by <see cref="Reconcile"/>.
+        /// </summary>
         public static void Buy(string productId, Action<ActionResult> done = null)
         {
-            Current.Purchase(productId, (ok, txOrError) =>
+            G.Session.BeginPurchase(productId);
+            GameRoot.Instance.Save();
+            Current.Purchase(productId, (outcome, txOrMessage) =>
             {
-                ActionResult r = ok ? G.Session.GrantPurchase(productId, txOrError) : ActionResult.Fail(txOrError);
-                if (ok && r.Ok) GameRoot.Instance.Save(); // persist immediately after a paid grant (retried if it fails)
+                ActionResult r;
+                switch (outcome)
+                {
+                    case PurchaseOutcome.Paid:
+                        r = G.Session.GrantPurchase(productId, txOrMessage);
+                        break;
+                    case PurchaseOutcome.Cancelled:
+                        G.Session.EndPurchase(productId);
+                        r = ActionResult.Fail(txOrMessage);
+                        break;
+                    default: // the store may still have charged (network drop, Ask to Buy): keep watching
+                        r = ActionResult.Fail(txOrMessage);
+                        Reconcile();
+                        break;
+                }
+                GameRoot.Instance.Save(); // persist at once after a paid grant (retried if it fails)
                 done?.Invoke(r);
             });
+        }
+
+        /// <summary>Delivers purchases this device started that never got their reward (crash, lost callback).</summary>
+        public static void Reconcile()
+        {
+            if (G.Session == null || !G.Session.HasPendingPurchases) return;
+            Current.Receipts(Deliver);
+        }
+
+        /// <summary>Matches the store's transactions against this device's pending purchases.</summary>
+        public static void Deliver(List<StoreReceipt> receipts)
+        {
+            if (G.Session == null || !G.Session.HasPendingPurchases || receipts == null) return;
+            var got = G.Session.ReconcilePurchases(receipts);
+            GameRoot.Instance.Save();
+            if (got.Count > 0 && UIRoot.Instance != null) UIRoot.Instance.Toast("Your purchase arrived. " + string.Join(" ", got), true);
         }
     }
 
@@ -70,14 +110,15 @@ namespace Ironhorse.Game
         public bool Ready { get { return Allowed; } }
         public string Price(string productId) { return null; }
 
-        public void Purchase(string productId, Action<bool, string> done)
+        public void Purchase(string productId, Action<PurchaseOutcome, string> done)
         {
-            if (!Allowed) { done(false, "The store isn't available yet."); return; }
+            if (!Allowed) { done(PurchaseOutcome.Failed, "The store isn't available yet."); return; }
             Debug.Log("[TestStore] Simulated purchase of " + productId);
-            done(true, "test-" + Guid.NewGuid().ToString("N"));
+            done(PurchaseOutcome.Paid, "test-" + Guid.NewGuid().ToString("N"));
         }
 
         public void Restore(Action<int> done) { done(0); }
+        public void Receipts(Action<List<StoreReceipt>> done) { done(new List<StoreReceipt>()); }
         public void Identify(string appUserId) { }
     }
 
@@ -106,9 +147,28 @@ namespace Ironhorse.Game
             {
                 yield return null;
                 Store._booted = true;
-                if (Store._hasPendingUser) Store.Identify(Store._pendingUser);
+                if (Store._hasPendingUser) Store.Identify(Store._pendingUser); // reconciles once logged in
+                else Ironhorse.Game.Store.Reconcile();
                 Store.LoadPrices();
             }
+        }
+
+        /// <summary>RevenueCat reports transactions StoreKit re-delivers at launch (after a crash mid-purchase) here.</summary>
+        sealed class Listener : Purchases.UpdatedCustomerInfoListener
+        {
+            public override void CustomerInfoReceived(Purchases.CustomerInfo info)
+            {
+                if (G.Session != null && G.Session.HasPendingPurchases) Ironhorse.Game.Store.Deliver(ToReceipts(info));
+            }
+        }
+
+        static readonly DateTime Epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        static List<StoreReceipt> ToReceipts(Purchases.CustomerInfo info)
+        {
+            if (info == null || info.NonSubscriptionTransactions == null) return null;
+            return info.NonSubscriptionTransactions.Where(t => t != null)
+                .Select(t => new StoreReceipt(t.ProductIdentifier, t.TransactionIdentifier, (t.PurchaseDate - Epoch).TotalSeconds)).ToList();
         }
 
         public static RevenueCatStore Create()
@@ -121,6 +181,7 @@ namespace Ironhorse.Game
             s._purchases.revenueCatAPIKeyApple = ApiKey;
             s._purchases.useRuntimeSetup = false;
             s._purchases.productIdentifiers = Catalog.Products.Select(p => p.Id).ToArray();
+            s._purchases.listener = go.AddComponent<Listener>();
             go.AddComponent<Boot>().Store = s; // load prices one frame after Purchases.Start has configured the SDK
             go.SetActive(true);
             return s;
@@ -139,16 +200,32 @@ namespace Ironhorse.Game
 
         public string Price(string productId) { string p; return _prices.TryGetValue(productId, out p) ? p : null; }
 
-        public void Purchase(string productId, Action<bool, string> done)
+        public void Purchase(string productId, Action<PurchaseOutcome, string> done)
         {
-            if (!_booted) { done(false, "The store is still loading. Try again in a moment."); return; }
+            if (!_booted) { done(PurchaseOutcome.Cancelled, "The store is still loading. Try again in a moment."); return; }
             _purchases.PurchaseProduct(productId, result =>
             {
-                if (result.UserCancelled) { done(false, "Purchase cancelled."); return; }
-                if (result.Error != null) { done(false, result.Error.Message); return; }
+                if (result.UserCancelled) { done(PurchaseOutcome.Cancelled, "Purchase cancelled."); return; }
+                if (result.Error != null) { done(PurchaseOutcome.Failed, result.Error.Message); return; }
                 var tx = result.StoreTransaction;
-                done(true, tx != null ? tx.TransactionIdentifier : "rc-" + Guid.NewGuid().ToString("N"));
+                string id = tx != null ? tx.TransactionIdentifier : null;
+                if (string.IsNullOrEmpty(id)) // fall back to the account's newest transaction for this product
+                {
+                    var r = ToReceipts(result.CustomerInfo);
+                    if (r != null) id = r.Where(x => x.ProductId == productId).OrderByDescending(x => x.PurchasedAt).Select(x => x.TransactionId).FirstOrDefault();
+                }
+                done(PurchaseOutcome.Paid, id);
             }, "inapp");
+        }
+
+        public void Receipts(Action<List<StoreReceipt>> done)
+        {
+            if (!_booted) { done(null); return; }
+            _purchases.GetCustomerInfo((info, error) =>
+            {
+                if (error != null) { Debug.LogWarning("[RevenueCat] customer info: " + error.Message); done(null); return; }
+                done(ToReceipts(info));
+            });
         }
 
         public void Identify(string appUserId)
@@ -160,9 +237,14 @@ namespace Ironhorse.Game
                 {
                     if (error != null) { Debug.LogWarning("[RevenueCat] log in: " + error.Message); return; }
                     G.Session.RestoreNonConsumables(info.AllPurchasedProductIdentifiers); // one-time items follow the account
+                    Ironhorse.Game.Store.Deliver(ToReceipts(info));
                 });
             else
-                _purchases.LogOut((info, error) => { if (error != null) Debug.LogWarning("[RevenueCat] log out: " + error.Message); });
+                _purchases.LogOut((info, error) =>
+                {
+                    if (error != null) { Debug.LogWarning("[RevenueCat] log out: " + error.Message); return; }
+                    Ironhorse.Game.Store.Deliver(ToReceipts(info));
+                });
         }
 
         public void Restore(Action<int> done)

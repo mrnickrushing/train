@@ -22,12 +22,16 @@ namespace Ironhorse.Game
     /// <summary>JSON save file in the app's persistent data folder, written atomically.</summary>
     public static class SaveSystem
     {
-        public static string PathFor(string name) { return Path.Combine(Application.persistentDataPath, name); }
+        /// <summary>Where saves live; tests point it at a scratch folder (null = the app's data folder).</summary>
+        public static string Folder;
+        public static string PathFor(string name) { return Path.Combine(Folder ?? Application.persistentDataPath, name); }
         static string Main { get { return PathFor("ironhorse_save.json"); } }
 
+        /// <summary>The newest save that reads back whole: the main file, else a checked temp file left by
+        /// a crash between writing and moving it into place, else the previous save.</summary>
         public static GameState Load()
         {
-            foreach (var path in new[] { Main, Main + ".bak" })
+            foreach (var path in new[] { Main, Main + ".tmp", Main + ".bak" })
             {
                 try
                 {
@@ -105,7 +109,7 @@ namespace Ironhorse.Game
             bool fresh = state == null;
             if (fresh) state = GameSession.NewGame(Clock.Now, Environment.TickCount);
             G.Session = new GameSession(state, Clock);
-            G.Session.UtcOffsetSeconds = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalSeconds;
+            ReadTimeZone();
             AudioManager.MusicOn = state.settings.music;
             AudioManager.SfxOn = state.settings.sfx;
             Haptics.On = state.settings.haptics;
@@ -219,7 +223,21 @@ namespace Ironhorse.Game
             return ok;
         }
 
-        void OnApplicationPause(bool paused) { if (paused) Save(); }
+        void OnApplicationPause(bool paused)
+        {
+            if (paused) Save();
+            else
+            {
+                ReadTimeZone(); // the player may have flown somewhere, or the clocks changed, while the game slept
+                Store.Reconcile();
+            }
+        }
+
+        static void ReadTimeZone()
+        {
+            TimeZoneInfo.ClearCachedData();
+            G.Session.UtcOffsetSeconds = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalSeconds;
+        }
         void OnApplicationQuit() { Save(); }
 
         /// <summary>Set before <see cref="Reload"/> to greet the player in the rebuilt world.</summary>
