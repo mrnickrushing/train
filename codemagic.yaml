@@ -90,7 +90,7 @@ workflows:
       groups:
         - ios_credentials
       vars:
-        BUNDLE_ID: com.rushingtech.thetrail
+        BUNDLE_ID: com.rushingtech.theogtrail
         APPLE_TEAM_ID: PH4AKDQ4Q7
         XCODE_PROJECT: ios/Unity-iPhone.xcodeproj
         XCODE_SCHEME: Unity-iPhone
@@ -166,18 +166,3 @@ workflows:
         submit_to_testflight: false
         submit_to_app_store: false
 
-  thetrail-asc-check:
-    # Lists the App Store Connect apps and bundle ids the team key can see (diagnostics only).
-    name: The Trail App Store Connect check
-    max_build_duration: 10
-    instance_type: mac_mini_m2
-    environment:
-      groups:
-        - ios_credentials
-    scripts:
-      - name: List apps and bundle ids
-        script: |
-          KEY="/tmp/AuthKey.p8"; printf "%b" "$APP_STORE_CONNECT_PRIVATE_KEY" > "$KEY"
-          A=(--issuer-id "$APP_STORE_CONNECT_ISSUER_ID" --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" --private-key "@file:$KEY")
-          app-store-connect apps list "${A[@]}" 2>&1 | grep -E "Name|Bundle ID|^Id:" || true
-          app-store-connect bundle-ids list "${A[@]}" 2>&1 | grep -E "Identifier|Name|Platform" || true
