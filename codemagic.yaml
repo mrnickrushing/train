@@ -170,7 +170,7 @@ workflows:
     # Lists the App Store Connect apps and bundle ids the team key can see (diagnostics only).
     name: The Trail App Store Connect check
     max_build_duration: 10
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     environment:
       groups:
         - ios_credentials
