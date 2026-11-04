@@ -168,7 +168,8 @@ namespace Ironhorse.Game
                 int i = 0;
                 foreach (var p in Catalog.Products.Where(p => p.Id.StartsWith("ironhorse.nuggets_"))) { var pp = p; int k = i++; InCell(ct, t => NuggetCard(t, pp, k)); }
                 bool ad = S.AdsLeft(AdReward.Nuggets) > 0 && Ads.Current.Available;
-                InCell(ct, t => ShopCard(t, "Free Nuggets", "FREE", UIKit.Blue, null, null, x => Art(x, "shop_nuggets_1", 190), null, new Grant { Nuggets = Balance.AdNuggets },
+                // No video ads ship yet: the free-nuggets card only appears where ads can play.
+                if (Ads.Current.Available) InCell(ct, t => ShopCard(t, "Free Nuggets", "FREE", UIKit.Blue, null, null, x => Art(x, "shop_nuggets_1", 190), null, new Grant { Nuggets = Balance.AdNuggets },
                     S.AdsLeft(AdReward.Nuggets) + " left today", "Watch", UIKit.Green, ad ? (Action)(() => Ads.Watch(AdReward.Nuggets, 0, r => { Result(r, Sfx.Coin); RebuildWindow(); })) : null));
             }
             else if (_shopTab == "supplies")
@@ -598,8 +599,11 @@ namespace Ironhorse.Game
             else Pill(refill, null, "Full", 34, BGood);
 
             int ads = S.AdsLeft(AdReward.Fuel);
-            var ad = FuelOption(panel.transform, Ico("shop_fuel", 80), "Free coal", "+" + Balance.AdFuel + " fuel for a short video · " + ads + " left today");
-            Big(ad, "Watch", UIKit.Green, () => Ads.Watch(AdReward.Fuel, 0, r => Result(r, Sfx.Coin)), 280, 84, ads > 0 && Ads.Current.Available, 36);
+            if (Ads.Current.Available)
+            {
+                var ad = FuelOption(panel.transform, Ico("shop_fuel", 80), "Free coal", "+" + Balance.AdFuel + " fuel for a short video · " + ads + " left today");
+                Big(ad, "Watch", UIKit.Green, () => Ads.Watch(AdReward.Fuel, 0, r => Result(r, Sfx.Coin)), 280, 84, ads > 0, 36);
+            }
 
             var supply = Catalog.Offer("n_coal");
             var sc = FuelOption(panel.transform, Ico("coal", 80), supply.Title, supply.Subtitle + " Can overfill your tender.");

@@ -131,6 +131,26 @@ namespace Ironhorse.Game
             if (o != null) o.enabled = false;
         }
 
+        /// <summary>Account deletion (App Store guideline 5.1.1(v)): ends the Sign in with Apple link, unlinks purchases
+        /// from it and erases the railroad. The game keeps no data on a server, so nothing else remains.</summary>
+        void ConfirmDeleteAccount()
+        {
+            ShowBoard("Delete account?", (body, right) =>
+            {
+                var panel = Box(body, BCardDeep, -1, -1, "Panel");
+                UIKit.Stretch(panel.gameObject);
+                Stack(panel.gameObject, 18, new RectOffset(30, 30, 30, 30), TextAnchor.MiddleCenter);
+                T(panel.transform, "Delete your account and data?", 56, BBad, TextAnchor.MiddleCenter, true);
+                T(panel.transform, "This signs you out of Sign in with Apple, unlinks your purchases from your Apple ID and erases your railroad, coins and nuggets on this device. "
+                    + "Ironhorse Frontier keeps no data on its own servers. One-time purchases such as the Big Tender come back with Restore purchases. This cannot be undone.", 32, Color.white, TextAnchor.MiddleCenter, false, UIKit.Heading);
+                T(panel.transform, "To also remove the app from your Apple ID: iPhone Settings › your name › Sign in with Apple.", 28, BLabel, TextAnchor.MiddleCenter, false, UIKit.Heading);
+                Flex(panel.transform);
+                var row = HBox(panel.transform, 24, 0, TextAnchor.MiddleCenter, -1, 100);
+                Big(row.transform, "Keep my account", UIKit.Green, () => CloseWindow(), 420, 96, true, 40);
+                Big(row.transform, "Delete everything", UIKit.Red, () => { CloseWindow(); AppleAccount.SignOut(); GameRoot.Instance.ResetGame(); }, 420, 96, true, 40);
+            }, 1400, 720);
+        }
+
         void ConfirmReset()
         {
             ShowBoard("Are you sure?", (body, right) =>
