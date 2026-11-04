@@ -107,11 +107,16 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   tutorial) and the Roundhouse album (sets of owned stock give permanent perks through `CivicBonus`). Screens are in
   `UI/UIRoot.Hooks.cs`; launch queues the away card, then payday, then any featured offer (`QueueWelcome`).
 - **Frontier systems**: `Core/GameSession.Frontier.cs` (content and tuning in `Core/Frontier.cs`) adds the dispatcher's board
-  (4 daily jobs, daily and weekly chests; the Tasks tab of the Daily board), engineers (shards from chests, crates and the
-  peddler; one per locomotive; perks feed `PreviewDispatch`, `TripSeconds`, `FuelCost`, `FareFor`), the traveling peddler,
-  Full Steam combos (trains sent within 60 s haul up to 50% more), curios (one per destination, rolled at dispatch, shown in
+  (4 daily jobs, daily and weekly chests; the Tasks tab of the Daily board), engineers (level 4; shards from chests, crates and the
+  peddler; one per locomotive; perks feed `PreviewDispatch`, `TripSeconds`, `FuelCost`, `FareFor`), the traveling peddler (level 5),
+  Full Steam combos (trains sent within 60 s haul up to 25% more; bonuses pay goods, not XP), curios (one per destination, rolled at dispatch, shown in
   `World/Museum.cs` west of Main Street) and new-territory charters (after the Golden Spike: the town restarts, stock and
   collections stay, `GameRoot.Reload` rebuilds the world). Screens: `UI/UIRoot.Frontier.cs`.
+- **Balance simulator**: `Tools/BalanceSim` runs a bot that plays the game logic for a month of five short daily sessions
+  and prints level, coins, nuggets and blueprints (and where each came from). `dotnet run --project Tools/BalanceSim/current
+  -c Release -- 30 3` (days, seeds); `baseline` runs the same bot on the logic from before the daily hooks (extract it first,
+  see `baseline/Baseline.csproj`). Rerun it after changing rewards. The bot is a very engaged player: compare runs, don't
+  read the numbers as typical.
 - **Audio**: recorded music, day/night ambience beds and effects (Higgsfield Sonilo, Mirelo, Seed Audio; raw takes in
   `art-src/audio`) are trimmed, levelled and looped by `Tools/art/audio.py` (free, ffmpeg) into `Resources/Audio/*.ogg`.
   `AudioManager` loads them and falls back to its synthesized sounds for any that are missing. Seed Audio's quoted

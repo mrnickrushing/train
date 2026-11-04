@@ -146,7 +146,7 @@ namespace Ironhorse.Game
                 if (g.Nuggets > 0) parts.Add(g.Nuggets + " nuggets");
                 if (g.Fuel > 0) parts.Add(g.Fuel + " fuel");
                 foreach (var r in g.Resources) parts.Add(r.amount + " " + ResName(r.id));
-                if (g.Blueprints > 0) parts.Add(g.Blueprints + " plans");
+                if (g.Blueprints > 0) parts.Add(g.Blueprints + (g.Blueprints == 1 ? " plan" : " plans"));
                 if (shards > 0 && S.CrewUnlocked) parts.Add(shards + " crew shards");
                 var gt = T(tile.transform, string.Join(", ", parts), 22, Color.white, TextAnchor.MiddleCenter, false, UIKit.Heading);
                 UIKit.Size(gt.gameObject, -1, weekly ? 50 : 56);
@@ -368,8 +368,8 @@ namespace Ironhorse.Game
             if (!on) return;
             float now = S.ComboNow, next = S.NextCombo;
             _comboText.text = S.State.comboCount <= 1
-                ? "Send another train for FULL STEAM ×" + next.ToString("0.0")
-                : "FULL STEAM ×" + now.ToString("0.0") + "  ·  next train ×" + next.ToString("0.0");
+                ? "Send another train for FULL STEAM ×" + next.ToString("0.0#")
+                : "FULL STEAM ×" + now.ToString("0.0#") + "  ·  next train ×" + next.ToString("0.0#");
             UIKit.SetBar(_comboFill, (float)(S.ComboLeft / Frontier.ComboWindow));
         }
 

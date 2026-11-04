@@ -236,7 +236,7 @@ namespace Ironhorse.Game
             T1(info.transform, sel.Name, 38, Color.white, TextAnchor.MiddleLeft, true);
             string cargo = sel.IsTown ? "riders" : ResName(sel.ResourceId);
             string extra = p.Boom ? " (gold strike: double!)" : p.Bandits ? " · bandits on this line!" : "";
-            if (p.Combo > 1.001f) extra += " · Full Steam ×" + p.Combo.ToString("0.0");
+            if (p.Combo > 1.001f) extra += " · Full Steam ×" + p.Combo.ToString("0.0#");
             T1(info.transform, p.Possible ? "Back in " + Fmt.Time(p.Seconds) + " with " + p.Amount + " " + cargo + extra : p.Reason, 28, p.Possible ? (p.Bandits ? BBad : p.Boom ? BGold : BLabel) : BBad, TextAnchor.MiddleLeft, false, UIKit.Heading);
             string id = sel.Id;
             int uid = t.uid;

@@ -151,17 +151,17 @@ namespace Ironhorse.Tests
         {
             SetLevel(Frontier.ComboLevel);
             var a = _s.State.trains[0];
-            var b = AddTrain("dusty", "flatcar", "hopper");
+            var b = AddTrain("redmesa", "flatcar", "flatcar", "flatcar", "flatcar");
             var d = GameDatabase.Destination("pinecrest");
             _s.State.fuel = 999;
             int plain = _s.PreviewDispatch(b, d).Amount;
             Assert.IsTrue(_s.Dispatch(a.uid, "pinecrest").Ok);
             Assert.AreEqual(0, a.combo);
             var p = _s.PreviewDispatch(b, d);
-            Assert.AreEqual(1.1f, p.Combo, 1e-4);
+            Assert.AreEqual(1 + Frontier.ComboStep, p.Combo, 1e-4);
             Assert.Greater(p.Amount, plain);
             Assert.IsTrue(_s.Dispatch(b.uid, "pinecrest").Ok);
-            Assert.AreEqual(10, b.combo);
+            Assert.AreEqual((int)System.Math.Round(Frontier.ComboStep * 100), b.combo);
             _clock.Advance(Frontier.ComboWindow + 1);
             Assert.AreEqual(1f, _s.NextCombo, 1e-4);
         }

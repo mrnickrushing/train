@@ -1,0 +1,15 @@
+<!-- Balance simulator against the current game logic: dotnet run, project Tools/BalanceSim/current -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>$(DefineConstants);HOOKS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../Assets/Scripts/Core/**/*.cs" />
+    <Compile Include="../Bot.cs" />
+  </ItemGroup>
+</Project>

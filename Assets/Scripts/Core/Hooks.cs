@@ -26,7 +26,7 @@ namespace Ironhorse.Core
     {
         // Payday
         public const int PaydayDays = 7;
-        public const int PaydayBlueprints = 2;
+        public const int PaydayBlueprints = 1;
 
         // Away summary: shown when the player was gone at least this long and something is waiting.
         public const double AwayMinSeconds = 10 * 60;
@@ -37,11 +37,13 @@ namespace Ironhorse.Core
         public const int CrateDrySpell = 7;
         /// <summary>The first few trips (the tutorial) never bring one.</summary>
         public const int CrateMinDispatches = 4;
+        /// <summary>At most this many crates a day, however many trains run (keeps crates a treat, not a farm).</summary>
+        public const int CratesPerDay = 4;
 
         // Express telegrams
         public const int ExpressLevel = 3;
         public const double ExpressSeconds = 2 * 3600;
-        public const double ExpressGap = 3 * 3600;
+        public const double ExpressGap = 4 * 3600;
         public const double ExpressFirstDelay = 5 * 60;
         public const int ExpressPayMultiplier = 3;
 

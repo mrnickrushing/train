@@ -94,7 +94,7 @@ namespace Ironhorse.Game
             if (g.Blueprints > 0 && g.BlueprintLoco != null)
             {
                 var loco = GameDatabase.Locomotive(g.BlueprintLoco);
-                Pill(p, t => LocoArt(t, loco, 64, 36), g.Blueprints + " plans", 30, null, BTile);
+                Pill(p, t => LocoArt(t, loco, 64, 36), g.Blueprints + (g.Blueprints == 1 ? " plan" : " plans"), 30, null, BTile);
             }
             if (xp > 0) Pill(p, t => UIDeco.XpIcon(t, 42), xp.ToString(), 30, null, BTile);
         }

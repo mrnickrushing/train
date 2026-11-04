@@ -18,6 +18,8 @@ namespace Ironhorse.Core
         public bool Bandits;
         /// <summary>Full Steam multiplier this dispatch would get (1 = none).</summary>
         public float Combo;
+        /// <summary>The load without Full Steam, engineer and gold-strike extras (what earns XP).</summary>
+        public int BaseAmount;
     }
 
     public sealed partial class GameSession
@@ -69,11 +71,13 @@ namespace Ironhorse.Core
                 if (wd.Cargo == res.Cargo) capacity += wd.Capacity;
             }
             p.Combo = NextCombo;
+            p.BaseAmount = (int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level) * d.Yield * (1 + CivicBonus(CivicEffect.Yield)));
             p.Amount = (int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level) * d.Yield * (1 + CivicBonus(CivicEffect.Yield) + EngineerValue(t, EngineerPerk.Cargo, res.Cargo)) * p.Combo);
             if (d.IsTown) p.Amount = Math.Min((int)Math.Round(capacity * Balance.LocoCapacityMultiplier(t.level)), Balance.PassengerDemand(Population));
             else if (BoomAt(d.Id)) { p.Amount *= 2; p.Boom = true; }
             p.Bandits = BanditsOn(d.Id);
-            p.Xp = Balance.XpForCargo(res, p.Amount);
+            if (d.IsTown) p.BaseAmount = p.Amount;
+            p.Xp = Balance.XpForCargo(res, Math.Min(p.Amount, p.BaseAmount));
             p.Fuel = FuelCost(t, d);
 
             if (!IsDestinationUnlocked(d)) p.Reason = "Unlocks at level " + d.UnlockLevel;
@@ -121,6 +125,7 @@ namespace Ironhorse.Core
             t.arrivesAt = Now + p.Seconds;
             t.cargoId = d.ResourceId;
             t.cargoAmount = p.Amount;
+            t.xpCargo = p.BaseAmount;
             _arrivalSeen.Remove(t.uid);
             State.stats.dispatches++;
             RollTrip(t, p);
@@ -148,7 +153,9 @@ namespace Ironhorse.Core
             State.inventory.Change(t.cargoId, moved);
             State.stats.collected.Change(t.cargoId, moved);
             t.cargoAmount -= moved;
-            AddXp(Balance.XpForCargo(res, moved));
+            int xpMoved = t.xpCargo < 0 ? moved : Math.Min(moved, t.xpCargo);
+            if (t.xpCargo >= 0) t.xpCargo -= xpMoved;
+            AddXp(Balance.XpForCargo(res, xpMoved));
 
             string msg = "+" + moved + " " + res.Name;
             if (t.cargoAmount <= 0)

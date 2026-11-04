@@ -35,7 +35,8 @@ namespace Ironhorse.Game
             _chapterNext = UIKit.Label(v.transform, "", 19, UIKit.Cream, TextAnchor.MiddleLeft);
             UIKit.OneLine(_chapterNext, 12); // long unlock names shrink instead of spilling out of the card
             _chapterClaim = UIKit.Btn(card.transform, "Claim!", UIKit.Green, OpenTimeline, 22, 120, 50);
-            UIKit.Place(_chapterClaim.gameObject, new Vector2(1, 1), new Vector2(1, 0.5f), new Vector2(-8, -4), new Vector2(120, 50));
+            // Bottom-right inside the card, beside the short "Chapter complete!" line (not over the goal card above).
+            UIKit.Place(_chapterClaim.gameObject, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-8, 6), new Vector2(120, 46));
         }
 
         void RefreshChapterHud()
@@ -49,7 +50,7 @@ namespace Ironhorse.Game
             bool done = S.IsChapterComplete(c);
             _chapterClaim.gameObject.SetActive(done);
             if (done) _chapterClaim.transform.localScale = Vector3.one * (1 + Mathf.Sin(Time.unscaledTime * 6) * 0.05f);
-            _chapterNext.text = done ? "Chapter complete! Claim your reward." : NextUnlockText();
+            _chapterNext.text = done ? "Chapter complete!" : NextUnlockText();
         }
 
         string NextUnlockText()
