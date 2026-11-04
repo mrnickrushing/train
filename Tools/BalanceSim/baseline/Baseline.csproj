@@ -1,0 +1,15 @@
+<!-- The same bot against the game logic before the daily hooks (commit e3541b6). Needs the old sources:
+     git archive e3541b6 Assets/Scripts/Core | tar -x -C Tools/BalanceSim/.baseline -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../.baseline/Assets/Scripts/Core/**/*.cs" />
+    <Compile Include="../Bot.cs" />
+  </ItemGroup>
+</Project>

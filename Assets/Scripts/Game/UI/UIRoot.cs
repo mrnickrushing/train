@@ -429,7 +429,8 @@ namespace Ironhorse.Game
                 if (r.Ok) { AudioManager.Play(Sfx.Coin); Fx.Burst(CameraRig.Instance.Focus + Vector3.up * 10, 50); }
                 Toast(r.Message, r.Ok);
             }, 24, 140, 56);
-            UIKit.Place(_goalClaim.gameObject, new Vector2(1, 0), new Vector2(1, 0.5f), new Vector2(-10, 0), new Vector2(140, 56));
+            // Inside the card's bottom-right corner (over the "3/3" it replaces), not hanging over the chapter card below.
+            UIKit.Place(_goalClaim.gameObject, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-10, 8), new Vector2(150, 54));
         }
 
         /// <summary>Tapping the goal card opens the screen where that goal gets done.</summary>
@@ -516,6 +517,7 @@ namespace Ironhorse.Game
                 UIKit.SetBar(_goalFill, p / (float)g.Count);
                 bool done = p >= g.Count;
                 _goalClaim.gameObject.SetActive(done);
+                _goalProgress.enabled = !done;
                 if (done) _goalClaim.transform.localScale = Vector3.one * (1 + Mathf.Sin(Time.unscaledTime * 6) * 0.04f);
             }
 
@@ -716,8 +718,15 @@ namespace Ironhorse.Game
             unlocks.AddRange(GameDatabase.Wagons.Where(d => d.UnlockLevel == level).Select(d => "Wagon: " + d.Name));
             unlocks.AddRange(GameDatabase.Buildings.Where(d => d.UnlockLevel == level).Select(d => "Building: " + d.Name));
             unlocks.AddRange(DepthContent.Projects.Where(d => d.UnlockLevel == level).Select(d => "Project: " + d.Name));
+            // Daily features, named as they open so new players know what just appeared.
+            if (level == Hooks.EventLevel) unlocks.Insert(0, "New: map events (travelers and tumbleweeds)");
+            if (level == Hooks.ExpressLevel) unlocks.Insert(0, "New: express telegrams and Full Steam combos");
+            if (level == Frontier.CrewLevel) unlocks.Insert(0, "New: engineers ride your locomotives");
+            if (level == Frontier.PeddlerLevel) unlocks.Insert(0, "New: the traveling peddler visits");
             if (level == Balance.GoldenAgeLevel) unlocks.Insert(0, "THE GOLDEN AGE BEGINS!");
 
+            // Several levels at once (a big reward): the newest popup replaces the older ones, whose rewards are already paid.
+            foreach (Transform old in _popupLayer) if (old.name == "LevelUp") Destroy(old.gameObject);
             var dim = UIKit.Panel(_popupLayer, UIKit.Dim, "LevelUp");
             dim.sprite = null;
             UIKit.Stretch(dim.gameObject);
@@ -727,7 +736,9 @@ namespace Ironhorse.Game
             stack.AddComponent<WindowIntro>();
             UIDeco.Ribbon(stack.transform, level == Balance.GoldenAgeLevel ? "The Golden Age!" : "Level Up!", Palette.Hex(0x7A2E1E), 760, 120);
             var card = UIKit.Panel(stack.transform, new Color(0.13f, 0.09f, 0.06f, 0.92f), "Card", null, true);
-            UIKit.Size(card.gameObject, 820, 560);
+            int lines = Mathf.Min(unlocks.Count, 5);
+            UIKit.Size(card.gameObject, 820, 560 + 32 * Mathf.Max(0, lines - 2));
+            UIKit.RT(stack).sizeDelta = new Vector2(1000, 760 + 32 * Mathf.Max(0, lines - 2));
             card.gameObject.AddComponent<Outline>().effectColor = UIKit.Brass;
             var v = UIKit.Node("V", card.transform);
             UIKit.Stretch(v, 30);
@@ -753,7 +764,7 @@ namespace Ironhorse.Game
             if (nextUp.Count > 0)
             {
                 var nl = UIKit.Label(v.transform, "Coming up at level " + nextUp[0].Level + ": " + string.Join(", ", nextUp.Take(3).Select(u => u.Name)), 22, UIKit.Gold, TextAnchor.MiddleCenter);
-                UIKit.Size(nl.gameObject, -1, 34);
+                UIKit.OneLine(nl, 14); // one line, shrinking, so it never runs into the unlock list
             }
             UIKit.Spacer(v.transform, -1, 6);
             var go = dim.gameObject;

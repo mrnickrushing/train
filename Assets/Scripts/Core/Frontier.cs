@@ -126,12 +126,12 @@ namespace Ironhorse.Core
         public static Grant WeeklyChest(int at, string blueprintLoco)
         {
             if (at <= WeeklyChestAt[0]) return new Grant { Nuggets = 15 };
-            if (at <= WeeklyChestAt[1]) return new Grant { Nuggets = 25, BlueprintLoco = blueprintLoco, Blueprints = 2 };
-            return new Grant { Nuggets = 40, BlueprintLoco = blueprintLoco, Blueprints = 3 };
+            if (at <= WeeklyChestAt[1]) return new Grant { Nuggets = 25, BlueprintLoco = blueprintLoco, Blueprints = 1 };
+            return new Grant { Nuggets = 40, BlueprintLoco = blueprintLoco, Blueprints = 2 };
         }
 
         // ---------------------------------------------------------------- Engineers
-        public const int CrewLevel = 3;
+        public const int CrewLevel = 4;
         public const int RecruitShards = 10;
         public const int MaxEngineerLevel = 5;
         public static int LevelUpShards(int level) { return 10 * level; }
@@ -152,7 +152,7 @@ namespace Ironhorse.Core
         { return new EngineerDef { Id = id, Name = name, Title = title, Perk = perk, Cargo = cargo, Base = b, PerLevel = per, Rarity = r, Blurb = blurb }; }
 
         // ---------------------------------------------------------------- Traveling peddler
-        public const int PeddlerLevel = 3;
+        public const int PeddlerLevel = 5;
         public const double PeddlerStay = 3600;
         public const double PeddlerFirstDelay = 10 * 60;
         public const double PeddlerGapMin = 3 * 3600, PeddlerGapMax = 5 * 3600;
@@ -160,7 +160,7 @@ namespace Ironhorse.Core
         // ---------------------------------------------------------------- Full Steam combo
         public const int ComboLevel = 3;
         public const double ComboWindow = 60;
-        public const float ComboStep = 0.1f;
+        public const float ComboStep = 0.05f;
         public const int ComboMax = 6;
 
         /// <summary>Cargo multiplier for the n-th train sent in a row (1 = no bonus).</summary>

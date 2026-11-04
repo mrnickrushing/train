@@ -166,11 +166,14 @@ namespace Ironhorse.Core
             }
             RollCurio(t, rng);
             if (State.stats.dispatches <= Hooks.CrateMinDispatches) return;
+            if (State.crateDay != LocalDay) { State.crateDay = LocalDay; State.cratesToday = 0; }
+            if (State.cratesToday >= Hooks.CratesPerDay) return;
             State.crateDry++;
             if (State.crateDry >= Hooks.CrateDrySpell || rng.NextDouble() < Hooks.CrateChance)
             {
                 t.crate = true;
                 State.crateDry = 0;
+                State.cratesToday++;
             }
         }
 
@@ -210,9 +213,9 @@ namespace Ironhorse.Core
                 string[] parts = lvl < 4 ? new[] { "rivets" } : lvl < 8 ? new[] { "rivets", "bearings" } : new[] { "bearings", "rods", "gauges" };
                 return new Grant { Resources = new[] { new ResourceAmount(parts[rng.Next(parts.Length)], 3 + rng.Next(3) + lvl / 3) } };
             }
-            if (r < 0.70) return new Grant { Nuggets = 2 + rng.Next(5) };
-            if (r < 0.88) return new Grant { BlueprintLoco = CrateBlueprintLoco(), Blueprints = 1 };
-            return new Grant { Coins = (500 + 200 * lvl) * (2 + rng.Next(2)) }; // the rare jackpot
+            if (r < 0.72) return new Grant { Nuggets = 2 + rng.Next(5) };
+            if (r < 0.80) return new Grant { BlueprintLoco = CrateBlueprintLoco(), Blueprints = 1 };
+            return new Grant { Coins = (500 + 200 * lvl) * (2 + rng.Next(2)) }; // the coin jackpot
         }
 
         /// <summary>The first assemblable locomotive the player has never owned (Sundown once they own them all).</summary>
@@ -280,7 +283,7 @@ namespace Ironhorse.Core
                 expiresAt = Now + Hooks.ExpressSeconds,
                 rewardCoins = (int)Math.Round((value * 1.8 + 40) * Hooks.ExpressPayMultiplier),
                 rewardXp = Math.Max(10, (int)Math.Round(value * 0.9)),
-                rewardNuggets = 3 + rng.Next(4),
+                rewardNuggets = 2 + rng.Next(3),
             };
             c.requirements.Add(new ResourceAmount(id, amt));
             return c;

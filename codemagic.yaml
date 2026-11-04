@@ -102,7 +102,10 @@ workflows:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true
+        # Upload only: internal testers get every processed build. Submitting to external beta review
+        # needs the TestFlight test info in App Store Connect (feedback email, review contact); turn this
+        # back on once that's filled in, or builds show as failed at the submission step.
+        submit_to_testflight: false
         submit_to_app_store: false
 
   ios-check:

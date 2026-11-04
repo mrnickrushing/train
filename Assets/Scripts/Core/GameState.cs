@@ -71,6 +71,9 @@ namespace Ironhorse.Core
         /// <summary>Dispatches since the last mystery crate (a dry spell guarantees one).</summary>
         public int crateDry;
         public int cratesOpened;
+        /// <summary>Local day of the last crate and how many have come that day (crates are capped per day).</summary>
+        public int crateDay = -1;
+        public int cratesToday;
         /// <summary>Every locomotive and wagon ever owned, for the Roundhouse album.</summary>
         public List<string> album = new List<string>();
         public List<string> albumClaimed = new List<string>();
@@ -180,6 +183,9 @@ namespace Ironhorse.Core
         public int combo;
         /// <summary>A curio found on this trip, collected when the train gets home.</summary>
         public string curio = "";
+        /// <summary>Cargo on this trip that earns XP: the normal load, without Full Steam, engineer or gold-strike
+        /// extras (those pay in goods, not levels). -1 for trips from older saves: all of it counts.</summary>
+        public int xpCargo = -1;
 
         public bool IsIdle { get { return string.IsNullOrEmpty(destinationId); } }
     }

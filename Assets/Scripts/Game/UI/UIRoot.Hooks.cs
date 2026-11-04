@@ -241,7 +241,7 @@ namespace Ironhorse.Game
             {
                 var loco = GameDatabase.Locomotive(g.BlueprintLoco);
                 LocoArt(p, loco, size * 1.5f, size * 0.8f);
-                return g.Blueprints + " " + ShortLoco(loco) + " plans";
+                return g.Blueprints + " " + ShortLoco(loco) + (g.Blueprints == 1 ? " plan" : " plans");
             }
             var parts = new List<string>();
             if (g.Coins > 0) { if (UIKit.Icon(p, "shop_coins", size) == null) UIKit.CoinIcon(p, size); parts.Add(Fmt.Num(g.Coins)); }

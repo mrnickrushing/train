@@ -301,7 +301,7 @@ namespace Ironhorse.Core
             deals.Add(new DealState { kind = DealKind.Parts, id = parts[rng.Next(parts.Length)], amount = pa, coins = pa * 90 });
 
             double r = rng.NextDouble();
-            if (CrewUnlocked && r < 0.4)
+            if (CrewUnlocked && r < 0.45)
             {
                 var open = Frontier.Engineers.Where(d => { var e = Crew(d.Id); return e == null || e.level < Frontier.MaxEngineerLevel; }).ToList();
                 if (open.Count > 0)
@@ -310,7 +310,7 @@ namespace Ironhorse.Core
                     return deals;
                 }
             }
-            if (r < 0.75) deals.Add(new DealState { kind = DealKind.Blueprint, id = CrateBlueprintLoco(), amount = 1, coins = 2000 + 250 * lvl });
+            if (r < 0.55) deals.Add(new DealState { kind = DealKind.Blueprint, id = CrateBlueprintLoco(), amount = 1, coins = 5000 + 800 * lvl }); // rare
             else deals.Add(new DealState { kind = DealKind.Fuel, amount = 80, nuggets = 8 });
             return deals;
         }
