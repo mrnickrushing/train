@@ -12,6 +12,7 @@ namespace Ironhorse.Game
     {
         string _selDest, _depotLoco, _whTab = "raw", _whSel;
         bool _selByUser;
+        int _wagonPick; // train whose wagon picker is open on the dispatch board (0 = none)
         int _openBuilding;
 
         static GameObject Flex(Transform p)
@@ -79,6 +80,7 @@ namespace Ironhorse.Game
             _selectedTrain = uid;
             _selDest = null;
             _selByUser = false;
+            _wagonPick = 0;
             var view = TrainManager.Instance.View(uid);
             if (view != null && view.IsShownAtStation) CameraRig.Instance.FlyTo(view.LeadPosition, 70);
             ShowBoard("Send a Train", DispatchBoard);
@@ -116,6 +118,7 @@ namespace Ironhorse.Game
             var colC = VBox(panel.transform, 14, 0, TextAnchor.UpperLeft, -1, -1, 1);
             if (S.HasArrived(t)) ArrivedPanel(colC.transform, t, d);
             else if (!t.IsIdle) EnRoutePanel(colC.transform, t, d);
+            else if (_wagonPick == t.uid) WagonPicker(colC.transform, t, d);
             else DestinationPicker(colC.transform, t, d);
         }
 
@@ -139,7 +142,7 @@ namespace Ironhorse.Game
                 tag.color = arrived || x.IsIdle ? BGood : Color.white;
             };
             live(); Live(live);
-            if (!on) Clickable(tile.gameObject, () => { _selectedTrain = uid; _selDest = null; _selByUser = false; RebuildWindow(); });
+            if (!on) Clickable(tile.gameObject, () => { _selectedTrain = uid; _selDest = null; _selByUser = false; _wagonPick = 0; RebuildWindow(); });
         }
 
         void LocoPanel(Transform p, TrainState t, LocomotiveDef d)
@@ -181,8 +184,9 @@ namespace Ironhorse.Game
                 if (i != wagons.Count || !t.IsIdle) continue;
                 empty.raycastTarget = true;
                 int tuid = t.uid;
-                if (depot.Count > 0) { int first = depot[0].uid; Clickable(empty.gameObject, () => Result(S.AttachWagon(first, tuid), Sfx.Click)); }
-                else Clickable(empty.gameObject, () => OpenDepot("wagons"));
+                // Opens the wagon picker in place of the destinations: the player chooses which wagon to couple.
+                Clickable(empty.gameObject, () => { _wagonPick = tuid; RebuildWindow(); });
+                Tag(empty.gameObject, "wagon.add");
             }
             if (t.IsIdle && !S.HasArrived(t) && wagons.Count > 0)
                 T(card.transform, "Tap a wagon to uncouple it", 24, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
@@ -304,6 +308,67 @@ namespace Ironhorse.Game
             card.raycastTarget = true;
             string id = dest.Id;
             if (!sel) Clickable(card.gameObject, () => { _selDest = id; _selByUser = true; RebuildWindow(); });
+        }
+
+        // ================================================================ Wagon picker
+
+        /// <summary>Choose the wagon to couple: every type, what it hauls, how many wait in the depot, couple or buy.</summary>
+        void WagonPicker(Transform col, TrainState t, LocomotiveDef d)
+        {
+            int have = S.WagonsOf(t).Count;
+            var head = HBox(col, 14, 0, TextAnchor.MiddleLeft, -1, 68);
+            T(head.transform, "Couple a wagon", 42, Color.white, TextAnchor.MiddleLeft, true);
+            Flex(head.transform);
+            T(head.transform, have + " / " + d.Power + " wagons", 30, BLabel, TextAnchor.MiddleRight, false, UIKit.Heading);
+            Big(head.transform, "Done", BBlue, () => { _wagonPick = 0; RebuildWindow(); }, 170, 64, true, 34);
+
+            var grid = HBox(col, 0, 0, TextAnchor.UpperLeft, -1, 470);
+            grid.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+            var strip = Scroller(grid.transform, "wagonpick", true, DestGap);
+            // Usable wagons first (the ones for the chosen destination leading), locked ones last.
+            var want = _selDest != null ? GameDatabase.Destination(_selDest) : null;
+            var cargo = want != null ? GameDatabase.Resource(want.ResourceId).Cargo : (CargoClass?)null;
+            foreach (var wd in GameDatabase.Wagons.OrderBy(w => S.IsWagonUnlocked(w) ? 0 : 1).ThenBy(w => cargo.HasValue && w.Cargo == cargo.Value ? 0 : 1).ThenBy(w => w.UnlockLevel))
+                WagonPickCard(strip, t, d, wd, want);
+            Flex(col);
+            var tip = Box(col, BCard, -1, 70, "Tip");
+            Row(tip.gameObject, 12, new RectOffset(20, 20, 0, 0));
+            T1(tip.transform, have >= d.Power ? d.Name.Split(' ')[0] + " can't pull more. Tap a wagon on the train to uncouple it." : "Tap a wagon on the train to uncouple it and send it to the depot.", 28, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
+        }
+
+        void WagonPickCard(Transform p, TrainState t, LocomotiveDef d, WagonDef wd, DestinationDef want)
+        {
+            bool locked = !S.IsWagonUnlocked(wd), full = S.WagonsOf(t).Count >= d.Power;
+            var inDepot = S.DepotWagons().Where(w => w.defId == wd.Id).ToList();
+            bool fits = want != null && GameDatabase.Resource(want.ResourceId).Cargo == wd.Cargo;
+            var card = Box(p, fits ? Palette.Hex(0x3B3426) : BCard, 300, -1, "Wagon " + wd.Id);
+            if (fits) { var o = card.gameObject.AddComponent<Outline>(); o.effectColor = BGold; o.effectDistance = new Vector2(4, -4); }
+            Stack(card.gameObject, 8, new RectOffset(12, 12, 12, 14), TextAnchor.UpperCenter);
+            var art = Box(card.transform, BTile, -1, 140, "Art");
+            UIKit.HStack(art.gameObject, 0, 0, TextAnchor.MiddleCenter);
+            var g = WagonArt(art.transform, wd, 260, 120);
+            if (locked) g.color = new Color(0, 0, 0, 0.6f);
+            T1(card.transform, wd.Name, 32, fits ? BGold : Color.white, TextAnchor.MiddleCenter, true);
+            // What it carries, as icons and names.
+            var goods = GameDatabase.Resources.Where(r => r.Cargo == wd.Cargo && !r.IsPart).ToList();
+            var icons = HBox(card.transform, 4, 0, TextAnchor.MiddleCenter, -1, 44);
+            foreach (var r in goods.Take(4)) { var id = r.IsPassenger ? "people" : r.Id; Ico(id, 40)(icons.transform); }
+            T1(card.transform, string.Join(", ", goods.Take(3).Select(r => r.Name)), 22, BLabel, TextAnchor.MiddleCenter, false, UIKit.Heading);
+            var stats = HBox(card.transform, 8, 0, TextAnchor.MiddleCenter, -1, 44);
+            Pill(stats.transform, null, "Holds " + wd.Capacity, 24);
+            if (inDepot.Count > 0) Pill(stats.transform, null, inDepot.Count + " in depot", 24, BGood);
+            if (fits) T1(card.transform, "Right for " + want.Name.Split(' ')[0], 22, BGold, TextAnchor.MiddleCenter, false, UIKit.Heading);
+            Flex(card.transform);
+            int tuid = t.uid;
+            string id2 = wd.Id;
+            Action after = () => { if (S.WagonsOf(S.Train(tuid)).Count >= d.Power) _wagonPick = 0; }; // a full train goes back to the destinations
+            if (locked) T1(card.transform, "Unlocks at level " + wd.UnlockLevel, 26, BLabel, TextAnchor.MiddleCenter, false, UIKit.Heading);
+            else if (inDepot.Count > 0)
+            {
+                int wuid = inDepot[0].uid;
+                Tag(Big(card.transform, "Couple", UIKit.Green, () => { var r = S.AttachWagon(wuid, tuid); Result(r, Sfx.Click); if (r.Ok) after(); }, 260, 80, !full, 36), "wagon.couple." + wd.Id);
+            }
+            else Tag(PriceBtn(card.transform, "Buy", UIKit.Green, tr => UIKit.CoinIcon(tr, 40), Fmt.Num(wd.PriceCoins), () => { var r = S.BuyWagon(id2, tuid); Result(r, Sfx.Coin); if (r.Ok) after(); }, 260, 80, !full && S.Coins >= wd.PriceCoins, 32), "wagon.buy." + wd.Id);
         }
 
         const float DestWidth = 330, DestGap = 18;
