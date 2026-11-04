@@ -95,6 +95,7 @@ namespace Ironhorse.Game
                 StoryDirector.Instance.OnProject(p); // the characters' finale scene, then the cinematic
                 Celebrations.Instance.Play("project", "Project Complete!", p.Name + " is finished. The whole territory feels it.", force: true);
             };
+            S.PlatformOpened += i => { AudioManager.Play(Sfx.LevelUp); Celebrations.Instance.Confetti(); };
             S.LocomotiveAdded += t => Celebrations.Instance.Play("newloco", "New Locomotive!", GameDatabase.Locomotive(t.defId).Name + " joins your fleet.", force: true);
             S.TaskSetCompleted += ts => Celebrations.Instance.Confetti();
             S.TelegramArrived += OnTelegram;
@@ -727,6 +728,8 @@ namespace Ironhorse.Game
             if (level == Hooks.ExpressLevel) unlocks.Insert(0, "New: express telegrams and Full Steam combos");
             if (level == Frontier.CrewLevel) unlocks.Insert(0, "New: engineers ride your locomotives");
             if (level == Frontier.PeddlerLevel) unlocks.Insert(0, "New: the traveling peddler visits");
+            if (!G.Session.StationComplete && !G.Session.LayingPlatform && level == G.Session.NextPlatformLevel)
+                unlocks.Insert(0, "New: lay platform " + (G.Session.PlatformsBuilt + 1) + " for another locomotive");
             if (level == Balance.GoldenAgeLevel) unlocks.Insert(0, "THE GOLDEN AGE BEGINS!");
 
             // Several levels at once (a big reward): the newest popup replaces the older ones, whose rewards are already paid.

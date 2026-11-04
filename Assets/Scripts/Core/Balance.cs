@@ -7,7 +7,10 @@ namespace Ironhorse.Core
     {
         public const int StartCoins = 1200;
         public const int StartNuggets = 30;
+        /// <summary>Most platforms the station holds.</summary>
         public const int Platforms = 6;
+        /// <summary>Platforms a new railroad starts with; the rest are laid one at a time (<see cref="PlatformCoins"/>).</summary>
+        public const int StartPlatforms = 3;
         public const int TotalPlots = 36;
         public const int StartPlots = 10;
         public const int ReferenceSpeed = 40;
@@ -43,6 +46,22 @@ namespace Ironhorse.Core
             if (warehouseLevel < 7) return new[] { new ResourceAmount("planks", 12 * warehouseLevel) };
             return new[] { new ResourceAmount("planks", 10 * warehouseLevel), new ResourceAmount("steel", 4 * warehouseLevel) };
         }
+
+        /// <summary>Level needed to lay the next platform when <paramref name="built"/> are already laid.</summary>
+        public static int PlatformUnlockLevel(int built) { return built <= 3 ? 6 : built == 4 ? 10 : 14; }
+
+        public static int PlatformCoins(int built) { return built <= 3 ? 4000 : built == 4 ? 12000 : 25000; }
+
+        /// <summary>Goods from the town's mills and works that the track crew needs for the next platform.</summary>
+        public static ResourceAmount[] PlatformResources(int built)
+        {
+            if (built <= 3) return new[] { new ResourceAmount("planks", 40), new ResourceAmount("steel", 10) };
+            if (built == 4) return new[] { new ResourceAmount("steel", 30), new ResourceAmount("tools", 10) };
+            return new[] { new ResourceAmount("steel", 50), new ResourceAmount("tools", 20), new ResourceAmount("copper_wire", 15) };
+        }
+
+        /// <summary>How long the track crew takes to lay the next platform.</summary>
+        public static double PlatformBuildSeconds(int built) { return built <= 3 ? 5 * 60 : built == 4 ? 15 * 60 : 30 * 60; }
 
         public static int PlotCost(int unlockedPlots)
         {

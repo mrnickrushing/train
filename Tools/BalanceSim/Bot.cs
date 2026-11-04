@@ -152,9 +152,18 @@ static class Program
         foreach (var id in _bpSeen.Keys.ToList()) if (S.BlueprintsOf(id) == 0) _bpSeen[id] = 0;
     }
 
+    /// <summary>Goods the bot holds back for the next platform (like a player saving up for it).</summary>
+    static readonly HashSet<string> _save = new HashSet<string>();
+    static bool Saved(string id) { return _save.Contains(id); }
+
     static void Step()
     {
         var st = S.State;
+        _save.Clear();
+#if PLATFORMS
+        if (st.trains.Count >= S.FleetCapacity && !S.StationComplete && !S.LayingPlatform && st.level >= S.NextPlatformLevel && NextLoco() != null)
+            foreach (var r in S.NextPlatformResources) _save.Add(r.id);
+#endif
         // Trains home: unload (and open crates).
         foreach (var t in st.trains.ToList())
         {
@@ -169,14 +178,14 @@ static class Program
             if (S.PendingRent(b) > 0 && S.RentFill(b) > 0.3f) Src("rent", () => S.CollectRent(b.uid));
             if (GameDatabase.Building(b.defId).Recipe != null && S.IsReady(b)) while (S.Enqueue(b.uid).Ok) { }
         }
-        foreach (var c in st.contracts.ToList()) if (S.CanDeliver(c)) Src(Express(c) ? "telegram" : "contract", () => S.DeliverContract(c.uid));
+        foreach (var c in st.contracts.ToList()) if (S.CanDeliver(c) && !c.requirements.Any(r => Saved(r.id))) Src(Express(c) ? "telegram" : "contract", () => S.DeliverContract(c.uid));
         // Contracts needing what we can't get for a long time are skipped now and then.
         foreach (var c in st.contracts.ToList())
             if (c.requirements.Any(r => !S.ObtainableResources().Contains(r.id))) S.DiscardContract(c.uid);
         foreach (var p in DepthContent.Projects)
         {
             var stage = S.IsProjectUnlocked(p) ? S.CurrentStage(p) : null;
-            if (stage != null && S.Amount(stage.ResourceId) >= Math.Min(20, stage.Amount)) Src("project", () => S.DeliverToProject(p.Id));
+            if (stage != null && !Saved(stage.ResourceId) && S.Amount(stage.ResourceId) >= Math.Min(20, stage.Amount)) Src("project", () => S.DeliverToProject(p.Id));
         }
         Src("goals", () => { while (S.CurrentGoal != null && S.IsGoalComplete(S.CurrentGoal)) S.ClaimGoal(); });
         if (S.CanClaimTaskSet) Src("foreman", () => S.ClaimTaskSet());
@@ -234,7 +243,7 @@ static class Program
         {
             var keep = new HashSet<string>(st.contracts.SelectMany(c => c.requirements).Select(r => r.id));
             foreach (var b in st.buildings) { var d = GameDatabase.Building(b.defId); if (d.Recipe != null) foreach (var i in d.Recipe.Inputs) keep.Add(i.id); }
-            var surplus = st.inventory.Where(r => !GameDatabase.Resource(r.id).IsPart).OrderByDescending(r => keep.Contains(r.id) ? r.amount / 3 : r.amount).FirstOrDefault();
+            var surplus = st.inventory.Where(r => !GameDatabase.Resource(r.id).IsPart && !Saved(r.id)).OrderByDescending(r => keep.Contains(r.id) ? r.amount / 3 : r.amount).FirstOrDefault();
             if (surplus.amount > 0) Src("sell", () => S.Sell(surplus.id, Math.Max(1, surplus.amount / 2)));
         }
         if (S.FreePlots().Count == 0 && S.CanBuyPlot && st.level >= S.NextPlotLevel && st.coins > S.NextPlotCost * 2) S.BuyPlot();
@@ -248,15 +257,26 @@ static class Program
         {
             if (d.Category == BuildingCategory.Production && S.CountBuilt(d.Id) > 0) continue;
             if (st.coins < d.CostCoins * 1.5) continue;
+            if (d.Category != BuildingCategory.Production && d.CostResources != null && d.CostResources.Any(r => Saved(r.id))) continue;
             if (S.CanConstruct(d.Id).Ok && S.Construct(d.Id, plots[0]).Ok) return;
         }
+    }
+
+    /// <summary>The cheapest coin-priced engine the bot doesn't own yet.</summary>
+    static LocomotiveDef NextLoco()
+    {
+        return GameDatabase.Locomotives.Where(d => S.IsLocoUnlocked(d) && d.PriceNuggets == 0 && d.PriceCoins > 0 && S.State.trains.All(t => t.defId != d.Id))
+            .OrderBy(d => d.PriceCoins).FirstOrDefault();
     }
 
     static void Rolling()
     {
         var st = S.State;
-        var loco = GameDatabase.Locomotives.Where(d => S.IsLocoUnlocked(d) && d.PriceNuggets == 0 && d.PriceCoins > 0 && st.trains.All(t => t.defId != d.Id))
-            .OrderBy(d => d.PriceCoins).FirstOrDefault();
+        var loco = NextLoco();
+#if PLATFORMS
+        // A full station with an engine waiting to be bought: lay the next platform.
+        if (loco != null && st.trains.Count >= S.FleetCapacity && S.CanLayPlatform().Ok && st.coins > S.NextPlatformCoins * 1.5) S.LayPlatform();
+#endif
         if (loco != null && st.trains.Count < S.FleetCapacity && st.coins > loco.PriceCoins * 1.6) S.BuyLocomotive(loco.Id);
         var classes = GameDatabase.Destinations.Where(d => S.IsDestinationUnlocked(d)).Select(d => GameDatabase.Resource(d.ResourceId).Cargo).Distinct().ToList();
         foreach (var t in st.trains.Where(x => x.IsIdle && !S.HasArrived(x)))

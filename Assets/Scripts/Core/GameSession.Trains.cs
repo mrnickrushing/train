@@ -208,19 +208,17 @@ namespace Ironhorse.Core
         // ---------------------------------------------------------------- Rolling stock
 
         public bool IsLocoUnlocked(LocomotiveDef d) { return State.level >= d.UnlockLevel; }
-        public int FleetCapacity { get { return Balance.Platforms; } }
 
         public ActionResult BuyLocomotive(string defId)
         {
             var d = GameDatabase.Locomotive(defId);
             if (d == null) return ActionResult.Fail("Unknown locomotive");
             if (!IsLocoUnlocked(d)) return ActionResult.Fail("Unlocks at level " + d.UnlockLevel);
-            if (State.trains.Count >= FleetCapacity) return ActionResult.Fail("All platforms are full");
+            if (State.trains.Count >= FleetCapacity) return ActionResult.Fail(FullText);
             if (!CanAfford(d.PriceCoins, null, d.PriceNuggets)) return ActionResult.Fail(MissingText(d.PriceCoins, null, d.PriceNuggets));
             Pay(d.PriceCoins, null, d.PriceNuggets);
 
-            int platform = Enumerable.Range(0, Balance.Platforms).First(p => State.trains.All(t => t.platform != p));
-            var train = new TrainState { uid = NewUid(), defId = d.Id, platform = platform };
+            var train = new TrainState { uid = NewUid(), defId = d.Id, platform = FreePlatform() };
             State.trains.Add(train);
             RaiseLocomotiveAdded(train);
             RaiseChanged();

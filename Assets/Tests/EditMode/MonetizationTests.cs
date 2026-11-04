@@ -91,6 +91,7 @@ namespace Ironhorse.Tests
         [Test]
         public void LocomotiveGrant_WithFullPlatforms_PaysNuggets()
         {
+            _s.State.platforms = Balance.Platforms; // every platform laid and taken: no room to lay another
             while (_s.State.trains.Count < _s.FleetCapacity)
                 _s.State.trains.Add(new TrainState { uid = 900 + _s.State.trains.Count, defId = "dusty", platform = _s.State.trains.Count });
             int n = _s.Nuggets;

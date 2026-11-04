@@ -104,13 +104,15 @@ namespace Ironhorse.Game
             var colA = VBox(panel.transform, 0, 0, TextAnchor.UpperCenter, 172);
             var list = Scroller(colA.transform, "trains", false, 12);
             foreach (var tr in S.State.trains.OrderBy(x => x.platform)) TrainTile(list, tr, tr.uid == t.uid);
-            if (S.State.trains.Count < S.FleetCapacity)
+            bool room = S.State.trains.Count < S.FleetCapacity;
+            if (room || !S.StationComplete)
             {
                 var add = Box(list, new Color(1, 1, 1, 0.06f), 172, 118, "Add");
                 add.raycastTarget = true;
                 var pl = T(add.transform, "+", 70, BGood, TextAnchor.MiddleCenter, true);
                 UIKit.Stretch(pl.gameObject);
-                Clickable(add.gameObject, () => OpenDepot("locos"));
+                // A full station sends the player to lay the next platform.
+                Clickable(add.gameObject, () => { if (room) OpenDepot("locos"); else { OpenFleet(); Toast("Every platform is taken. Lay a new one for another engine.", true); } });
             }
 
             LocoPanel(panel.transform, t, d);
@@ -474,6 +476,7 @@ namespace Ironhorse.Game
             var list = Scroller(panel.transform, "fleet", false, 12);
             foreach (var t in trains) FleetRow(list, t);
             for (int i = trains.Count; i < S.FleetCapacity; i++) FreeRow(list, i);
+            if (!S.StationComplete) PlatformRow(list);
         }
 
         void FleetRow(Transform p, TrainState t)
@@ -559,6 +562,49 @@ namespace Ironhorse.Game
             T1(col.transform, "Platform " + (index + 1) + " is free", 42, Color.white, TextAnchor.MiddleLeft, true);
             T1(col.transform, "A new locomotive could be earning here", 28, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
             Big(row.transform, "Buy a locomotive", UIKit.Green, () => OpenDepot("locos"), 420, 96, true, 40);
+        }
+
+        /// <summary>The next platform: what laying it takes, or the track crew's progress.</summary>
+        void PlatformRow(Transform p)
+        {
+            int n = S.PlatformsBuilt + 1;
+            var row = Box(p, Palette.Hex(0x3B3324), -1, 150, "NewPlatform");
+            var o = row.gameObject.AddComponent<Outline>();
+            o.effectColor = new Color(BGold.r, BGold.g, BGold.b, 0.6f);
+            o.effectDistance = new Vector2(3, -3);
+            Tag(row.gameObject, "platform.row");
+            Row(row.gameObject, 18, new RectOffset(40, 18, 0, 0));
+            var col = VBox(row.transform, 6, 0, TextAnchor.MiddleLeft, -1, -1, 1);
+            if (S.LayingPlatform)
+            {
+                T1(col.transform, "Laying platform " + n, 42, Color.white, TextAnchor.MiddleLeft, true);
+                var trk = HBox(col.transform, 8, 0, TextAnchor.MiddleLeft, 560, 40);
+                ClockIcon(trk.transform, 40);
+                var fill = Track(trk.transform, 32, BGold);
+                var left = T(fill.transform.parent, "", 26, Color.white, TextAnchor.MiddleRight, true);
+                UIKit.Anchor(left.gameObject, Vector2.zero, Vector2.one, new Vector2(8, 0), new Vector2(-10, 0));
+                Action live = () => { UIKit.SetBar(fill, S.PlatformProgress); left.text = Fmt.Time(S.PlatformRemaining); };
+                live(); Live(live);
+                int cost = S.PlatformRushCost;
+                PriceBtn(row.transform, "Speed up", BBlue, tr => UIKit.NuggetIcon(tr, 44), cost.ToString(), () => Result(S.RushPlatform(), Sfx.Build), 400, 96, S.Nuggets >= cost, 36);
+                return;
+            }
+            bool locked = S.Level < S.NextPlatformLevel;
+            T1(col.transform, "Lay platform " + n, 42, Color.white, TextAnchor.MiddleLeft, true);
+            T1(col.transform, locked ? "Room for one more locomotive · opens at level " + S.NextPlatformLevel
+                : "Room for one more locomotive · the crew needs " + Fmt.Time(S.NextPlatformSeconds), 28, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
+            foreach (var r in S.NextPlatformResources)
+            {
+                string id = r.id;
+                bool have = S.Amount(id) >= r.amount;
+                var well = Well(row.transform, 104, tr => UIKit.ResIcon(tr, id, 62), S.Amount(id) + "/" + r.amount, null, have ? Color.white : BBad);
+                if (!have) { well.raycastTarget = true; Clickable(well.gameObject, () => GoGet(id)); }
+            }
+            int coins = S.NextPlatformCoins;
+            Pill(row.transform, tr => UIKit.CoinIcon(tr, 44), Fmt.Num(coins), 34, S.Coins >= coins ? Color.white : BBad);
+            bool can = S.CanLayPlatform().Ok;
+            Tag(Big(row.transform, locked ? Locks.Text(S.NextPlatformLevel) : "Lay track", can ? UIKit.Green : UIKit.Disabled,
+                () => Result(S.LayPlatform(), Sfx.Build), 300, 96, true, locked ? 30 : 40), "platform.lay");
         }
 
         // ================================================================ 3 · Contracts
@@ -957,13 +1003,53 @@ namespace Ironhorse.Game
                 Segs(bottom.transform, Balance.MaxLocoLevel, train.level);
                 T(bottom.transform, train.level + " / " + Balance.MaxLocoLevel, 34, Color.white, TextAnchor.MiddleLeft, true);
                 int tuid = train.uid;
-                Big(bottom.transform, "Send Train", UIKit.Green, () => OpenTrain(tuid), 320, 88, true, 40);
+                Tag(Big(bottom.transform, "Sell", UIKit.Red, () => ConfirmSellLoco(tuid), 170, 88, true, 38), "loco.sell");
+                Big(bottom.transform, "Send Train", UIKit.Green, () => OpenTrain(tuid), 300, 88, true, 40);
             }
             else
             {
                 T(colC.transform, "Pulls up to " + d.Power + " wagons at " + d.Speed + " mph", 34, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
                 Flex(colC.transform);
             }
+        }
+
+        /// <summary>Asks before selling a locomotive and says where its wagons and engineer go.</summary>
+        void ConfirmSellLoco(int uid)
+        {
+            var t = S.Train(uid);
+            string why = S.CantSellReason(t);
+            if (why != null) { Toast(why, false); return; }
+            var d = GameDatabase.Locomotive(t.defId);
+            int coins = GameSession.LocoSellPrice(t);
+            int wagons = S.WagonsOf(t).Count;
+            var eng = S.EngineerOn(t);
+            var notes = new System.Collections.Generic.List<string>();
+            if (wagons > 0) notes.Add((wagons == 1 ? "Its wagon goes" : "Its " + wagons + " wagons go") + " back to the depot");
+            if (eng != null) notes.Add(Frontier.Engineer(eng.id).Name + " heads to the bunkhouse");
+            notes.Add("platform " + (t.platform + 1) + " is free for a better engine");
+            string last = notes[notes.Count - 1];
+            notes.RemoveAt(notes.Count - 1);
+            string body = (notes.Count > 0 ? string.Join(", ", notes) + " and " : "") + last + ".";
+            body = char.ToUpperInvariant(body[0]) + body.Substring(1);
+            ShowBoard("Sell this engine?", (b, right) =>
+            {
+                var panel = Box(b, BCardDeep, -1, -1, "Panel");
+                UIKit.Stretch(panel.gameObject);
+                Stack(panel.gameObject, 16, new RectOffset(30, 30, 24, 30), TextAnchor.MiddleCenter);
+                var art = LocoArt(panel.transform, d, 520, 190);
+                UIKit.Size(art.gameObject, 520, 190);
+                T(panel.transform, "Sell " + GameSession.Name(t) + " (level " + t.level + ") for " + Fmt.Num(coins) + " coins?", 44, BGold, TextAnchor.MiddleCenter, true);
+                T(panel.transform, body, 32, Color.white, TextAnchor.MiddleCenter, false, UIKit.Heading);
+                Flex(panel.transform);
+                var row = HBox(panel.transform, 24, 0, TextAnchor.MiddleCenter, -1, 100);
+                Big(row.transform, "Keep it", UIKit.Green, () => OpenDepotLoco(d.Id), 380, 96, true, 40);
+                PriceBtn(row.transform, "Sell", UIKit.Red, tr => UIKit.CoinIcon(tr, 46), Fmt.Num(coins), () =>
+                {
+                    var r = S.SellLocomotive(uid);
+                    Result(r, Sfx.Coin);
+                    if (r.Ok) { _selectedTrain = 0; OpenDepot("locos"); }
+                }, 420, 96, true, 40);
+            }, 1300, 760);
         }
 
         void StatRow(Transform p, string label, int total, int on, int bonus, string value)
@@ -981,6 +1067,12 @@ namespace Ironhorse.Game
             if (d.PriceCoins == 0 && d.PriceNuggets == 0)
             {
                 if (d.Blueprints <= 0) T(p, "Your first engine. Every empire starts somewhere.", 28, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
+                return;
+            }
+            if (S.State.trains.Count >= S.FleetCapacity)
+            {
+                if (S.StationComplete) Big(p, "All platforms full · sell an engine first", UIKit.Disabled, null, -1, 84, false, 30);
+                else Big(p, "All platforms full · lay a new one", UIKit.WoodLight, () => OpenFleet(), -1, 84, true, 32);
                 return;
             }
             string id = d.Id;

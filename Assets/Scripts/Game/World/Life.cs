@@ -48,7 +48,7 @@ namespace Ironhorse.Game
             float half = WorldLayout.PlatformHalfLength - 4;
             Spawn(new Rect(-half, -26.6f, half * 2, 3.2f), 0.9f, 26);           // depot side platform
             Spawn(new Rect(-half + 4, island1 - 0.7f, half * 2 - 8, 1.4f), 0.9f, 12);
-            Spawn(new Rect(-half + 4, island2 - 0.7f, half * 2 - 8, 1.4f), 0.9f, 10);
+            if (G.Session.PlatformsBuilt >= 4) Spawn(new Rect(-half + 4, island2 - 0.7f, half * 2 - 8, 1.4f), 0.9f, 10);
             Spawn(new Rect(-16, -17.4f, 32, 5.5f), 0.08f, 12);                  // station plaza
             Spawn(new Rect(-50, -12.5f, 100, 4.5f), 0.08f, 22);                 // Main Street
             Spawn(new Rect(WorldLayout.YardRect.xMin + 6, WorldLayout.SidingZ(2) + 2.2f, 90, 1.2f), 0.08f, 8); // yard hands

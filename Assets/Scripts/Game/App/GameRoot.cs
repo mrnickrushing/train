@@ -121,6 +121,7 @@ namespace Ironhorse.Game
             _loading.SetProgress(0.55f, "Laying track...");
             yield return null;
             Yard.Build(world);
+            new GameObject("Platforms", typeof(StationPlatforms)).transform.SetParent(world, false);
             var loop = new MeshBuilder();
             TrackBuilder.Build(loop, WorldLayout.ScenicLoop, 0, -1, trestleOverWater: true);
             loop.ToObject("Scenic Loop", world);
