@@ -58,7 +58,7 @@ namespace Ironhorse.Game
             Current.Purchase(productId, (ok, txOrError) =>
             {
                 ActionResult r = ok ? G.Session.GrantPurchase(productId, txOrError) : ActionResult.Fail(txOrError);
-                if (ok && r.Ok) GameRoot.Instance.Save(); // persist immediately after a paid grant
+                if (ok && r.Ok) GameRoot.Instance.Save(); // persist immediately after a paid grant (retried if it fails)
                 done?.Invoke(r);
             });
         }

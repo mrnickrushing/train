@@ -169,7 +169,17 @@ namespace Ironhorse.Game
         public enum Phase { Parked, Departing, Away, Arriving, Arrived }
         public Phase Current { get; private set; }
 
-        public void Bind(int uid) { Uid = uid; Rebuild(); }
+        bool _dirty;
+        void MarkDirty() { _dirty = true; }
+
+        public void Bind(int uid)
+        {
+            Uid = uid;
+            if (G.Session != null) { G.Session.Changed -= MarkDirty; G.Session.Changed += MarkDirty; }
+            Rebuild();
+        }
+
+        void OnDestroy() { if (G.Session != null) G.Session.Changed -= MarkDirty; }
 
         string Signature(TrainState t, GameSession s)
         {
@@ -203,7 +213,8 @@ namespace Ironhorse.Game
             var s = G.Session;
             var t = s?.Train(Uid);
             if (t == null) { Destroy(gameObject); return; }
-            if (Signature(t, s) != _signature) Rebuild();
+            // The consist only changes with the game state, so the signature (string + LINQ) isn't rebuilt every frame.
+            if (_dirty) { _dirty = false; if (Signature(t, s) != _signature) Rebuild(); }
 
             float pos = _park;
             var phase = Phase.Parked;
