@@ -221,7 +221,7 @@ namespace Ironhorse.Core
             if (!string.IsNullOrEmpty(transactionId))
             {
                 State.transactions.Add(transactionId);
-                if (State.transactions.Count > 300) State.transactions.RemoveAt(0);
+                if (State.transactions.Count > 2000) State.transactions.RemoveAt(0); // store transactions are finished once delivered and never replayed after this long
             }
             if (p.Kind == ProductKind.NonConsumable) State.ownedProducts.Add(p.Id);
             var weekly = Catalog.Offers.FirstOrDefault(o => o.ProductId == p.Id && o.Schedule == OfferSchedule.Weekly);

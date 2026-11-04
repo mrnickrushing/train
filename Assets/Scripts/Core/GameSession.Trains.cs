@@ -144,6 +144,15 @@ namespace Ironhorse.Core
             if (!HasArrived(t)) return ActionResult.Fail("Still on the line");
 
             var cargoDef = GameDatabase.Resource(t.cargoId);
+            if (cargoDef == null)
+            {
+                // Cargo this version doesn't know (an old or damaged save): bring the train home empty.
+                t.destinationId = "";
+                t.cargoId = "";
+                t.cargoAmount = 0;
+                RaiseChanged();
+                return ActionResult.Success(Name(t) + " is back at the station");
+            }
             if (cargoDef.IsPassenger) return UnloadPassengers(t);
 
             int moved = Math.Min(t.cargoAmount, WarehouseFree);

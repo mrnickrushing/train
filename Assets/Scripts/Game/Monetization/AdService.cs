@@ -22,7 +22,14 @@ namespace Ironhorse.Game
         {
             if (G.Session.AdsLeft(reward) <= 0) { done?.Invoke(ActionResult.Fail("No more of these today. Come back tomorrow!")); return; }
             if (!Current.Available) { done?.Invoke(ActionResult.Fail("No video available right now.")); return; }
-            Current.ShowRewarded(ok => done?.Invoke(ok ? G.Session.RewardAd(reward, trainUid) : ActionResult.Fail("Watch the whole video to earn the reward.")));
+            // One reward per ad, even if a network calls its completion handler more than once.
+            bool finished = false;
+            Current.ShowRewarded(ok =>
+            {
+                if (finished) return;
+                finished = true;
+                done?.Invoke(ok ? G.Session.RewardAd(reward, trainUid) : ActionResult.Fail("Watch the whole video to earn the reward."));
+            });
         }
     }
 

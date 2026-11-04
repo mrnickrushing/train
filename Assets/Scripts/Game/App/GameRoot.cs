@@ -40,18 +40,28 @@ namespace Ironhorse.Game
             return null;
         }
 
-        public static void Save(GameState s)
+        /// <summary>Writes the save through a temp file, checks it reads back, keeps the previous save as .bak.
+        /// Returns false (and leaves the last good save in place) when anything goes wrong.</summary>
+        public static bool Save(GameState s)
         {
+            string tmp = Main + ".tmp";
             try
             {
                 string json = JsonUtility.ToJson(s);
-                string tmp = Main + ".tmp";
                 File.WriteAllText(tmp, json);
+                var check = JsonUtility.FromJson<GameState>(File.ReadAllText(tmp));
+                if (check == null || check.trains == null || check.trains.Count != s.trains.Count) throw new IOException("save did not read back");
                 if (File.Exists(Main)) File.Copy(Main, Main + ".bak", true);
                 if (File.Exists(Main)) File.Delete(Main);
                 File.Move(tmp, Main);
+                return true;
             }
-            catch (Exception e) { Debug.LogError("Save failed: " + e.Message); }
+            catch (Exception e)
+            {
+                Debug.LogWarning("Save failed: " + e.Message);
+                try { if (File.Exists(tmp)) File.Delete(tmp); } catch (Exception) { }
+                return false;
+            }
         }
 
         public static void Delete()
@@ -190,10 +200,23 @@ namespace Ironhorse.Game
             if (_saveTimer <= 0) { _saveTimer = 20f; Save(); }
         }
 
-        public void Save()
+        float _saveWarnedAt = -999;
+
+        /// <summary>Saves now; on failure retries on the next timer tick (5 s) and warns the player, at most once a minute.</summary>
+        public bool Save()
         {
             G.Session.State.lastSavedAt = Clock.Now;
-            SaveSystem.Save(G.Session.State);
+            bool ok = SaveSystem.Save(G.Session.State);
+            if (!ok)
+            {
+                _saveTimer = Mathf.Min(_saveTimer, 5f);
+                if (Time.unscaledTime - _saveWarnedAt > 60 && UIRoot.Instance != null)
+                {
+                    _saveWarnedAt = Time.unscaledTime;
+                    UIRoot.Instance.Toast("Couldn't save your railroad. Check your iPhone's free storage.", false);
+                }
+            }
+            return ok;
         }
 
         void OnApplicationPause(bool paused) { if (paused) Save(); }
@@ -245,7 +268,9 @@ namespace Ironhorse.Game
     public sealed class Clouds : MonoBehaviour
     {
         readonly System.Collections.Generic.List<Transform> _clouds = new System.Collections.Generic.List<Transform>();
+        readonly System.Collections.Generic.List<MeshRenderer> _renderers = new System.Collections.Generic.List<MeshRenderer>();
         MaterialPropertyBlock _block;
+        bool _shown = true;
 
         void Start()
         {
@@ -276,6 +301,7 @@ namespace Ironhorse.Game
                 go.transform.position = new Vector3((float)rng.NextDouble() * 900 - 450, 150 + (float)rng.NextDouble() * 40, (float)rng.NextDouble() * 700 - 250);
                 go.transform.rotation = Quaternion.Euler(0, (float)rng.NextDouble() * 40 - 20, 0);
                 _clouds.Add(go.transform);
+                _renderers.Add(mr);
             }
         }
 
@@ -287,18 +313,18 @@ namespace Ironhorse.Game
             bool show = rig == null || rig.Distance > 190;
             Vector3 focus = rig != null ? rig.Focus : Vector3.zero;
             float zoomFade = rig == null ? 1 : Mathf.InverseLerp(190, 300, rig.Distance);
-            foreach (var c in _clouds)
+            if (_block == null) _block = new MaterialPropertyBlock();
+            if (show != _shown) { _shown = show; foreach (var c in _clouds) c.gameObject.SetActive(show); }
+            for (int i = 0; i < _clouds.Count; i++)
             {
-                c.gameObject.SetActive(show);
+                var c = _clouds[i];
                 c.position += new Vector3(Fx.Wind.x, 0, Fx.Wind.z) * 1.6f * Time.deltaTime;
                 if (c.position.x > 480) c.position -= new Vector3(960, 0, 0);
                 if (c.position.z > 470) c.position -= new Vector3(0, 0, 740);
                 if (!show) continue;
                 float d = new Vector2(c.position.x - focus.x, c.position.z - focus.z).magnitude;
-                var mr = c.GetComponent<MeshRenderer>();
-                if (_block == null) _block = new MaterialPropertyBlock();
                 _block.SetColor("_Color", new Color(1, 1, 1, zoomFade * Mathf.InverseLerp(60, 170, d)));
-                mr.SetPropertyBlock(_block);
+                _renderers[i].SetPropertyBlock(_block);
             }
         }
     }

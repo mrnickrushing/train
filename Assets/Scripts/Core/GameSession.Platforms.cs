@@ -93,6 +93,14 @@ namespace Ironhorse.Core
             // Saves from before platforms were laid one at a time keep a platform for every engine they park.
             if (State.platforms <= 0)
                 State.platforms = Math.Max(Balance.StartPlatforms, State.trains.Count == 0 ? 0 : State.trains.Max(t => t.platform) + 1);
+            // A damaged save with more engines than the station can ever hold keeps the first ones.
+            if (State.trains.Count > Balance.Platforms)
+            {
+                var extra = State.trains.OrderBy(t => t.uid).Skip(Balance.Platforms).Select(t => t.uid).ToList();
+                foreach (var w in State.wagons) if (extra.Contains(w.trainUid)) { w.trainUid = 0; w.slot = 0; }
+                foreach (var e in State.engineers) if (extra.Contains(e.trainUid)) e.trainUid = 0;
+                State.trains.RemoveAll(t => extra.Contains(t.uid));
+            }
             State.platforms = Math.Max(State.platforms, State.trains.Count);
             State.platforms = Math.Min(State.platforms, Balance.Platforms);
             if (State.platforms >= Balance.Platforms) State.platformReadyAt = 0;

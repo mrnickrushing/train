@@ -115,14 +115,42 @@ namespace Ironhorse.Core
             if (State.unlockedPlots < Balance.StartPlots) State.unlockedPlots = Balance.StartPlots;
             if (State.level < 1) State.level = 1;
             if (State.warehouseLevel < 1) State.warehouseLevel = 1;
+            if (State.coins < 0) State.coins = 0;
+            if (State.nuggets < 0) State.nuggets = 0;
+            State.inventory.RemoveAll(r => r.amount <= 0 || GameDatabase.Resource(r.id) == null);
+            State.trains.RemoveAll(t => t == null || GameDatabase.Locomotive(t.defId) == null);
+            State.wagons.RemoveAll(w => w == null || GameDatabase.Wagon(w.defId) == null);
+            State.buildings.RemoveAll(b => b == null || GameDatabase.Building(b.defId) == null);
+            // Two things with one uid (a damaged save) would confuse every lookup: keep the first.
+            var seen = new HashSet<int>();
+            State.trains.RemoveAll(t => !seen.Add(t.uid));
+            seen.Clear();
+            State.wagons.RemoveAll(w => !seen.Add(w.uid));
+            seen.Clear();
+            State.buildings.RemoveAll(b => !seen.Add(b.uid));
+            int maxUid = 0;
+            foreach (var t in State.trains) maxUid = Math.Max(maxUid, t.uid);
+            foreach (var w in State.wagons) maxUid = Math.Max(maxUid, w.uid);
+            foreach (var b in State.buildings) maxUid = Math.Max(maxUid, b.uid);
+            if (State.nextUid <= maxUid) State.nextUid = maxUid + 1;
             foreach (var t in State.trains)
             {
                 if (t.destinationId == null) t.destinationId = "";
                 if (t.cargoId == null) t.cargoId = "";
+                if (t.level < 1) t.level = 1;
+                if (t.level > Balance.MaxLocoLevel) t.level = Balance.MaxLocoLevel;
+                // A trip to a place or with a cargo this version doesn't know: bring the train home empty.
+                bool badTrip = !t.IsIdle && (GameDatabase.Destination(t.destinationId) == null || GameDatabase.Resource(t.cargoId) == null);
+                if (badTrip || t.cargoAmount < 0)
+                {
+                    t.destinationId = "";
+                    t.cargoId = "";
+                    t.cargoAmount = 0;
+                    t.crate = false;
+                }
             }
-            State.trains.RemoveAll(t => GameDatabase.Locomotive(t.defId) == null);
-            State.wagons.RemoveAll(w => GameDatabase.Wagon(w.defId) == null);
-            State.buildings.RemoveAll(b => GameDatabase.Building(b.defId) == null);
+            foreach (var w in State.wagons)
+                if (w.trainUid != 0 && State.trains.All(t => t.uid != w.trainUid)) { w.trainUid = 0; w.slot = 0; }
             RepairMonetization();
             RepairDepth();
             RepairHooks();
