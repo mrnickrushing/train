@@ -349,5 +349,21 @@ namespace Ironhorse.Tests
             }
             Assert.GreaterOrEqual(_s.Level, 5, "bot got stuck at level " + _s.Level);
         }
+    
+        [Test]
+        public void TutorialOrder_PostedOnlyWhenNothingCanBeDelivered()
+        {
+            var s = new GameSession(GameSession.NewGame(1_000_000, 9), new ManualClock());
+            s.State.contracts.Clear();
+            s.State.inventory.Clear();
+            Assert.IsFalse(s.PostTutorialOrder(), "nothing on hand to ask for");
+            s.State.inventory.Change("planks", 6);
+            Assert.IsTrue(s.PostTutorialOrder());
+            var c = s.State.contracts[0];
+            Assert.IsTrue(s.CanDeliver(c));
+            Assert.IsFalse(s.PostTutorialOrder(), "one deliverable order is enough");
+            Assert.IsTrue(s.DeliverContract(c.uid).Ok);
+        }
     }
+
 }

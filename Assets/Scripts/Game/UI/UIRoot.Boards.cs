@@ -93,6 +93,7 @@ namespace Ironhorse.Game
             UIKit.Anchor(cx.gameObject, Vector2.zero, Vector2.one, new Vector2(0, 10), Vector2.zero);
             UIKit.Stroke(cx, new Color(0.35f, 0.05f, 0.03f, 0.95f), 2f);
             Clickable(close.gameObject, CloseWindow);
+            Tag(close.gameObject, "board.close");
 
             var rim = UIKit.KitImage(frame.transform, "inset", "Rim").gameObject;
             UIKit.Anchor(rim, Vector2.zero, Vector2.one, new Vector2(22, 22), new Vector2(-22, -118));
@@ -423,6 +424,7 @@ namespace Ironhorse.Game
                 var t = T1(tab.transform, tb.label.ToUpperInvariant(), 30, tb.on ? UIKit.Ink : Color.white, TextAnchor.MiddleCenter, !tb.on);
                 var pick = tb.pick;
                 if (!tb.on) Clickable(tab.gameObject, () => { pick(); RebuildWindow(); });
+                Tag(tab.gameObject, "tab." + tb.label);
                 t.raycastTarget = false;
             }
         }

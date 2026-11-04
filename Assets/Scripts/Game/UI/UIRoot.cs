@@ -40,11 +40,15 @@ namespace Ironhorse.Game
         void Awake()
         {
             Instance = this;
-            if (FindAnyObjectByType<EventSystem>() == null)
+            var events = FindAnyObjectByType<EventSystem>();
+            if (events == null)
             {
                 var es = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
                 es.transform.SetParent(transform, false);
+                events = es.GetComponent<EventSystem>();
             }
+            // Touch only: no keyboard/gamepad "submit" re-pressing the last tapped button (Editor focus changes send one).
+            events.sendNavigationEvents = false;
             var cgo = new GameObject("Canvas", typeof(RectTransform));
             cgo.transform.SetParent(transform, false);
             _canvas = cgo.AddComponent<Canvas>();

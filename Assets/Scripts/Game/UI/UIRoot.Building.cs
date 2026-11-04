@@ -17,6 +17,7 @@ namespace Ironhorse.Game
             var b0 = S.Building(uid);
             if (b0 == null) return;
             CameraRig.Instance.FlyTo(WorldLayout.Plots[b0.plot], 60);
+            _openBuilding = uid;
             ShowBoard(GameDatabase.Building(b0.defId).Name, (body, right) => BuildingBoard(body, right, uid));
         }
 
@@ -166,11 +167,12 @@ namespace Ironhorse.Game
                 }
             }
             var acts = HBox(p, 14, 0, TextAnchor.MiddleLeft, -1, 100);
-            Big(acts.transform, "Queue 1", UIKit.Green, () => Result(S.Enqueue(uid), Sfx.Build), 230, 96, afford > 0, 40);
-            if (afford > 1) Big(acts.transform, "Fill all (" + afford + ")", UIKit.Green, () => Result(S.StartProduction(uid, afford), Sfx.Build), 270, 96, true, 40);
+            var q1 = Big(acts.transform, "Queue 1", UIKit.Green, () => Result(S.Enqueue(uid), Sfx.Build), 230, 96, afford > 0, 40);
+            if (afford > 1) Tag(Big(acts.transform, "Fill all (" + afford + ")", UIKit.Green, () => Result(S.StartProduction(uid, afford), Sfx.Build), 270, 96, true, 40), "factory.fill");
+            else if (afford == 1) Tag(q1, "factory.fill");
             Flex(acts.transform);
             int done = S.FinishedJobs(b);
-            if (done > 0) PriceBtn(acts.transform, "Collect", UIKit.Gold, Ico(r.Output.id, 44), "+" + r.Output.amount * done, () => Result(S.CollectProduction(uid)), 300, 96, true, 40);
+            if (done > 0) Tag(PriceBtn(acts.transform, "Collect", UIKit.Gold, Ico(r.Output.id, 44), "+" + r.Output.amount * done, () => Result(S.CollectProduction(uid)), 300, 96, true, 40), "factory.collect");
             if (S.IsProducing(b))
             {
                 int rush = S.RushProductionCost(b);
