@@ -247,6 +247,27 @@ namespace Ironhorse.Core
             return ActionResult.Success(d.Name + " bought");
         }
 
+        /// <summary>Coins back for selling a wagon: half its price.</summary>
+        public static int WagonSellPrice(WagonDef d) { return d.PriceCoins / 2; }
+
+        /// <summary>How many of a wagon type the player owns, and how many of those sit in the depot.</summary>
+        public int WagonsOwned(string defId) { return State.wagons.Count(w => w.defId == defId); }
+        public int WagonsInDepot(string defId) { return State.wagons.Count(w => w.defId == defId && w.trainUid == 0); }
+
+        /// <summary>Sells one wagon of this type from the depot (never one coupled to a train) for half its price.</summary>
+        public ActionResult SellWagon(string defId)
+        {
+            var d = GameDatabase.Wagon(defId);
+            if (d == null) return ActionResult.Fail("Unknown wagon");
+            var w = State.wagons.FirstOrDefault(x => x.defId == defId && x.trainUid == 0);
+            if (w == null) return ActionResult.Fail(WagonsOwned(defId) > 0 ? "Uncouple a " + d.Name + " first: only wagons in the depot can be sold" : "You don't have a " + d.Name);
+            State.wagons.Remove(w);
+            int coins = WagonSellPrice(d);
+            EarnCoins(coins);
+            RaiseChanged();
+            return ActionResult.Success("Sold a " + d.Name + " for " + coins.ToString("#,0") + " coins");
+        }
+
         public ActionResult AttachWagon(int wagonUid, int trainUid)
         {
             var w = State.wagons.FirstOrDefault(x => x.uid == wagonUid);
