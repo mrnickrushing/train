@@ -5,6 +5,10 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOG=~/.config/unity3d/Editor.log
+# With a second Unity project open, Editor.log belongs to whichever Editor started last; read the log of the
+# Editor that has this project open instead (its stdout, even if the file has since been renamed or deleted).
+PID=$(unity status 2>/dev/null | awk -v r="$ROOT" '$3 == r { print $5 }' | head -1)
+[ -n "$PID" ] && [ -r "/proc/$PID/fd/1" ] && LOG="/proc/$PID/fd/1"
 unity command --project-path "$ROOT" editor.playmode stop >/dev/null 2>&1 || true
 unity status --until-ready >/dev/null
 # Synchronous: a delayCall would wait for an Editor tick that an unfocused Editor may never get.
