@@ -9,7 +9,7 @@ U=(unity command --project-path "$ROOT")
 W=1800; H=830   # iPhone landscape aspect (2.17:1); must fit inside the maximized Game view
 
 unity status --until-ready --project-path "$ROOT" >/dev/null 2>&1 || true  # e.g. after a recompile/domain reload
-"${U[@]}" editor set_auto_tick --enable true >/dev/null
+"${U[@]}" editor set_auto_tick --enabled true >/dev/null
 "${U[@]}" script eval --result-only "UnityEditor.EditorPrefs.SetInt(\"ScriptCompilationDuringPlay\", 2); return 0;" >/dev/null  # stop Play before recompiling (a reload mid-play nulls statics)
 "${U[@]}" console clear >/dev/null
 "${U[@]}" script eval --result-only "UnityEditor.EditorSettings.asyncShaderCompilation = false; return 0;" >/dev/null  # no cyan placeholders
@@ -23,10 +23,9 @@ if [ -n "$EVAL" ]; then
   "${U[@]}" script eval --result-only "$EVAL" >/dev/null || echo "warning: pre-capture eval failed"
   end=$((SECONDS + 2)); while [ $SECONDS -lt $end ]; do sleep 1; done
 fi
-"${U[@]}" capture game_view --width $W --height $H --save_path _Captures/cap.png >/dev/null
 mkdir -p "$(dirname "$OUT")"
-mv "$ROOT/Assets/_Captures/cap.png" "$OUT"
-rm -rf "$ROOT/Assets/_Captures" "$ROOT/Assets/_Captures.meta"
+OUT="$(cd "$(dirname "$OUT")" && pwd)/$(basename "$OUT")"
+"${U[@]}" capture game_view --width $W --height $H --output-path "$OUT" >/dev/null
 "${U[@]}" console get --result-only | python3 -c "
 import sys,json
 d=json.JSONDecoder().raw_decode(sys.stdin.read())[0]
