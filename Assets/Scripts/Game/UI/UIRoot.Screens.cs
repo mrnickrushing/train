@@ -356,7 +356,9 @@ namespace Ironhorse.Game
             T1(card.transform, string.Join(", ", goods.Take(3).Select(r => r.Name)), 22, BLabel, TextAnchor.MiddleCenter, false, UIKit.Heading);
             var stats = HBox(card.transform, 8, 0, TextAnchor.MiddleCenter, -1, 44);
             Pill(stats.transform, null, "Holds " + wd.Capacity, 24);
-            if (inDepot.Count > 0) Pill(stats.transform, null, inDepot.Count + " in depot", 24, BGood);
+            int own = S.WagonsOwned(wd.Id);
+            if (own > 0) Pill(stats.transform, null, "Own " + own, 24, BGood);
+            if (inDepot.Count > 0) Pill(stats.transform, null, inDepot.Count + " spare", 24, BGood);
             if (fits) T1(card.transform, "Right for " + want.Name.Split(' ')[0], 22, BGold, TextAnchor.MiddleCenter, false, UIKit.Heading);
             Flex(card.transform);
             int tuid = t.uid;
@@ -1006,19 +1008,32 @@ namespace Ironhorse.Game
                 var card = Box(cards, BCardDeep, 380, -1, "Wagon " + d.Id);
                 Stack(card.gameObject, 12, new RectOffset(18, 18, 16, 18), TextAnchor.UpperLeft);
                 T1(card.transform, d.Name, 38, BGold, TextAnchor.MiddleLeft, true);
-                var hero = Box(card.transform, BTile, -1, 200, "Hero");
+                var hero = Box(card.transform, BTile, -1, 170, "Hero");
                 UIKit.HStack(hero.gameObject, 0, 0, TextAnchor.MiddleCenter);
-                var art = WagonArt(hero.transform, d, 320, 170);
+                var art = WagonArt(hero.transform, d, 300, 150);
                 if (locked) art.color = new Color(0.3f, 0.3f, 0.33f);
                 var cap = HBox(card.transform, 8, 0, TextAnchor.MiddleLeft, -1, 50);
                 Pill(cap.transform, null, "Carries " + d.Capacity, 28);
+                // What you own: total, spare in the depot, and coupled to trains.
+                int own = S.WagonsOwned(d.Id), spare = S.WagonsInDepot(d.Id);
+                var owned = Box(card.transform, own > 0 ? Palette.Hex(0x2E4A2A) : BChip, -1, 56, "Owned");
+                var ot = T1(owned.transform, own == 0 ? "You don't own any yet" : "Own " + own + "  ·  " + spare + " spare  ·  " + (own - spare) + " on trains",
+                    26, own > 0 ? BGood : BLabel, TextAnchor.MiddleCenter, own > 0, UIKit.Heading);
+                UIKit.Stretch(ot.gameObject, 8);
                 var hauls = GameDatabase.Resources.Where(r => r.Cargo == d.Cargo && !r.Manufactured && !r.IsPart).ToList();
                 var hr = HBox(card.transform, 6, 0, TextAnchor.MiddleLeft, -1, 70);
                 foreach (var r in hauls.Take(5)) { if (r.IsPassenger) UIKit.Icon(hr.transform, "people", 60); else UIKit.ResIcon(hr.transform, r.Id, 56); }
                 Flex(card.transform);
                 if (locked) { Big(card.transform, "Unlocks at level " + d.UnlockLevel, UIKit.Disabled, null, -1, 86, false, 32); continue; }
                 string id = d.Id;
-                PriceBtn(card.transform, "Buy", S.Coins >= d.PriceCoins ? UIKit.Green : UIKit.Disabled, tr => UIKit.CoinIcon(tr, 44), Fmt.Num(d.PriceCoins), () => Result(S.BuyWagon(id, target)), -1, 86, true, 38);
+                // Buy and, for spare wagons in the depot, sell back for half price (coupled ones must be uncoupled first).
+                var btns = HBox(card.transform, 10, 0, TextAnchor.MiddleCenter, -1, 86);
+                float bw = own > 0 ? 167 : 344;
+                PriceBtn(btns.transform, "Buy", S.Coins >= d.PriceCoins ? UIKit.Green : UIKit.Disabled, tr => UIKit.CoinIcon(tr, 40), Fmt.Num(d.PriceCoins), () => Result(S.BuyWagon(id, target)), bw, 84, true, 30);
+                if (own > 0)
+                    Tag(PriceBtn(btns.transform, "Sell", spare > 0 ? UIKit.Red : UIKit.Disabled, tr => UIKit.CoinIcon(tr, 40),
+                        "+" + Fmt.Num(GameSession.WagonSellPrice(d)), () => Result(S.SellWagon(id), Sfx.Coin), bw, 84, spare > 0, 30), "wagon.sell." + d.Id);
+                if (own > 0 && spare == 0) T1(card.transform, "Uncouple one from a train to sell it", 22, BLabel, TextAnchor.MiddleCenter, false, UIKit.Heading);
             }
         }
 

@@ -364,6 +364,27 @@ namespace Ironhorse.Tests
             Assert.IsFalse(s.PostTutorialOrder(), "one deliverable order is enough");
             Assert.IsTrue(s.DeliverContract(c.uid).Ok);
         }
+    
+        [Test]
+        public void SellWagon_OnlyFromTheDepot_ForHalfPrice()
+        {
+            var s = new GameSession(GameSession.NewGame(1_000_000, 9), new ManualClock());
+            var flat = GameDatabase.Wagon("flatcar");
+            Assert.AreEqual(1, s.WagonsOwned("flatcar"));
+            Assert.AreEqual(0, s.WagonsInDepot("flatcar"));
+            Assert.IsFalse(s.SellWagon("flatcar").Ok, "coupled to Dusty");
+            Assert.IsFalse(s.SellWagon("boxcar").Ok, "none owned");
+            s.State.coins = 10000;
+            Assert.IsTrue(s.BuyWagon("flatcar").Ok);
+            Assert.AreEqual(2, s.WagonsOwned("flatcar"));
+            Assert.AreEqual(1, s.WagonsInDepot("flatcar"));
+            int coins = s.Coins;
+            Assert.IsTrue(s.SellWagon("flatcar").Ok);
+            Assert.AreEqual(coins + GameSession.WagonSellPrice(flat), s.Coins);
+            Assert.AreEqual(1, s.WagonsOwned("flatcar"));
+            Assert.AreEqual(1, s.WagonsOf(s.State.trains[0]).Count(w => w.defId == "flatcar"), "the coupled one stays");
+        }
     }
+
 
 }
