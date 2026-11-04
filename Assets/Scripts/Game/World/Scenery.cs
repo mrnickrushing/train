@@ -58,7 +58,7 @@ namespace Ironhorse.Game
         /// <summary>Layered sandstone mesa. faceDeg = angle (degrees) of a flat cliff face for a tunnel, or -999.</summary>
         static void Mesa(MeshBuilder mb, Vector2 c, float radius, float height, float faceDeg, int seed)
         {
-            const int sides = 28;
+            const int sides = 40;
             int layers = Mathf.Clamp(Mathf.RoundToInt(height / 6f), 3, 9);
             float lh = height / layers;
             float baseY = -3;
@@ -71,8 +71,10 @@ namespace Ironhorse.Game
                 for (int i = 0; i < sides; i++)
                 {
                     float a = i / (float)sides * Mathf.PI * 2;
+                    // Broad shape shared by every layer, plus a per-layer wobble so strata step in and out as ledges.
                     float n = Mathf.PerlinNoise(seed * 3.1f + Mathf.Cos(a) * 1.4f, seed * 1.7f + Mathf.Sin(a) * 1.4f + l * 0.15f);
-                    float r = radius * shrink * (0.82f + n * 0.36f);
+                    float w = Mathf.PerlinNoise(seed * 5.3f + Mathf.Cos(a) * 3.2f + l * 1.9f, seed * 0.9f + Mathf.Sin(a) * 3.2f) - 0.5f;
+                    float r = radius * shrink * (0.82f + n * 0.36f + w * 0.07f);
                     if (faceDeg > -900)
                     {
                         float d = Mathf.DeltaAngle(a * Mathf.Rad2Deg, faceDeg);
@@ -85,8 +87,30 @@ namespace Ironhorse.Game
                 Color top = topLayer ? Palette.Hex(0x8C7A4E) : MeshBuilder.Darken(bands[(l + seed) % bands.Length], 0.92f);
                 mb.Matte();
                 mb.Surf = SurfaceKind.Stone;
-                if (topLayer) { mb.Prism(poly, y0, y1, bands[(l + seed) % bands.Length], top, 0.025f, skipTop: true); MesaTop(mb, poly, y1, seed); }
-                else mb.Prism(poly, y0, y1, bands[(l + seed) % bands.Length], top, 0.025f);
+                Color band = bands[(l + seed) % bands.Length];
+                // A thin, darker seam recessed at the foot of each stratum: the shadowed bedding plane between layers.
+                if (l > 0)
+                {
+                    var seam = new List<Vector2>();
+                    foreach (var q in poly) seam.Add(c + (q - c) * 0.95f);
+                    mb.Prism(seam, y0, y0 + Mathf.Min(0.8f, lh * 0.18f), MeshBuilder.Darken(band, 0.62f), MeshBuilder.Darken(band, 0.7f), 0, skipTop: true);
+                    y0 += Mathf.Min(0.8f, lh * 0.18f);
+                }
+                // Smooth cliff walls with vertical weathering streaks, then the ledge (or the scrubby cap) on top.
+                int layer = l;
+                mb.PrismWalls(poly, y0, y1, band, k => 0.8f + 0.32f * Mathf.PerlinNoise(k * 0.7f + seed * 1.3f, layer * 0.8f));
+                if (topLayer) MesaTop(mb, poly, y1, seed);
+                else
+                {
+                    Vector2 mid = Vector2.zero;
+                    foreach (var q in poly) mid += q;
+                    mid /= poly.Count;
+                    for (int k = 0; k < poly.Count; k++)
+                    {
+                        var q0 = poly[k]; var q1 = poly[(k + 1) % poly.Count];
+                        mb.Tri(new Vector3(mid.x, y1, mid.y), new Vector3(q1.x, y1, q1.y), new Vector3(q0.x, y1, q0.y), top);
+                    }
+                }
                 mb.Surf = SurfaceKind.Auto;
                 if (topLayer) _mesaTops.Add((c, radius * shrink * 0.7f, y1));
                 shrink *= l < 2 ? 1f : 0.965f;
@@ -218,7 +242,8 @@ namespace Ironhorse.Game
                         if (north > 0.45f && R() < 0.7f) Pine(Chunk(p), p, R(0.7f, 1.1f));
                         else Cottonwood(Chunk(p), p, R(0.8f, 1.2f));
                     }
-                    else if (wild > 0.04f && R() < 0.25f) Sage(Chunk(p), p, R(0.6f, 1.1f));
+                    else if (wild > 0.025f && R() < 0.38f) Sage(Chunk(p), p, R(0.6f, 1.1f));
+                    else if (wild > 0.03f && R() < 0.05f) Rock(Chunk(p), p, R(0.6f, 1.6f)); // the odd boulder in the meadows
                     continue;
                 }
                 if (nearRiver && R() < 0.6f) { Cottonwood(Chunk(p), p, R(0.9f, 1.4f)); continue; }
@@ -250,6 +275,20 @@ namespace Ironhorse.Game
                     else if (k < 0.8f) Pine(Chunk(p), p, R(0.55f, 0.85f));
                     else if (k < 0.9f) Saguaro(Chunk(p), p, R(0.7f, 1.0f));
                     else Rock(Chunk(p), p, R(0.8f, 2.2f));
+                }
+            }
+            // Talus: boulders fallen from the cliffs lie around each mesa's foot.
+            foreach (var (mc, mr, my) in _mesaTops)
+            {
+                float foot = mr / 0.7f;
+                int n = Mathf.RoundToInt(foot * 0.35f);
+                for (int i = 0; i < n; i++)
+                {
+                    float a = R(0, Mathf.PI * 2), d = foot * R(1.02f, 1.3f);
+                    float x = mc.x + Mathf.Cos(a) * d, z = mc.y + Mathf.Sin(a) * d;
+                    if (ProjectSites.Blocks(x, z) || Mathf.Abs(z - WorldLayout.MainZ) < 14) continue; // keep the line clear
+                    var p = new Vector3(x, ValleyTerrain.Height(x, z), z);
+                    Rock(Chunk(p), p, R(1.0f, 2.6f));
                 }
             }
             _instancing = false;
@@ -351,6 +390,12 @@ namespace Ironhorse.Game
 
         public static void Rock(MeshBuilder mb, Vector3 p, float s)
         {
+            // Sculpted sandstone boulders (Props/boulders) when the art exists, sunk a little into the ground.
+            if (_instancing && Vegetation.HasArt("Props", "boulders"))
+            {
+                Vegetation.Add("Props", "boulders", p - Vector3.up * 0.25f * s, s * 0.42f);
+                return;
+            }
             mb.Matte();
             Color c = Color.Lerp(Palette.Hex(0x7E5A44), Palette.Hex(0x8A8278), R());
             mb.Surf = SurfaceKind.Stone;
@@ -393,8 +438,12 @@ namespace Ironhorse.Game
                 float pz = inTown ? WorldLayout.PlatformZ(5) - 8 : z;
                 var top = new Vector3(x, 7.2f, pz);
                 mb.Matte();
-                mb.Cylinder(new Vector3(x, 0, pz), top + Vector3.up * 0.3f, 0.16f, 0.13f, 5, Palette.WoodDark, true);
-                mb.Box(top + Vector3.up * -0.2f, new Vector3(0.2f, 0.18f, 1.8f), Palette.WoodDark);
+                // Weathered pine poles, thick enough to read as poles (not sticks) from the game camera.
+                var pole = Palette.Hex(0x6E5A44);
+                mb.Surf = SurfaceKind.WoodGrain;
+                mb.Cylinder(new Vector3(x, -0.3f, pz), top + Vector3.up * 0.3f, 0.25f, 0.18f, 7, pole, true);
+                mb.Box(top + Vector3.up * -0.2f, new Vector3(0.24f, 0.22f, 2.2f), MeshBuilder.Darken(pole, 0.9f));
+                mb.Surf = SurfaceKind.Auto;
                 mb.Mat(0.6f);
                 mb.Box(top + new Vector3(0, 0, -0.7f), new Vector3(0.12f, 0.2f, 0.12f), Palette.Hex(0x7FB3A6));
                 mb.Box(top + new Vector3(0, 0, 0.7f), new Vector3(0.12f, 0.2f, 0.12f), Palette.Hex(0x7FB3A6));

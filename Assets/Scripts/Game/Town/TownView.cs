@@ -9,7 +9,7 @@ namespace Ironhorse.Game
     {
         public int Uid;
         int _builtLevel, _plot;
-        GameObject _body, _scaffold;
+        GameObject _body, _scaffold, _siteArt;
         readonly List<Spinner> _workSpinners = new List<Spinner>();
         readonly List<ParticleSystem> _smoke = new List<ParticleSystem>();
         ParticleSystem _dust;
@@ -72,7 +72,16 @@ namespace Ironhorse.Game
                 NightLights.Attach(transform, new Vector3(0, Height * 0.9f, 0), LightType.Point, 20f, 12f, NightLights.Lamp);
             else
                 NightLights.Attach(transform, new Vector3(0, Mathf.Min(3.2f, Height * 0.45f), -WorldLayout.PlotSize * 0.5f), LightType.Point, 13f, 7f, NightLights.Warm);
-            _scaffold = BuildingFactory.Scaffold(Mathf.Max(5, model.Height * 0.7f)).ToObject("Scaffold", transform);
+            // A real construction site (timber frame, scaffold, hoist, lumber) when the art exists; the building appears
+            // whole when it's finished. Without the art, the old scaffold cage with the building growing inside.
+            _siteArt = ModelRegistry.Spawn(ModelRegistry.Buildings, "construction_site", transform);
+            if (_siteArt != null)
+            {
+                _scaffold = _siteArt;
+                // Turn on top of the FBX root's own axis-conversion rotation (replacing it would tip the model over).
+                _scaffold.transform.localRotation = Quaternion.Euler(0, (b.uid % 4) * 90, 0) * _scaffold.transform.localRotation;
+            }
+            else _scaffold = BuildingFactory.Scaffold(Mathf.Max(5, model.Height * 0.7f)).ToObject("Scaffold", transform);
             _dust = Fx.Create(FxKind.Dust, _scaffold.transform, new Vector3(0, 0.5f, 0));
 
             var col = gameObject.GetComponent<BoxCollider>();
@@ -104,10 +113,11 @@ namespace Ironhorse.Game
             if (ready && !_wasReady) { _pop = 1; AudioManager.Play(Sfx.Build); Fx.Burst(transform.position + Vector3.up * Height * 0.6f, 40); }
             _wasReady = ready;
             _scaffold.SetActive(!ready);
+            if (_siteArt != null) _body.SetActive(ready);
             if (!ready)
             {
                 float p = s.ConstructionProgress(b);
-                _body.transform.localScale = new Vector3(1, Mathf.Max(0.02f, p), 1);
+                if (_siteArt == null) _body.transform.localScale = new Vector3(1, Mathf.Max(0.02f, p), 1);
             }
             else
             {

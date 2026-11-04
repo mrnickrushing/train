@@ -60,11 +60,14 @@ namespace Ironhorse.Game
 
         /// <summary>True when drop-in art exists for this plant.</summary>
         public static bool HasArt(string kind) { return Get(kind) != null; }
+        public static bool HasArt(string category, string kind) { return Get(category, kind) != null; }
 
         /// <summary>Registers one instance (position on the ground, uniform scale, random yaw from the position).</summary>
-        public static void Add(string kind, Vector3 p, float scale)
+        public static void Add(string kind, Vector3 p, float scale) { Add("Trees", kind, p, scale); }
+
+        public static void Add(string category, string kind, Vector3 p, float scale)
         {
-            var k = Get(kind);
+            var k = Get(category, kind);
             if (k == null) return;
             var cell = new Vector2Int(Mathf.FloorToInt(p.x / CellSize), Mathf.FloorToInt(p.z / CellSize));
             List<Matrix4x4> list;

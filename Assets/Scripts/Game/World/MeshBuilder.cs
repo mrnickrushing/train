@@ -231,6 +231,39 @@ namespace Ironhorse.Game
             }
         }
 
+        /// <summary>
+        /// Smooth-shaded prism walls (no cap): vertex normals averaged around the outline so curved cliffs don't break
+        /// into flat facets. <paramref name="tint"/> gives each outline vertex a brightness (weathering streaks);
+        /// the foot of the wall is darkened by <paramref name="footShade"/>.
+        /// </summary>
+        public void PrismWalls(IList<Vector2> poly, float y0, float y1, Color side, System.Func<int, float> tint, float footShade = 0.85f)
+        {
+            int n = poly.Count;
+            Vector2 center = Vector2.zero;
+            foreach (var p in poly) center += p;
+            center /= n;
+            var normals = new Vector3[n];
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 Out(Vector2 a0, Vector2 a1)
+                {
+                    var e = a1 - a0;
+                    var o = new Vector2(e.y, -e.x).normalized;
+                    return Vector2.Dot(o, (a0 + a1) * 0.5f - center) < 0 ? -o : o;
+                }
+                var m = Out(poly[(i + n - 1) % n], poly[i]) + Out(poly[i], poly[(i + 1) % n]);
+                normals[i] = new Vector3(m.x, 0, m.y).normalized;
+            }
+            for (int i = 0; i < n; i++)
+            {
+                int j = (i + 1) % n;
+                var p0 = poly[i]; var p1 = poly[j];
+                Color t0 = Darken(side, tint(i)), t1 = Darken(side, tint(j));
+                QuadSmooth(new Vector3(p0.x, y0, p0.y), new Vector3(p0.x, y1, p0.y), new Vector3(p1.x, y1, p1.y), new Vector3(p1.x, y0, p1.y),
+                    normals[i], normals[i], normals[j], normals[j], Darken(t0, footShade), t0, t1, Darken(t1, footShade));
+            }
+        }
+
         /// <summary>Appends another builder's geometry, transformed by the current matrix.</summary>
         public void Append(MeshBuilder other)
         {
