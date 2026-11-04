@@ -246,8 +246,13 @@ namespace Ironhorse.Game
                 Tag(Big(bar.transform, "Send Train", UIKit.Green, () =>
                 {
                     var r = S.Dispatch(uid, id);
-                    Result(r, Sfx.Click);
-                    if (!r.Ok) return;
+                    if (!r.Ok) { Result(r, Sfx.Click); return; }
+                    AudioManager.Play(Sfx.Click);
+                    var sent = S.Train(uid);
+                    var dest = GameDatabase.Destination(id);
+                    DepartureBanner(GameSession.ShortName(sent) + " departs!", (dest != null ? "for " + dest.Name + " · " : "") + "back in " + Fmt.Time(sent.arrivesAt - S.Now));
+                    int dot = r.Message.IndexOf(". ", System.StringComparison.Ordinal);
+                    if (dot > 0) Toast(r.Message.Substring(dot + 2), true); // a mystery crate rode along
                     var next = S.State.trains.Where(x => x.IsIdle && !S.HasArrived(x) && S.WagonsOf(x).Count > 0).OrderBy(x => x.platform).FirstOrDefault();
                     if (next == null) { CloseWindow(); return; }
                     _selectedTrain = next.uid;
