@@ -111,6 +111,24 @@ namespace Ironhorse.Core
             return ActionResult.Success(c.client + " pays " + c.rewardCoins + " coins");
         }
 
+        /// <summary>
+        /// The tutorial's last step needs an order the player can fill right away: when none can be delivered, a
+        /// small one for planks (or timber) already in the warehouse is posted. Returns true when one was posted.
+        /// </summary>
+        public bool PostTutorialOrder()
+        {
+            if (State.contracts.Any(CanDeliver)) return false;
+            string id = Amount("planks") >= 3 ? "planks" : Amount("timber") >= 5 ? "timber" : null;
+            if (id == null) return false;
+            int amount = id == "planks" ? 3 : 5;
+            int value = GameDatabase.Resource(id).Value * amount;
+            var c = new ContractState { uid = NewUid(), client = "Mayor Quill", rewardCoins = (int)Math.Round(value * 1.8 + 60), rewardXp = Math.Max(10, (int)Math.Round(value * 0.45)), rewardNuggets = 3 };
+            c.requirements.Add(new ResourceAmount(id, amount));
+            State.contracts.Insert(0, c);
+            RaiseChanged();
+            return true;
+        }
+
         public ActionResult DiscardContract(int uid)
         {
             var c = State.contracts.FirstOrDefault(x => x.uid == uid);

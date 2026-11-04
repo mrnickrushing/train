@@ -46,7 +46,7 @@ namespace Ironhorse.Game
         void RefreshHooksHud()
         {
             if (_payday == null) return;
-            bool on = S.State.settings.tutorialDone || S.Level >= 3;
+            bool on = S.State.settings.tutorialDone || S.Level >= 3 || _coachKey == "end";
             _payday.SetActive(on);
             bool can = S.CanClaimPayday || S.DailyClaimable > 0;
             _paydayBadge.text = S.CanClaimPayday ? "!" : S.DailyClaimable.ToString();

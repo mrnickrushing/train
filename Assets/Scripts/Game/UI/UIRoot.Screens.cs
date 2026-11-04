@@ -11,7 +11,8 @@ namespace Ironhorse.Game
     public sealed partial class UIRoot
     {
         string _selDest, _depotLoco, _whTab = "raw", _whSel;
-        int _destPage;
+        bool _selByUser;
+        int _openBuilding;
 
         static GameObject Flex(Transform p)
         {
@@ -43,7 +44,8 @@ namespace Ironhorse.Game
             if (idle == null) { Toast("Every train is out on the line. Wait for one to come home.", false); OpenFleet(); return; }
             OpenTrain(idle.uid);
             _selDest = destId;
-            _destPage = Mathf.Max(0, GameDatabase.Destinations.ToList().FindIndex(d => d.Id == destId)) / 3;
+            _selByUser = true;
+            ScrollToDestination(destId);
             RebuildWindow();
         }
 
@@ -76,6 +78,7 @@ namespace Ironhorse.Game
             if (t0 == null) return;
             _selectedTrain = uid;
             _selDest = null;
+            _selByUser = false;
             var view = TrainManager.Instance.View(uid);
             if (view != null && view.IsShownAtStation) CameraRig.Instance.FlyTo(view.LeadPosition, 70);
             ShowBoard("Send a Train", DispatchBoard);
@@ -136,7 +139,7 @@ namespace Ironhorse.Game
                 tag.color = arrived || x.IsIdle ? BGood : Color.white;
             };
             live(); Live(live);
-            if (!on) Clickable(tile.gameObject, () => { _selectedTrain = uid; _selDest = null; RebuildWindow(); });
+            if (!on) Clickable(tile.gameObject, () => { _selectedTrain = uid; _selDest = null; _selByUser = false; RebuildWindow(); });
         }
 
         void LocoPanel(Transform p, TrainState t, LocomotiveDef d)
@@ -199,31 +202,24 @@ namespace Ironhorse.Game
         {
             var dests = GameDatabase.Destinations.ToList();
             var sel = _selDest != null ? GameDatabase.Destination(_selDest) : null;
-            if (sel == null || !S.IsDestinationUnlocked(sel))
+            // Keep the player's own pick; otherwise choose the first run this train can actually make.
+            if (sel == null || !S.IsDestinationUnlocked(sel) || (!_selByUser && !S.PreviewDispatch(t, sel).Possible))
             {
                 sel = dests.FirstOrDefault(x => S.IsDestinationUnlocked(x) && S.PreviewDispatch(t, x).Possible) ?? dests.FirstOrDefault(x => S.IsDestinationUnlocked(x));
                 _selDest = sel != null ? sel.Id : null;
-                _destPage = Mathf.Max(0, dests.IndexOf(sel)) / 3;
+                if (sel != null) ScrollToDestination(sel.Id);
             }
-            int pages = (dests.Count + 2) / 3;
-            _destPage = Mathf.Clamp(_destPage, 0, pages - 1);
 
             var head = HBox(col, 14, 0, TextAnchor.MiddleLeft, -1, 68);
             T(head.transform, "Choose a destination", 42, Color.white, TextAnchor.MiddleLeft, true);
             Flex(head.transform);
-            T(head.transform, dests.Count(x => S.IsDestinationUnlocked(x)) + " of " + dests.Count + " unlocked", 30, BLabel, TextAnchor.MiddleRight, false, UIKit.Heading);
-            Big(head.transform, "<", UIKit.WoodLight, () => { _destPage--; RebuildWindow(); }, 78, 64, _destPage > 0, 44);
-            Big(head.transform, ">", UIKit.WoodLight, () => { _destPage++; RebuildWindow(); }, 78, 64, _destPage < pages - 1, 44);
+            T(head.transform, dests.Count(x => S.IsDestinationUnlocked(x)) + " of " + dests.Count + " unlocked  ·  swipe for more", 30, BLabel, TextAnchor.MiddleRight, false, UIKit.Heading);
 
-            var grid = HBox(col, 18, 0, TextAnchor.UpperLeft, -1, 430);
-            var gl = grid.GetComponent<HorizontalLayoutGroup>();
-            gl.childForceExpandHeight = true;
-            gl.childForceExpandWidth = true;
-            for (int i = _destPage * 3; i < _destPage * 3 + 3; i++)
-            {
-                if (i < dests.Count) DestCard(grid.transform, t, dests[i]);
-                else Flex(grid.transform);
-            }
+            // One swipeable strip of postcards; the fourth peeks in at the edge so it's clear there's more.
+            var grid = HBox(col, 0, 0, TextAnchor.UpperLeft, -1, 430);
+            grid.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+            var strip = Scroller(grid.transform, "dests", true, DestGap);
+            foreach (var dd in dests) DestCard(strip, t, dd);
             Flex(col);
 
             var bar = Box(col, BCard, -1, 124, "Summary");
@@ -241,7 +237,7 @@ namespace Ironhorse.Game
             string id = sel.Id;
             int uid = t.uid;
             if (p.Possible)
-                Big(bar.transform, "Send Train", UIKit.Green, () =>
+                Tag(Big(bar.transform, "Send Train", UIKit.Green, () =>
                 {
                     var r = S.Dispatch(uid, id);
                     Result(r, Sfx.Click);
@@ -250,8 +246,9 @@ namespace Ironhorse.Game
                     if (next == null) { CloseWindow(); return; }
                     _selectedTrain = next.uid;
                     _selDest = null;
+                    _selByUser = false;
                     RebuildWindow();
-                }, 380, 100, true, 46);
+                }, 380, 100, true, 46), "dispatch.send");
             else if (p.Reason != null && p.Reason.Contains("fuel")) Big(bar.transform, "Get fuel", FuelOrange, () => OpenFuel(), 380, 100, true, 44);
             else Big(bar.transform, "Get wagons", UIKit.WoodLight, () => OpenDepot("wagons"), 380, 100, true, 44);
         }
@@ -261,8 +258,8 @@ namespace Ironhorse.Game
             bool locked = !S.IsDestinationUnlocked(dest);
             bool sel = dest.Id == _selDest;
             var pv = S.PreviewDispatch(t, dest);
-            var card = Box(p, BCard, -1, -1, "Dest " + dest.Id);
-            UIKit.Size(card.gameObject, -1, -1, 1);
+            var card = Box(p, BCard, DestWidth, -1, "Dest " + dest.Id);
+            Tag(card.gameObject, "dest." + dest.Id);
             Stack(card.gameObject, 10, new RectOffset(0, 0, 0, 14), TextAnchor.UpperCenter);
             if (sel)
             {
@@ -306,7 +303,18 @@ namespace Ironhorse.Game
             Pill(r2.transform, tr => FuelIcon(tr, 32), pv.Fuel.ToString(), 26);
             card.raycastTarget = true;
             string id = dest.Id;
-            if (!sel) Clickable(card.gameObject, () => { _selDest = id; RebuildWindow(); });
+            if (!sel) Clickable(card.gameObject, () => { _selDest = id; _selByUser = true; RebuildWindow(); });
+        }
+
+        const float DestWidth = 330, DestGap = 18;
+
+        /// <summary>Scrolls the destination strip so a destination's card is in view.</summary>
+        void ScrollToDestination(string destId)
+        {
+            var list = GameDatabase.Destinations;
+            int i = Mathf.Max(0, list.FindIndex(d => d.Id == destId));
+            float content = list.Count * (DestWidth + DestGap) - DestGap, view = 3 * (DestWidth + DestGap);
+            _scrollMemo["dests"] = new Vector2(Mathf.Clamp01((i - 1) * (DestWidth + DestGap) / Mathf.Max(1, content - view)), 0);
         }
 
         /// <summary>Takes a free-floating widget out of layout and pins it to a corner of its parent.</summary>
@@ -374,7 +382,7 @@ namespace Ironhorse.Game
             Pill(bar.transform, Ico(res, 64), "+" + t.cargoAmount + " " + (dest.IsTown ? "riders" : ResName(t.cargoId)), 40);
             Flex(bar.transform);
             int uid = t.uid;
-            Big(bar.transform, "Unload", UIKit.Green, () => Result(S.Unload(uid)), 380, 100, true, 46);
+            Tag(Big(bar.transform, "Unload", UIKit.Green, () => Result(S.Unload(uid)), 380, 100, true, 46), "dispatch.unload");
         }
 
         // ================================================================ 2 · Trains on the Line
@@ -430,13 +438,13 @@ namespace Ironhorse.Game
                 T1(nc.transform, "Arrived at the station!", 44, Color.white, TextAnchor.MiddleLeft, true);
                 var dest = GameDatabase.Destination(t.destinationId);
                 Pill(mid.transform, Ico(dest.IsTown ? "people" : t.cargoId, 56), "+" + t.cargoAmount, 38);
-                Big(rc.transform, "Collect", UIKit.Green, () => Result(S.Unload(uid)), 400, 100, true, 46);
+                Tag(Big(rc.transform, "Collect", UIKit.Green, () => Result(S.Unload(uid)), 400, 100, true, 46), "fleet.collect." + uid);
             }
             else if (idle)
             {
                 T1(nc.transform, "Waiting at platform " + (t.platform + 1), 40, Color.white, TextAnchor.MiddleLeft, true);
                 Pill(mid.transform, null, S.WagonsOf(t).Count + " / " + d.Power + " wagons", 30);
-                Big(rc.transform, "Send", UIKit.Green, () => OpenTrain(uid), 400, 100, true, 46);
+                Tag(Big(rc.transform, "Send", UIKit.Green, () => OpenTrain(uid), 400, 100, true, 46), "fleet.send." + uid);
             }
             else
             {
@@ -566,7 +574,7 @@ namespace Ironhorse.Game
             if (c.rewardParts != null) foreach (var rp in c.rewardParts) { var id = rp.id; RewardCell(rw.transform, tr => UIKit.ResIcon(tr, id, 58), rp.amount.ToString()); }
 
             var btns = HBox(card.transform, 12, 0, TextAnchor.MiddleCenter, -1, 84);
-            if (can) Big(btns.transform, "Deliver", UIKit.Green, () => Result(S.DeliverContract(uid), Sfx.Deliver), 340, 82, true, 44);
+            if (can) Tag(Big(btns.transform, "Deliver", UIKit.Green, () => Result(S.DeliverContract(uid), Sfx.Deliver), 340, 82, true, 44), "contract.deliver");
             else
             {
                 string mid = c.requirements.Where(r => S.Amount(r.id) < r.amount).Select(r => r.id).FirstOrDefault() ?? c.requirements[0].id;
@@ -727,12 +735,12 @@ namespace Ironhorse.Game
             {
                 var check = S.CanConstruct(d.Id);
                 string id = d.Id;
-                PriceBtn(btns.transform, "Build", check.Ok ? UIKit.Green : UIKit.Disabled, tr => UIKit.CoinIcon(tr, 46), Fmt.Num(d.CostCoins), () =>
+                Tag(PriceBtn(btns.transform, "Build", check.Ok ? UIKit.Green : UIKit.Disabled, tr => UIKit.CoinIcon(tr, 46), Fmt.Num(d.CostCoins), () =>
                 {
                     var r = S.CanConstruct(id);
                     if (r.Ok) TownView.Instance.BeginPlacement(id);
                     else Toast(r.Message, false);
-                }, firstUid != 0 ? 300 : 434, 88, true, 38);
+                }, firstUid != 0 ? 300 : 434, 88, true, 38), "build." + id);
             }
             if (firstUid != 0) Big(btns.transform, "Go", BBlue, () => OpenBuilding(firstUid), 122, 88, true, 38);
         }
