@@ -289,57 +289,62 @@ namespace Ironhorse.Game
             System.Func<float, float, Vector3> At = (side, along) => c + right * side + fwd * along;
             var mb = new MeshBuilder();
             var rng = new System.Random(id.GetHashCode());
+            // The place's signature building (Models/Buildings/dest_{id}) stands beside the depot, its front to the
+            // track; the procedural buildings make way for it, the props and outbuildings stay around it.
+            bool hero = ModelRegistry.Has(ModelRegistry.Buildings, "dest_" + id);
+            _skipMain = hero;
+            if (hero) PlaceAt("dest_" + id, At(26, 0), yaw + 90);
             switch (look)
             {
                 case Look.Logging:
-                    PlaceAt("sawmill", At(18, -10), yaw + 90);
+                    if (!hero) PlaceAt("sawmill", At(18, -10), yaw + 90);
                     PlaceAt("cabin", At(-14, -18), yaw + 180);
                     PlaceAt("cabin", At(-16, 2), yaw + 160);
                     for (int i = 0; i < 6; i++) LogPile(mb, At(8 + (i % 3) * 5f, 8 + (i / 3) * 6f), yaw, rng);
                     break;
                 case Look.Mine:
-                    Headframe(mb, At(16, 6), yaw);
-                    PlaceAt("freightshed", At(17, -14), yaw + 90);
+                    if (!hero) Headframe(mb, At(16, 6), yaw);
+                    if (!hero) PlaceAt("freightshed", At(17, -14), yaw + 90);
                     for (int i = 0; i < 4; i++) Heap(mb, At(-12 + (i % 2) * 8, -10 + (i / 2) * 12), 5 + i, Palette.Hex(0x232326));
                     PlaceAt("cabin", At(-18, 14), yaw);
                     break;
                 case Look.Farm:
-                    PlaceAt("gristmill", At(16, -6), yaw + 90);
-                    PlaceAt("freightbarn", At(-18, 6), yaw - 90);
+                    if (!hero) PlaceAt("gristmill", At(16, -6), yaw + 90);
+                    if (!hero) PlaceAt("freightbarn", At(-18, 6), yaw - 90);
                     PlaceAt("clapboard", At(18, 16), yaw + 90);
                     Fields(mb, c + right * 2 + fwd * 34, fwd, right, 3);
                     PlaceAt("watertower", At(-6, -20), yaw);
                     break;
                 case Look.Ranch:
-                    PlaceAt("clapboard", At(16, 10), yaw + 90);
-                    PlaceAt("freightbarn", At(18, -14), yaw + 90);
+                    if (!hero) PlaceAt("clapboard", At(16, 10), yaw + 90);
+                    if (!hero) PlaceAt("freightbarn", At(18, -14), yaw + 90);
                     Corral(mb, At(-14, 0), yaw, 22, 16);
                     Corral(mb, At(-14, 20), yaw, 14, 12);
                     PlaceAt("watertower", At(4, 18), yaw);
                     break;
                 case Look.IronMine:
-                    PlaceAt("smelter", At(18, -6), yaw + 90);
+                    if (!hero) PlaceAt("smelter", At(18, -6), yaw + 90);
                     Headframe(mb, At(-14, 8), yaw);
                     for (int i = 0; i < 4; i++) Heap(mb, At(-16 + (i % 2) * 9, -12 + (i / 2) * 10), 5 + i, Palette.Hex(0x8E4B3A));
                     break;
                 case Look.Fort:
-                    Fort(mb, At(16, 0), yaw);
+                    if (!hero) Fort(mb, At(16, 0), yaw);
                     PlaceAt("telegraph", At(-14, 12), yaw - 90);
                     break;
                 case Look.Boomtown:
-                    PlaceAt("wireworks", At(18, -6), yaw + 90);
+                    if (!hero) PlaceAt("wireworks", At(18, -6), yaw + 90);
                     PlaceAt("saloon", At(-14, 12), yaw - 90);
                     for (int i = 0; i < 8; i++) Tent(mb, At(-12 + (i % 4) * 6.5f, -18 + (i / 4) * 7), yaw + (float)rng.NextDouble() * 30);
                     for (int i = 0; i < 3; i++) Heap(mb, At(10 + i * 7, 18), 4, Palette.Hex(0xC8743A));
                     break;
                 case Look.GoldCamp:
-                    PlaceAt("assay", At(16, -4), yaw + 90);
+                    if (!hero) PlaceAt("assay", At(16, -4), yaw + 90);
                     PlaceAt("saloon", At(-15, 10), yaw - 90);
                     for (int i = 0; i < 6; i++) Tent(mb, At(-14 + (i % 3) * 7, -16 + (i / 3) * 7), yaw + (float)rng.NextDouble() * 40);
                     Sluice(mb, At(8, 18), yaw);
                     break;
                 case Look.OilField:
-                    PlaceAt("refinery", At(18, -4), yaw + 90);
+                    if (!hero) PlaceAt("refinery", At(18, -4), yaw + 90);
                     for (int i = 0; i < 7; i++) Derrick(mb, At(-22 + (i % 4) * 10, -16 + (i / 4) * 22 + (i % 2) * 4));
                     for (int i = 0; i < 3; i++) Tank(mb, At(14 + i * 6, 18));
                     break;
@@ -356,6 +361,8 @@ namespace Ironhorse.Game
             if (mb.VertexCount > 0) Station.Walkable(mb.ToObject(id + " site", transform));
         }
 
+        bool _skipMain;
+
         void PlaceAt(string model, Vector3 p, float yaw) { Place(model, p, 0, 0, yaw); }
 
         /// <summary>Blocks of buildings either side of a main street running beside the depot.</summary>
@@ -365,12 +372,12 @@ namespace Ironhorse.Game
             for (int i = 0; i < n; i++)
             {
                 int row = i % 2, col = i / 2;
-                float side = row == 0 ? 16 : 34;
+                float side = (row == 0 ? 16 : 34) * (_skipMain ? -1 : 1) + (_skipMain ? -4 : 0);
                 float along = -22 + col * 14 + (float)rng.NextDouble() * 2;
                 var p = c + right * side + fwd * along;
-                PlaceAt(models[i], p, yaw + 90 + (row == 1 ? 180 : 0));
+                PlaceAt(models[i], p, yaw + 90 + (row == 1 ? 180 : 0) + (_skipMain ? 180 : 0)); // fronts toward the main street
             }
-            for (int i = 0; i < 4; i++) PlaceAt(i % 2 == 0 ? "clapboard" : "cabin", c - right * 16 + fwd * (-18 + i * 13), yaw - 90);
+            if (!_skipMain) for (int i = 0; i < 4; i++) PlaceAt(i % 2 == 0 ? "clapboard" : "cabin", c - right * 16 + fwd * (-18 + i * 13), yaw - 90);
         }
 
         // ---------------------------------------------------------------- props
