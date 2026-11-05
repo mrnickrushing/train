@@ -34,7 +34,7 @@ Shader "Ironhorse/Terrain"
         // Meters per texture tile for grass, dry grass, dirt, sand, rock, gravel.
         static const float kTile[6] = { 7.0, 8.0, 4.0, 5.0, 9.0, 2.6 };
         // Per layer color correction so the photo textures sit in the game's warm palette.
-        static const float3 kTint[6] = { float3(0.86, 1.04, 0.66), float3(1.08, 1.04, 0.66), float3(1.0, 0.95, 0.9), float3(1.05, 1.0, 0.95), float3(1.05, 0.95, 0.9), float3(1.0, 1.0, 1.0) };
+        static const float3 kTint[6] = { float3(0.74, 0.98, 0.5), float3(1.08, 1.04, 0.66), float3(1.0, 0.95, 0.9), float3(1.05, 1.0, 0.95), float3(1.05, 0.95, 0.9), float3(1.0, 1.0, 1.0) };
         ENDHLSL
 
         Pass
@@ -164,9 +164,9 @@ Shader "Ironhorse/Terrain"
                 float green = saturate((albedo.g - max(albedo.r, albedo.b)) * 10);
                 float m3 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.011 + float2(0.61, 0.13)).r - 0.5;
                 float m4 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.085 + float2(0.21, 0.77)).r - 0.5;
-                float3 cured = albedo * float3(1.2, 1.04, 0.66);
-                float3 lush = albedo * float3(0.8, 0.97, 0.82);
-                albedo = lerp(albedo, m3 > 0 ? cured : lush, saturate(abs(m3) * 2.4) * green * 0.8);
+                float3 cured = albedo * float3(1.25, 1.08, 0.6);
+                float3 lush = albedo * float3(0.62, 0.86, 0.6);
+                albedo = lerp(albedo, m3 > 0 ? cured : lush, saturate(abs(m3) * 2.8) * green * 0.9);
                 albedo *= 1 + m4 * 0.22 * green;
 
                 float3 vcol = i.color.rgb;

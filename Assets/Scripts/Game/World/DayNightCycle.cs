@@ -125,7 +125,7 @@ namespace Ironhorse.Game
             // Close up the haze gives depth; zoomed out to the territory map it would wash everything grey, so it
             // thins with the camera's distance and the whole valley reads crisp and clear.
             float camDist = CameraRig.Instance != null ? CameraRig.Instance.Distance : 95f;
-            RenderSettings.fogDensity = Mathf.Lerp(0.0014f, 0.00045f, Mathf.InverseLerp(90f, 300f, camDist));
+            RenderSettings.fogDensity = Mathf.Lerp(0.0012f, 0.00018f, Mathf.InverseLerp(90f, 300f, camDist));
         }
     }
 }

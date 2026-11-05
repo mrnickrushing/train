@@ -49,7 +49,8 @@ namespace Ironhorse.Game
             float isl = IslandDist(x, z);
             north *= Mathf.SmoothStep(0, 1, Mathf.InverseLerp(WorldLayout.IslandRadius - 3, WorldLayout.IslandRadius + 3, isl));
             float m = Mathf.Max(Mathf.Max(river, lake), north);
-            depth = Mathf.Max(Mathf.Max(1 - rd / 9f, 1 - ld / WorldLayout.LakeRadius), north * Mathf.Clamp01((1 - nd) * 4));
+            // Deep blue water a few metres out from the bank (the shallow tint only along the edges).
+            depth = Mathf.Max(Mathf.Max(Mathf.Clamp01((9f - rd) / 4f), 1 - ld / WorldLayout.LakeRadius), north * Mathf.Clamp01((1 - nd) * 4));
             return m;
         }
 
@@ -92,6 +93,9 @@ namespace Ironhorse.Game
             mountains *= 1 - calm * 0.94f;
             hills *= 1 - calm * 0.55f;
             float h = Mathf.Lerp(gentle * 0.06f, gentle + Mathf.Max(0, hills) + mountains, wild);
+            // Rolling country between the lines: low swells and knolls everywhere off the valley floor.
+            float roll = (Noise2.Fbm(x * 0.016f - 7, z * 0.016f + 3, 3) - 0.42f) * 14f;
+            h += Mathf.Max(0, roll) * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.04f, 0.35f, wild)) * (1 - calm * 0.3f);
 
             float depth;
             float water = WaterMask(x, z, out depth);

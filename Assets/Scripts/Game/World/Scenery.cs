@@ -212,7 +212,7 @@ namespace Ironhorse.Game
                 return b;
             }
 
-            for (int i = 0; i < 13000; i++) // about the same density over the map, Eagle Lake's basin included
+            for (int i = 0; i < 20000; i++) // dense over the whole map, Eagle Lake's basin included
             {
                 float x = R(ValleyTerrain.MinX + 10, ValleyTerrain.MaxX - 10), z = R(ValleyTerrain.MinZ + 10, ValleyTerrain.MaxZ - 10);
                 if (ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue; // the trestle cut-off and the Fort Calder wire
@@ -236,8 +236,8 @@ namespace Ironhorse.Game
                 }
                 if (wild < 0.12f)
                 {
-                    // Valley floor: mostly open; a few shade trees and shrubs well away from tracks and town.
-                    if (wild > 0.012f && clump > 0.5f && R() < 0.55f)
+                    // Valley floor: open meadows with groves here and there, well away from tracks and town.
+                    if (wild > 0.012f && clump > 0.56f && R() < 0.8f)
                     {
                         if (north > 0.45f && R() < 0.7f) Pine(Chunk(p), p, R(0.7f, 1.1f));
                         else Cottonwood(Chunk(p), p, R(0.8f, 1.2f));

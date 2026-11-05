@@ -105,9 +105,9 @@ namespace Ironhorse.Game
             Focus = Vector3.Lerp(Focus, _focusTarget, k);
             Distance = Mathf.Lerp(Distance, _distTarget, k);
             Yaw = Mathf.LerpAngle(Yaw, _yawTarget, k);
-            // Tilt flatter when zoomed in for a more cinematic view.
-            // A high, map-like angle (like a model railway seen from above), flattening a little when zoomed right in.
-            Pitch = Mathf.Lerp(36f, 58f, Mathf.InverseLerp(MinDistance, MaxDistance * 0.6f, Distance));
+            // Looking across the land rather than straight down, so hills, mesas and towns read in depth even
+            // zoomed all the way out; a little flatter still when zoomed right in.
+            Pitch = Mathf.Lerp(36f, 46f, Mathf.InverseLerp(MinDistance, MaxDistance * 0.6f, Distance));
 
             var rot = Quaternion.Euler(Pitch, Yaw, 0);
             transform.position = Focus + rot * new Vector3(0, 0, -Distance);

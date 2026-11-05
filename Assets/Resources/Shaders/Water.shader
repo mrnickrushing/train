@@ -2,8 +2,8 @@ Shader "Ironhorse/Water"
 {
     Properties
     {
-        _ShallowColor ("Shallow", Color) = (0.24, 0.58, 0.56, 0.6)
-        _DeepColor ("Deep", Color) = (0.05, 0.23, 0.38, 0.93)
+        _ShallowColor ("Shallow", Color) = (0.2, 0.46, 0.5, 0.7)
+        _DeepColor ("Deep", Color) = (0.05, 0.19, 0.4, 0.95)
         _WaveTex ("Wave Noise", 2D) = "gray" {}
     }
 
