@@ -106,6 +106,7 @@ namespace Ironhorse.Game
                     var pr = S.Progress(def.Id);
                     bool locked = !S.IsProjectUnlocked(def);
                     if (pr.done) continue;
+                    if (def.Requires != null && !S.Progress(def.Requires).done) continue; // hidden under the cloud bank
                     if (locked) { if (nextLockedShown) continue; nextLockedShown = true; }
                     var at = sites.PinAt(def.Id);
                     if (at == null) continue;
@@ -184,7 +185,7 @@ namespace Ironhorse.Game
             else if (locked)
             {
                 UIKit.Icon(need.transform, "lock", 32);
-                T(need.transform, "Level " + def.UnlockLevel, 28, Color.white, TextAnchor.MiddleCenter, true).horizontalOverflow = HorizontalWrapMode.Overflow;
+                T(need.transform, S.Level >= def.UnlockLevel ? "Locked" : "Level " + def.UnlockLevel, 28, Color.white, TextAnchor.MiddleCenter, true).horizontalOverflow = HorizontalWrapMode.Overflow;
             }
             else
             {
@@ -214,7 +215,7 @@ namespace Ironhorse.Game
             string id = def.Id;
             var hit = go.AddComponent<Image>();
             hit.color = new Color(0, 0, 0, 0);
-            Clickable(go, () => { if (locked) Toast(def.Name + " opens at level " + def.UnlockLevel + ".", false); else OpenProjectSite(id); });
+            Clickable(go, () => { if (locked) Toast(def.Name + ": " + S.ProjectLockText(def) + ".", false); else OpenProjectSite(id); });
             return go;
         }
 
@@ -372,7 +373,7 @@ namespace Ironhorse.Game
             var def = DepthContent.Project(projectId);
             if (def == null) return;
             CloseWindow();
-            if (!S.IsProjectUnlocked(def)) { Toast(def.Name + " opens at level " + def.UnlockLevel + ".", false); return; }
+            if (!S.IsProjectUnlocked(def)) { Toast(def.Name + ": " + S.ProjectLockText(def) + ".", false); return; }
             if (ProjectSites.Instance != null) ProjectSites.Instance.Show(projectId);
             // A storyline's first visit: the characters tell what they want built, then the site opens.
             if (StoryDirector.Instance != null && StoryDirector.Instance.IsNew(projectId))

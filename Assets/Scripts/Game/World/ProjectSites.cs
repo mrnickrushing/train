@@ -175,6 +175,9 @@ namespace Ironhorse.Game
             if (s != null) CameraRig.Instance.FlyTo(s.FocusFor(Mathf.Max(1, s.Shown)), s.Distance);
         }
 
+        /// <summary>True while a site's new pieces are rising (the camera is busy there).</summary>
+        public bool Animating { get { return _animating; } }
+
         public bool HasSite(string projectId) { return _sites.Exists(x => x.Id == projectId); }
 
         /// <summary>Where a project's map pin floats (above the site), or null.</summary>

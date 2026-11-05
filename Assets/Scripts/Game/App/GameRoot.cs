@@ -149,6 +149,7 @@ namespace Ironhorse.Game
             Child<CameraRig>("Camera");
             Child<ProjectSites>("Project Sites");
             Child<DestinationSites>("Destinations");
+            Child<RegionFog>("Region Fog");
             Child<Museum>("Museum");
             Child<PostFx>("Post FX");
             Child<Life>("Townsfolk");

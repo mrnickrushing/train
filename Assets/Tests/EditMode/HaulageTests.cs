@@ -160,5 +160,18 @@ namespace Ironhorse.Tests
             Assert.IsTrue(_s.CharterNewTerritory().Ok);
             Assert.IsTrue(w.IsIdle);
         }
+
+        [Test]
+        public void NorthStorylines_WaitForFortResupply()
+        {
+            _s.State.level = 15;
+            var light = DepthContent.Project("lighthouse");
+            Assert.IsFalse(_s.NorthOpen);
+            Assert.IsFalse(_s.IsProjectUnlocked(light));
+            StringAssert.Contains("Fort Calder Resupply", _s.ProjectLockText(light));
+            _s.Progress(DepthContent.NorthKey).done = true;
+            Assert.IsTrue(_s.NorthOpen);
+            Assert.IsTrue(_s.IsProjectUnlocked(light));
+        }
     }
 }

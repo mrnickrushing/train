@@ -58,7 +58,7 @@ namespace Ironhorse.Core
             var def = DepthContent.Project(projectId);
             if (h == null || def == null) return "Unknown hauler or project";
             var hd = Haulage.Hauler(h.defId);
-            if (!IsProjectUnlocked(def)) return def.Name + " opens at level " + def.UnlockLevel;
+            if (!IsProjectUnlocked(def)) return def.Name + ": " + ProjectLockText(def);
             var pr = Progress(projectId);
             if (pr.done) return def.Name + " is finished";
             if (!h.IsIdle) return hd.Name + " is out on a delivery";

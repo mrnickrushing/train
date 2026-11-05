@@ -27,6 +27,8 @@ namespace Ironhorse.Core
         public CivicEffect Perk;
         public float PerkValue;
         public string PerkText;
+        /// <summary>A storyline that must be finished first (its region is hidden under cloud until then), or null.</summary>
+        public string Requires;
     }
 
     // ================================================================ Foreman's orders
@@ -93,6 +95,15 @@ namespace Ironhorse.Core
                 new[] { S("steel", 300), S("tools", 100), S("copper_wire", 120), S("gold_bars", 60), S("planks", 300), S("fuel", 120), S("steel", 400) },
                 new Grant { Nuggets = 400, BlueprintLoco = "thunderhead", Blueprints = 12 }, CivicEffect.Yield, 0.12f, "+12% cargo from every run"),
         };
+
+        /// <summary>Eagle Lake country, the map's north, stays under cloud until this storyline is finished.</summary>
+        public const string NorthKey = "resupply";
+
+        static DepthContent()
+        {
+            Project("lighthouse").Requires = NorthKey;
+            Project("lodge").Requires = NorthKey;
+        }
 
         static List<TaskSetDef> _handmade;
 

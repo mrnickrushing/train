@@ -27,7 +27,19 @@ namespace Ironhorse.Core
 
         public ProjectProgress Progress(string projectId) { return State.projects.First(p => p.id == projectId); }
 
-        public bool IsProjectUnlocked(ProjectDef p) { return State.level >= p.UnlockLevel; }
+        public bool IsProjectUnlocked(ProjectDef p) { return State.level >= p.UnlockLevel && RequirementMet(p); }
+
+        bool RequirementMet(ProjectDef p) { return p.Requires == null || State.projects.Any(x => x.id == p.Requires && x.done); }
+
+        /// <summary>The north (Eagle Lake country) is revealed once its key storyline is finished.</summary>
+        public bool NorthOpen { get { return State.projects.Any(x => x.id == DepthContent.NorthKey && x.done); } }
+
+        /// <summary>Why a project isn't open yet, for pins and buttons.</summary>
+        public string ProjectLockText(ProjectDef p)
+        {
+            if (!RequirementMet(p)) return "Finish " + DepthContent.Project(p.Requires).Name + " first";
+            return "Opens at level " + p.UnlockLevel;
+        }
 
         public ProjectStage CurrentStage(ProjectDef def)
         {
@@ -68,7 +80,7 @@ namespace Ironhorse.Core
         {
             var def = DepthContent.Project(projectId);
             if (def == null) return ActionResult.Fail("Unknown project");
-            if (!IsProjectUnlocked(def)) return ActionResult.Fail("Unlocks at level " + def.UnlockLevel);
+            if (!IsProjectUnlocked(def)) return ActionResult.Fail(ProjectLockText(def));
             var pr = Progress(projectId);
             if (pr.done) return ActionResult.Fail("Already complete");
             var stage = def.Stages[pr.stage];
