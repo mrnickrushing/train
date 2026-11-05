@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Ironhorse.Core;
 using UnityEngine;
@@ -633,9 +634,14 @@ namespace Ironhorse.Game
 
         public void OpenPass() { ShowBoard("Rail Season Pass", PassBoard); }
 
+        string _passTab = "rewards";
+
         void PassBoard(Transform body, Transform right)
         {
             _boardSub = "Season " + (S.CurrentSeason + 1);
+            Big(right, "Rewards", _passTab != "board" ? UIKit.Gold : UIKit.WoodLight, () => { _passTab = "rewards"; RebuildWindow(); }, 220, 76, true, 34);
+            Big(right, "Leaderboard", _passTab == "board" ? UIKit.Gold : UIKit.WoodLight, () => { _passTab = "board"; RebuildWindow(); }, 280, 76, true, 34);
+            if (_passTab == "board") { SeasonLeaderboard(body); return; }
             var panel = Box(body, Palette.Hex(0xE6E0D4), -1, -1, "Panel");
             UIKit.Stretch(panel.gameObject);
             Stack(panel.gameObject, 10, new RectOffset(16, 16, 14, 10));
@@ -697,6 +703,76 @@ namespace Ironhorse.Game
                 PassCell(row.transform, t, false);
                 PassCell(row.transform, t, true);
             }
+        }
+
+        // ---------------------------------------------------------------- season leaderboard
+
+        List<GameCenter.Row> _lbRows;
+        GameCenter.Row? _lbMine;
+        float _lbLoadedAt = -999;
+        bool _lbLoading;
+
+        /// <summary>This season's Game Center leaderboard: the top ten railroads by season XP and the player's own rank.</summary>
+        void SeasonLeaderboard(Transform body)
+        {
+            var panel = Box(body, BTile, -1, -1, "Board");
+            UIKit.Stretch(panel.gameObject);
+            Stack(panel.gameObject, 12, new RectOffset(22, 22, 18, 18));
+            var head = HBox(panel.transform, 16, 0, TextAnchor.MiddleLeft, -1, 70);
+            UIKit.Size(T1(head.transform, "Season " + (S.CurrentSeason + 1) + " standings", 46, BGold, TextAnchor.MiddleLeft, true).gameObject, -1, -1, 1);
+            var ends = Pill(head.transform, tr => ClockIcon(tr, 38), "", 30, null, BCardDeep);
+            var et = ends.GetComponentInChildren<Text>();
+            Action live = () => et.text = "Ends in " + Fmt.Time(S.SeasonEndsIn);
+            live(); Live(live);
+            Pill(head.transform, tr => UIDeco.XpIcon(tr, 40), Fmt.Num(S.State.seasonScore) + " season XP", 32, Color.white, BCardDeep);
+            T1(panel.transform, "Every railroad's Season Pass XP this season. The board starts over when the next season begins.", 28, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
+
+            if (!GameCenter.Supported)
+            {
+                Flex(panel.transform);
+                T(panel.transform, "The leaderboard uses Game Center on iPhone and iPad.", 36, Color.white, TextAnchor.MiddleCenter, false, UIKit.Heading);
+                Flex(panel.transform);
+                return;
+            }
+            if (!GameCenter.SignedIn)
+            {
+                Flex(panel.transform);
+                T(panel.transform, "Sign in to Game Center to see how your railroad ranks this season.", 36, Color.white, TextAnchor.MiddleCenter, false, UIKit.Heading);
+                var row = HBox(panel.transform, 0, 0, TextAnchor.MiddleCenter, -1, 100);
+                Big(row.transform, "Sign in to Game Center", BBlue, () => GameCenter.Start(), 520, 96, true, 38);
+                Flex(panel.transform);
+                return;
+            }
+            // Fresh scores at most every 30 seconds; the callback rebuilds the board.
+            if (!_lbLoading && Time.unscaledTime - _lbLoadedAt > 30)
+            {
+                _lbLoading = true;
+                GameCenter.Sync();
+                GameCenter.LoadSeason(10, (rows, mine) => { _lbRows = rows; _lbMine = mine; _lbLoading = false; _lbLoadedAt = Time.unscaledTime; _dirty = true; });
+            }
+            var list = Scroller(panel.transform, "season", false, 8);
+            if (_lbRows == null) T(list, _lbLoading ? "Loading the standings..." : "No scores yet this season. Dispatch a train to get on the board!", 32, Color.white, TextAnchor.MiddleCenter, false, UIKit.Heading);
+            else
+            {
+                bool meShown = false;
+                foreach (var r in _lbRows) { LeaderRow(list, r); meShown |= r.Me; }
+                if (!meShown && _lbMine != null) { T(list, "...", 30, BLabel, TextAnchor.MiddleCenter); LeaderRow(list, _lbMine.Value); }
+            }
+            var foot = HBox(panel.transform, 0, 0, TextAnchor.MiddleCenter, -1, 90);
+            Big(foot.transform, "See all in Game Center", BBlue, GameCenter.ShowSeasonBoard, 520, 84, true, 34);
+        }
+
+        void LeaderRow(Transform p, GameCenter.Row r)
+        {
+            var row = Box(p, r.Me ? Palette.Hex(0x4A3A12) : BCardDeep, -1, 84, "Rank " + r.Rank);
+            if (r.Me) { var o = row.gameObject.AddComponent<Outline>(); o.effectColor = BGold; o.effectDistance = new Vector2(3, -3); }
+            Row(row.gameObject, 18, new RectOffset(16, 22, 0, 0), TextAnchor.MiddleLeft);
+            var medal = UIKit.KitImage(row.transform, r.Rank == 1 ? "round_gold" : r.Rank <= 3 ? "round_blue" : "round_brown", "Medal");
+            UIKit.Size(medal.gameObject, 66, 66);
+            var rk = T(medal.transform, r.Rank.ToString(), 32, Color.white, TextAnchor.MiddleCenter, true);
+            UIKit.Stretch(rk.gameObject);
+            UIKit.Size(T1(row.transform, r.Name + (r.Me ? "  (you)" : ""), 34, r.Me ? BGold : Color.white, TextAnchor.MiddleLeft, false, UIKit.Heading).gameObject, -1, -1, 1);
+            T(row.transform, Fmt.Num((int)Math.Min(int.MaxValue, r.Score)) + " XP", 34, Color.white, TextAnchor.MiddleRight, true).horizontalOverflow = HorizontalWrapMode.Overflow;
         }
 
         static void TrackHeader(Transform parent, string text, Color c)

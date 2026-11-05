@@ -201,5 +201,16 @@ namespace Ironhorse.Tests
                 if (p.Grant.LocomotiveId != null) Assert.IsNotNull(GameDatabase.Locomotive(p.Grant.LocomotiveId), p.Id);
             Assert.AreEqual(Catalog.Products.Count, Catalog.Products.Select(p => p.Id).Distinct().Count());
         }
+
+        [Test]
+        public void SeasonScore_KeepsCountingPastTheLastTier_AndStartsOverEachSeason()
+        {
+            _s.AddPassXp(Balance.PassTiers * Balance.PassXpPerTier + 700);
+            Assert.AreEqual(Balance.PassTiers * Balance.PassXpPerTier, _s.State.passXp, "the pass caps");
+            Assert.AreEqual(Balance.PassTiers * Balance.PassXpPerTier + 700, _s.State.seasonScore, "the leaderboard doesn't");
+            _clock.Advance(Balance.SeasonSeconds);
+            _s.AddPassXp(10);
+            Assert.AreEqual(10, _s.State.seasonScore);
+        }
     }
 }

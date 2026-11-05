@@ -14,6 +14,8 @@
   ],
   "leaderboards": [
     {"id": "ironhorse.lb.coins",     "stat": "coins",     "name": "Railroad Fortune",    "suffix": " coins",     "singular": " coin"},
-    {"id": "ironhorse.lb.contracts", "stat": "contracts", "name": "Contracts Fulfilled", "suffix": " contracts", "singular": " contract"}
+    {"id": "ironhorse.lb.contracts", "stat": "contracts", "name": "Contracts Fulfilled", "suffix": " contracts", "singular": " contract"},
+    {"id": "ironhorse.lb.season",    "stat": "season",    "name": "Season Pass Standings", "suffix": " season XP", "singular": " season XP",
+     "recurrence": {"start": "2026-01-05T00:00:00Z", "duration": "P28D"}}
   ]
 }

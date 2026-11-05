@@ -48,6 +48,8 @@ namespace Ironhorse.Core
         public List<string> offerPurchases = new List<string>();
         public int passSeason = -1;
         public int passXp;
+        /// <summary>Season Pass XP earned this season without the tier cap: the season leaderboard's score.</summary>
+        public int seasonScore;
         public bool passPremium;
         public List<int> passClaimedFree = new List<int>();
         public List<int> passClaimedPremium = new List<int>();

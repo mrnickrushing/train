@@ -18,6 +18,8 @@ namespace Ironhorse.Core
 
         void RepairMonetization()
         {
+            // Saves from before the season leaderboard: this season's score starts from the pass XP already earned.
+            if (State.seasonScore < State.passXp) State.seasonScore = State.passXp;
             if (State.ownedProducts == null) State.ownedProducts = new List<string>();
             if (State.transactions == null) State.transactions = new List<string>();
             if (State.pendingPurchases == null) State.pendingPurchases = new List<PendingPurchase>();
@@ -118,6 +120,7 @@ namespace Ironhorse.Core
             if (State.passSeason == season) return;
             State.passSeason = season;
             State.passXp = 0;
+            State.seasonScore = 0;
             State.passPremium = false;
             State.passClaimedFree.Clear();
             State.passClaimedPremium.Clear();
@@ -130,6 +133,7 @@ namespace Ironhorse.Core
         {
             RollSeason();
             State.passXp = Math.Min(State.passXp + amount, Balance.PassTiers * Balance.PassXpPerTier);
+            State.seasonScore += Math.Max(0, amount); // the season leaderboard keeps counting past the last tier
         }
 
         public bool CanClaimPass(int tier, bool premium)
