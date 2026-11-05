@@ -148,7 +148,7 @@ namespace Ironhorse.Game
             float north = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(-250, 40, z));
             float n1 = Mathf.PerlinNoise(x * 0.035f + 3, z * 0.035f - 9);
             float n2 = Mathf.PerlinNoise(x * 0.11f, z * 0.11f);
-            float g = 1 - Mathf.SmoothStep(0.55f, 0.85f, n1) * 0.7f; // mostly lush, dry patches here and there
+            float g = 1 - Mathf.SmoothStep(0.62f, 0.9f, n1) * 0.55f; // mostly lush, dry patches here and there
             w[0] = g * north;                                   // grass
             w[1] = (1 - g) * north + n1 * 0.8f * (1 - north);   // dry grass
             w[2] = 0;                                           // dirt
