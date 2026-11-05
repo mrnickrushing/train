@@ -133,6 +133,7 @@ namespace Ironhorse.Game
             yield return null;
             Scenery.Build(world);
             HaulWorld.Build(world);
+            GroundTint.Build();
             _loading.SetProgress(0.55f, "Laying track...");
             yield return null;
             Yard.Build(world);

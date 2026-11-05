@@ -229,7 +229,7 @@ namespace Ironhorse.Game
                 bool nearRiver = water > 0.02f || Mathf.Sqrt(WorldLayout.River.SqrDistanceXZ(x, z)) < 22;
 
                 // Stands of pines frame the valley floor (just outside the town, rails and loop).
-                if (wild > 0.1f && wild < 0.6f && north > 0.3f && clump > 0.5f && R() < 0.8f)
+                if (wild > 0.1f && wild < 0.6f && north > 0.3f && clump > 0.45f && R() < 0.85f)
                 {
                     Pine(Chunk(p), p, R(0.75f, 1.35f));
                     continue;
@@ -237,7 +237,7 @@ namespace Ironhorse.Game
                 if (wild < 0.12f)
                 {
                     // Valley floor: open meadows with groves here and there, well away from tracks and town.
-                    if (wild > 0.012f && clump > 0.56f && R() < 0.8f)
+                    if (wild > 0.012f && clump > 0.5f && R() < 0.85f)
                     {
                         if (north > 0.45f && R() < 0.7f) Pine(Chunk(p), p, R(0.7f, 1.1f));
                         else Cottonwood(Chunk(p), p, R(0.8f, 1.2f));
@@ -260,6 +260,29 @@ namespace Ironhorse.Game
                 if (q < 0.3f) Sage(Chunk(p), p, R(0.7f, 1.2f));
                 else if (q < 0.4f) Rock(Chunk(p), p, R(0.5f, 1.8f));
                 else if (q < 0.55f && clump > 0.35f) Pine(Chunk(p), p, R(0.8f, 1.3f));
+            }
+
+            // Ground cover over the open country: shrub clumps, sagebrush and the odd rock, so meadows and hillsides
+            // read busy and natural from the top of the zoom (instanced, so thousands cost little).
+            for (int i = 0; i < 9000; i++)
+            {
+                float x = R(ValleyTerrain.MinX + 10, ValleyTerrain.MaxX - 10), z = R(ValleyTerrain.MinZ + 10, ValleyTerrain.MaxZ - 10);
+                float wild = ValleyTerrain.Wildness(x, z);
+                if (wild < 0.03f || ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue;
+                float depth;
+                if (ValleyTerrain.WaterMask(x, z, out depth) > 0.05f) continue;
+                float h = ValleyTerrain.Height(x, z);
+                if (h > 60) continue;
+                float slope = Mathf.Abs(ValleyTerrain.Height(x + 2, z) - h) + Mathf.Abs(ValleyTerrain.Height(x, z + 2) - h);
+                if (slope > 2.8f) continue;
+                float clump = Mathf.PerlinNoise(x * 0.05f + 13, z * 0.05f - 5);
+                if (clump < 0.38f) continue;
+                var p = new Vector3(x, h - 0.05f, z);
+                float north = Mathf.InverseLerp(-230, 60, z);
+                float q = R();
+                if (q < 0.45f) Cottonwood(Chunk(p), p, R(0.55f, 0.9f));      // low leafy shrubs and young trees
+                else if (q < 0.85f) Sage(Chunk(p), p, R(0.8f, 1.4f) * (north > 0.5f ? 1.2f : 1f));
+                else Rock(Chunk(p), p, R(0.4f, 1.1f));
             }
 
             // Eagle Lake: dense pine forest around the basin, with meadow clearings and open beaches at the shore,

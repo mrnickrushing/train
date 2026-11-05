@@ -94,7 +94,7 @@ namespace Ironhorse.Game
             hills *= 1 - calm * 0.55f;
             float h = Mathf.Lerp(gentle * 0.06f, gentle + Mathf.Max(0, hills) + mountains, wild);
             // Rolling country between the lines: low swells and knolls everywhere off the valley floor.
-            float roll = (Noise2.Fbm(x * 0.016f - 7, z * 0.016f + 3, 3) - 0.42f) * 14f;
+            float roll = (Noise2.Fbm(x * 0.016f - 7, z * 0.016f + 3, 3) - 0.42f) * 24f;
             h += Mathf.Max(0, roll) * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.04f, 0.35f, wild)) * (1 - calm * 0.3f);
 
             float depth;

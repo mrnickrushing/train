@@ -34,6 +34,21 @@ namespace Ironhorse.Game
 
         static Kind Get(string kind) { return Get("Trees", kind); }
 
+        /// <summary>Where every instanced tree and shrub stands, with its scale (for the ground tint under groves).</summary>
+        public static IEnumerable<Vector4> Plants()
+        {
+            foreach (var kv in _kinds)
+            {
+                if (kv.Value == null || !kv.Key.StartsWith("Trees/")) continue;
+                foreach (var cell in kv.Value.Cells.Values)
+                    foreach (var m in cell)
+                    {
+                        var p = m.GetColumn(3);
+                        yield return new Vector4(p.x, p.y, p.z, m.GetColumn(0).magnitude);
+                    }
+            }
+        }
+
         static Kind Get(string category, string kind)
         {
             Kind k;

@@ -28,6 +28,8 @@ Shader "Ironhorse/Terrain"
         float4 _TownMaskRect; // xMin, zMin, 1/width, 1/height (0 = no mask)
         TEXTURE2D(_RoadMask); SAMPLER(sampler_RoadMask);
         float4 _RoadMaskRect; // haul roads across the whole valley: r = dirt, g = wheel ruts
+        TEXTURE2D(_GroundTint); SAMPLER(sampler_GroundTint);
+        float4 _GroundTintRect; // world colour map (GroundTint.cs): rgb * 2 multiplies the grass
         CBUFFER_START(UnityPerMaterial)
             float4 _MacroTex_ST;
         CBUFFER_END
@@ -168,6 +170,19 @@ Shader "Ironhorse/Terrain"
                 float3 lush = albedo * float3(0.62, 0.86, 0.6);
                 albedo = lerp(albedo, m3 > 0 ? cured : lush, saturate(abs(m3) * 2.8) * green * 0.9);
                 albedo *= 1 + m4 * 0.22 * green;
+                // Big patches you can read from the top of the zoom: whole hillsides of yellow-green, deep green and olive.
+                float m5 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.0032 + float2(0.43, 0.29)).r - 0.5;
+                float m6 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.0071 + float2(0.17, 0.83)).r - 0.5;
+                float3 sunlit = albedo * float3(1.22, 1.12, 0.62);
+                float3 deep = albedo * float3(0.55, 0.78, 0.55);
+                albedo = lerp(albedo, m5 > 0 ? sunlit : deep, saturate(abs(m5) * 7) * green * 0.9);
+                albedo = lerp(albedo, albedo * float3(0.92, 0.86, 0.62), saturate(m6 * 6) * green * 0.65); // olive scrub
+                float2 tuv = (pos.xz - _GroundTintRect.xy) * _GroundTintRect.zw;
+                float grassW = saturate((w[0] + w[1]) / max(wsum, 1e-3));
+                if (_GroundTintRect.z > 0) albedo *= lerp(float3(1, 1, 1), SAMPLE_TEXTURE2D(_GroundTint, sampler_GroundTint, tuv).rgb * 2, grassW);
+                // Slopes and hollows read darker (grass thins to earth on the steep bits), crests catch the light.
+                float slope = 1 - saturate(nGeo.y);
+                albedo *= lerp(1.04, 0.8, saturate(slope * 3.2));
 
                 float3 vcol = i.color.rgb;
                 #if !defined(UNITY_COLORSPACE_GAMMA)
