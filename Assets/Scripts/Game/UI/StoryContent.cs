@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Ironhorse.Core;
 using UnityEngine;
@@ -105,6 +106,27 @@ namespace Ironhorse.Game
                 L("silas", "I had my reservations, given the cost. But look at it. The valley's lit like a city."),
                 L("hank", "Blackwell rode by this morning. Didn't say a word. Just stared."),
             }),
+            ["lighthouse"] = (new[]
+            {
+                L("clara", "Up the river there's a lake so big the steamers lose their way in a fog. Eagle Lake."),
+                L("clara", "A lighthouse on Eagle Point would guide every boat home. But there's no road to an island."),
+                L("hank", "Then the boats carry it out, plank by plank. I'll get the landing ready."),
+            }, new[]
+            {
+                L("clara", "The light on Eagle Point is burning! You can see it from the lodge road."),
+                L("hank", "First night it shone, three steamers came home through the fog. Not a scrape on any of 'em."),
+            }),
+            ["lodge"] = (new[]
+            {
+                L("silas", "City folk will pay a fortune for clean air and a view. Eagle Lake has both."),
+                L("silas", "A grand log lodge on the shore, and every one of them rides our trains to reach it."),
+                L("hank", "Logs, provisions, and a lot of fancy fixings. We'll haul it up the valley."),
+            }, new[]
+            {
+                L("silas", "The Eagle Lake Lodge is booked through the summer. Booked!"),
+                L("clara", "And every guest bought a ticket on our line to get here."),
+                L("hank", "Blackwell tried to book a room. Under a false name. They turned him away."),
+            }),
             ["goldenspike"] = (new[]
             {
                 L("silas", "The eastern line is three hundred miles out. Meet it, and the territory becomes a state."),
@@ -147,6 +169,19 @@ namespace Ironhorse.Game
         public void OnContract() { Beat("first_contract"); }
         public void OnProject(ProjectDef p) { Finale(p.Id); }
 
+        /// <summary>True until the player has heard a project's story: its map pin wears a NEW bubble.</summary>
+        public bool IsNew(string projectId) { return Projects.ContainsKey(projectId) && !Seen("pitch_" + projectId); }
+
+        /// <summary>Plays a project's story (when it hasn't been heard), then runs <paramref name="after"/>.</summary>
+        public void Open(string projectId, Action after)
+        {
+            if (!IsNew(projectId) || Celebrations.Instance == null) { after(); return; }
+            Pitch(projectId);
+            Celebrations.Instance.Enqueue(() => Then(after));
+        }
+
+        static System.Collections.IEnumerator Then(Action a) { a(); yield break; }
+
         void Start()
         {
             if (S.State.level <= 1 && S.State.storySeen.Count == 0) Invoke(nameof(Intro), 2.4f);
@@ -162,8 +197,7 @@ namespace Ironhorse.Game
             if (level == 4) Beat("rival_arrives");
             if (level == 10) Beat("rival_offer");
             if (level == Balance.GoldenAgeLevel) Beat("golden_age");
-            foreach (var p in DepthContent.Projects)
-                if (p.UnlockLevel == level) Pitch(p.Id);
+            // New projects aren't told here: their map pin shows a NEW bubble, and the story plays when it's tapped.
         }
 
         bool Seen(string id) { return S.State.storySeen.Contains(id); }

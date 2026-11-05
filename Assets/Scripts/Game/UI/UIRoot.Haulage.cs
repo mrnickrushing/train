@@ -134,6 +134,7 @@ namespace Ironhorse.Game
         string PinKey(ProjectDef def, bool locked)
         {
             if (locked) return "L" + S.Level;
+            if (StoryDirector.Instance != null && StoryDirector.Instance.IsNew(def.Id)) return "NEW";
             var pr = S.Progress(def.Id);
             int need = S.StillToSend(def.Id);
             int moving = S.HaulersTo(def.Id).Length;
@@ -154,6 +155,17 @@ namespace Ironhorse.Game
 
             var face = FaceBadge(go.transform, route != null ? route.Character : "foreman", 132, locked);
             HudShadow(face);
+            bool isNew = !locked && StoryDirector.Instance != null && StoryDirector.Instance.IsNew(def.Id);
+            if (isNew)
+            {
+                // The storyline hasn't started: a NEW flag, and the pin bobs to draw the eye.
+                var flag = Box(face.transform, UIKit.Red, 86, 38, "New");
+                Row(flag.gameObject, 0, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleCenter);
+                T(flag.transform, "NEW", 26, Color.white, TextAnchor.MiddleCenter, true);
+                Ignore(flag);
+                UIKit.Place(flag.gameObject, new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(-14, -12), new Vector2(86, 38));
+                go.AddComponent<PinBob>();
+            }
             var ribbon = Box(go.transform, Palette.Hex(0x1F2737), -1, 48, "Name");
             ribbon.color = new Color(0.1f, 0.12f, 0.17f, 0.92f);
             Row(ribbon.gameObject, 0, new RectOffset(18, 18, 0, 0), TextAnchor.MiddleCenter);
@@ -164,7 +176,11 @@ namespace Ironhorse.Game
             need.color = new Color(0.16f, 0.19f, 0.26f, 0.95f);
             Row(need.gameObject, 8, new RectOffset(12, 16, 2, 2), TextAnchor.MiddleCenter);
             need.gameObject.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-            if (locked)
+            if (isNew)
+            {
+                T(need.transform, "Tap to hear the story", 26, BGold, TextAnchor.MiddleCenter, true).horizontalOverflow = HorizontalWrapMode.Overflow;
+            }
+            else if (locked)
             {
                 UIKit.Icon(need.transform, "lock", 32);
                 T(need.transform, "Level " + def.UnlockLevel, 28, Color.white, TextAnchor.MiddleCenter, true).horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -201,6 +217,15 @@ namespace Ironhorse.Game
             return go;
         }
 
+        sealed class PinBob : MonoBehaviour
+        {
+            void LateUpdate()
+            {
+                var rt = (RectTransform)transform;
+                rt.anchoredPosition += new Vector2(0, Mathf.Abs(Mathf.Sin(Time.unscaledTime * 3f)) * 14f);
+            }
+        }
+
         /// <summary>Per-frame label updates on a pin.</summary>
         sealed class PinTimer : MonoBehaviour
         {
@@ -225,8 +250,14 @@ namespace Ironhorse.Game
             if (def == null) return;
             CloseWindow();
             if (!S.IsProjectUnlocked(def)) { Toast(def.Name + " opens at level " + def.UnlockLevel + ".", false); return; }
-            _siteId = projectId;
             if (ProjectSites.Instance != null) ProjectSites.Instance.Show(projectId);
+            // A storyline's first visit: the characters tell what they want built, then the site opens.
+            if (StoryDirector.Instance != null && StoryDirector.Instance.IsNew(projectId))
+            {
+                StoryDirector.Instance.Open(projectId, () => OpenProjectSite(projectId));
+                return;
+            }
+            _siteId = projectId;
             BuildSiteView();
         }
 
