@@ -173,5 +173,17 @@ namespace Ironhorse.Tests
             Assert.IsTrue(_s.NorthOpen);
             Assert.IsTrue(_s.IsProjectUnlocked(light));
         }
+
+        [Test]
+        public void Windfall_GivesTheOutpostsGoods()
+        {
+            _s.State.level = 6;
+            var ev = new MapEventState { uid = 999, kind = MapEventKind.Windfall, destinationId = "pinecrest", startsAt = _clock.Now, expiresAt = _clock.Now + 600 };
+            _s.State.events.Add(ev);
+            int before = _s.Amount("timber");
+            Assert.IsTrue(_s.ClaimEvent(999).Ok);
+            Assert.AreEqual(before + Hooks.WindfallAmount(6), _s.Amount("timber"));
+            Assert.AreEqual(0, _s.State.events.Count);
+        }
     }
 }

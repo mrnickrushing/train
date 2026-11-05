@@ -407,6 +407,7 @@ namespace Ironhorse.Game
                 case MapEventKind.GoldStrike: AudioManager.Play(Sfx.Bell); Toast("Gold strike rumor at " + d.Name + "! Double cargo from there for an hour.", true); break;
                 case MapEventKind.Bandits: Toast("Bandits spotted on the " + d.Name + " line!", false); break;
                 case MapEventKind.Traveler: Toast("A stranded traveler is waiting at the station.", true); break;
+                case MapEventKind.Windfall: AudioManager.Play(Sfx.Bell); Toast("A windfall of " + GameDatabase.Resource(d.ResourceId).Name + " is waiting at " + d.Name + "!", true); break;
                 default: Toast("Tumbleweeds are blowing through town. Tap them for coins!", true); break;
             }
         }
@@ -479,6 +480,15 @@ namespace Ironhorse.Game
                 {
                     var pos = Station.DepotPosition + new Vector3(-14 + (e.spot % 5) * 7, 13, -3);
                     ShowMarker(pos, "traveler", h => UIKit.Icon(h, "traveler", 64), Fmt.Time(S.EventLeft(e)), -1, () => ClaimMapEvent(uid, pos), true);
+                }
+                else if (e.kind == MapEventKind.Windfall)
+                {
+                    var at = DestinationSites.PinAt(e.destinationId);
+                    var d = GameDatabase.Destination(e.destinationId);
+                    if (at == null || d == null) continue;
+                    var pos = at.Value + Vector3.up * 20;
+                    string res = d.ResourceId;
+                    ShowMarker(pos, "windfall:" + res, h => UIKit.ResIcon(h, res, 66), "+" + Hooks.WindfallAmount(S.Level), -1, () => ClaimMapEvent(uid, pos), true);
                 }
                 else if (e.kind == MapEventKind.Tumbleweed)
                 {

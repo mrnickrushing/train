@@ -154,7 +154,7 @@ namespace Ironhorse.Core
         public bool sold;
     }
 
-    public enum MapEventKind { Traveler, GoldStrike, Tumbleweed, Bandits }
+    public enum MapEventKind { Traveler, GoldStrike, Tumbleweed, Bandits, Windfall }
 
     /// <summary>Something happening on the map for a while: a traveler, a gold strike, tumbleweeds, bandits.</summary>
     [Serializable]
