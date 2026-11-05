@@ -199,8 +199,12 @@ def model(i):
         return print("have", g)
     if not os.path.exists(p):
         raise SystemExit("no concept for " + i)
-    url = hf("generate", "create", "tripo_h3_1_image_to_3d", "--image", p, "--texture_quality", "detailed",
-             "--geometry_quality", "standard", "--pbr", "true", "--wait", "--wait-timeout", "25m")
+    if os.environ.get("MODEL3D") == "hunyuan":  # fallback when Tripo is failing
+        url = hf("generate", "create", "hunyuan3d_v3_image_to_3d", "--image", p, "--face_count", "300000",
+                 "--wait", "--wait-timeout", "30m")
+    else:
+        url = hf("generate", "create", "tripo_h3_1_image_to_3d", "--image", p, "--texture_quality", "detailed",
+                 "--geometry_quality", "standard", "--pbr", "true", "--wait", "--wait-timeout", "25m")
     fetch(url, g)
     print("model", i, url)
 
