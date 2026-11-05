@@ -82,7 +82,10 @@ namespace Ironhorse.Game
         }
 
         /// <summary>True where a project site stands (no trees, cacti or rocks there).</summary>
-        public static bool Blocks(float x, float z)
+        public static bool Blocks(float x, float z) { return BlocksCore(x, z) || Countryside.Blocks(x, z); }
+
+        /// <summary>Every reserved ground except the countryside homesteads (which pick their spots from it).</summary>
+        public static bool BlocksCore(float x, float z)
         {
             if (HaulRoutes.Blocks(x, z)) return true; // haul roads, the freight yard and the landing
             if (DestinationRoutes.Blocks(x, z)) return true; // destination spurs and sites
