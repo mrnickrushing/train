@@ -213,7 +213,7 @@ namespace Ironhorse.Game
                 return b;
             }
 
-            for (int i = 0; i < 20000; i++) // dense over the whole map, Eagle Lake's basin included
+            for (int i = 0; i < 15000; i++) // dense over the whole map, Eagle Lake's basin included
             {
                 float x = R(ValleyTerrain.MinX + 10, ValleyTerrain.MaxX - 10), z = R(ValleyTerrain.MinZ + 10, ValleyTerrain.MaxZ - 10);
                 if (ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue; // the trestle cut-off and the Fort Calder wire
@@ -283,7 +283,7 @@ namespace Ironhorse.Game
 
             // Ground cover over the open country: shrub clumps, sagebrush and the odd rock, so meadows and hillsides
             // read busy and natural from the top of the zoom (instanced, so thousands cost little).
-            for (int i = 0; i < 9000; i++)
+            for (int i = 0; i < 5000; i++)
             {
                 float x = R(ValleyTerrain.MinX + 10, ValleyTerrain.MaxX - 10), z = R(ValleyTerrain.MinZ + 10, ValleyTerrain.MaxZ - 10);
                 float wild = ValleyTerrain.Wildness(x, z);

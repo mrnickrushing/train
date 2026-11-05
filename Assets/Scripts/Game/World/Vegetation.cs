@@ -62,7 +62,7 @@ namespace Ironhorse.Game
                 k = new Kind { Mesh = mf.sharedMesh, Material = mat, Local = mf.transform.localToWorldMatrix }; // keeps the FBX root's axis-conversion rotation
                 k.FarMesh = k.Mesh; k.FarMaterial = mat; k.FarLocal = k.Local;
                 k.SmallPlant = kind == "sage";
-                k.FarShadows = category != "Trees";
+                k.FarShadows = category != "Trees" && kind != "boulders"; // distant rocks skip the shadow pass
                 k.LocalBounds = Transform(k.Local, k.Mesh.bounds);
                 var far = ModelRegistry.Prefab(category, kind + "_far");
                 var fmf = far != null ? far.GetComponentInChildren<MeshFilter>() : null;
@@ -151,6 +151,8 @@ namespace Ironhorse.Game
             var cam = CameraRig.Instance != null ? CameraRig.Instance.Cam : Camera.main;
             if (cam == null) return;
             GeometryUtility.CalculateFrustumPlanes(cam, _planes);
+            float zoom = CameraRig.Instance != null ? CameraRig.Instance.Distance : 95f;
+            float thin = Mathf.Lerp(1f, 0.7f, Mathf.InverseLerp(180f, 300f, zoom));
             foreach (var k in _kinds.Values)
             {
                 if (k == null) continue;
@@ -168,10 +170,26 @@ namespace Ironhorse.Game
                     var list = kv.Value;
                     List<Matrix4x4> farList;
                     if (!close && k.FarCells.TryGetValue(kv.Key, out farList)) list = farList;
-                    for (int start = 0; start < list.Count; start += 1023)
-                        Graphics.RenderMeshInstanced(close ? near : far, close ? k.Mesh : k.FarMesh, 0, list, Mathf.Min(1023, list.Count - start), start);
+                    // Zoomed far out, distant cells draw a random share of their instances (the lists are shuffled
+                    // once), so the whole map stays light on phones while forests still read as forests.
+                    int count = list.Count;
+                    if (!close && thin < 1)
+                    {
+                        if (!_shuffled.Contains(list)) { Shuffle(list); _shuffled.Add(list); }
+                        count = Mathf.CeilToInt(count * thin);
+                    }
+                    for (int start = 0; start < count; start += 1023)
+                        Graphics.RenderMeshInstanced(close ? near : far, close ? k.Mesh : k.FarMesh, 0, list, Mathf.Min(1023, count - start), start);
                 }
             }
+        }
+
+        readonly HashSet<List<Matrix4x4>> _shuffled = new HashSet<List<Matrix4x4>>();
+
+        static void Shuffle(List<Matrix4x4> list)
+        {
+            var rng = new System.Random(list.Count * 7919);
+            for (int i = list.Count - 1; i > 0; i--) { int j = rng.Next(i + 1); var t = list[i]; list[i] = list[j]; list[j] = t; }
         }
 
         void OnDestroy()
