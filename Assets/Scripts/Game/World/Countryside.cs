@@ -14,6 +14,7 @@ namespace Ironhorse.Game
         struct Farm { public Vector3 C; public float Yaw; public int Seed; }
 
         static List<Farm> _farms;
+        static readonly List<Vector3> _outskirts = new List<Vector3>();
 
         static List<Farm> Farms
         {
@@ -61,6 +62,8 @@ namespace Ironhorse.Game
         /// <summary>True on a homestead's ground (scenery keeps off).</summary>
         public static bool Blocks(float x, float z)
         {
+            foreach (var o in _outskirts)
+                if ((o.x - x) * (o.x - x) + (o.z - z) * (o.z - z) < 9 * 9) return true;
             foreach (var f in Farms)
                 if ((f.C.x - x) * (f.C.x - x) + (f.C.z - z) * (f.C.z - z) < 30 * 30) return true;
             return false;
@@ -126,7 +129,58 @@ namespace Ironhorse.Game
                     }
                 }
             }
+            Outskirts(mb);
             if (mb.VertexCount > 0) mb.ToObject("Countryside", root);
+        }
+
+        /// <summary>Houses, sheds and kitchen gardens on the edge of town, outside the building plots, so the town
+        /// reads as lived-in from the first minute.</summary>
+        static void Outskirts(MeshBuilder mb)
+        {
+            var rng = new System.Random(515);
+            var t = WorldLayout.TownRect;
+            float px0 = WorldLayout.PlotOriginX - WorldLayout.PlotPitchX, px1 = WorldLayout.PlotOriginX + WorldLayout.PlotCols * WorldLayout.PlotPitchX;
+            int placed = 0;
+            for (int i = 0; i < 400 && placed < 26; i++)
+            {
+                // A band 6-24 m outside the plot grid on the east, north and west.
+                float x, z;
+                int side = rng.Next(3);
+                if (side == 0) { x = px1 + 4 + (float)rng.NextDouble() * 18; z = -4 + (float)rng.NextDouble() * 96; }
+                else if (side == 1) { x = px0 - 2 - (float)rng.NextDouble() * 18; z = 30 + (float)rng.NextDouble() * 60; }
+                else { x = px0 + (float)rng.NextDouble() * (px1 - px0); z = t.yMax + 2 + (float)rng.NextDouble() * 6; }
+                if (ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue;
+                if (WorldLayout.ScenicLoop.SqrDistanceXZ(x, z) < 12 * 12) continue;
+                float h = ValleyTerrain.Height(x, z);
+                if (Mathf.Abs(ValleyTerrain.Height(x + 4, z) - h) > 0.8f || Mathf.Abs(ValleyTerrain.Height(x, z + 4) - h) > 0.8f) continue;
+                float d;
+                if (ValleyTerrain.WaterMask(x, z, out d) > 0.01f) continue;
+                bool near = false;
+                foreach (var o in _outskirts) if ((o.x - x) * (o.x - x) + (o.z - z) * (o.z - z) < 13 * 13) { near = true; break; }
+                if (near) continue;
+                var p = new Vector3(x, h, z);
+                _outskirts.Add(p);
+                placed++;
+                // Face the town.
+                var toTown = new Vector3(t.center.x - x, 0, t.center.y - z);
+                var rot = Quaternion.LookRotation(-toTown.normalized);
+                Vegetation.AddModel("Buildings", rng.Next(3) == 0 ? "clapboard" : "cabin", p, rot);
+                // A little garden plot and a picket fence beside it.
+                var g = p + rot * new Vector3(7, 0, 0);
+                g.y = ValleyTerrain.Height(g.x, g.z);
+                mb.Matte();
+                mb.Push().Translate(g + Vector3.up * 0.08f).Rotate(rot);
+                mb.Surf = SurfaceKind.Dirt;
+                mb.Box(Vector3.zero, new Vector3(4.5f, 0.12f, 6f), Palette.Hex(0x6E5034));
+                mb.Surf = SurfaceKind.Auto;
+                for (int r = 0; r < 4; r++) mb.Box(new Vector3(-1.6f + r * 1.05f, 0.2f, 0), new Vector3(0.5f, 0.35f, 5.4f), Palette.Hex(0x6E9440));
+                for (float f = -3f; f <= 3.01f; f += 0.75f)
+                {
+                    mb.Box(new Vector3(-2.5f, 0.4f, f), new Vector3(0.08f, 0.8f, 0.08f), Palette.White);
+                    mb.Box(new Vector3(2.5f, 0.4f, f), new Vector3(0.08f, 0.8f, 0.08f), Palette.White);
+                }
+                mb.Pop();
+            }
         }
     }
 }
