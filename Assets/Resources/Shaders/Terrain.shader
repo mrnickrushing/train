@@ -26,6 +26,8 @@ Shader "Ironhorse/Terrain"
         // Town ground mask (global, from TownStreets): R dirt road, G gravel street, B worn lot, A wheel ruts.
         TEXTURE2D(_TownMask); SAMPLER(sampler_TownMask);
         float4 _TownMaskRect; // xMin, zMin, 1/width, 1/height (0 = no mask)
+        TEXTURE2D(_RoadMask); SAMPLER(sampler_RoadMask);
+        float4 _RoadMaskRect; // haul roads across the whole valley: r = dirt, g = wheel ruts
         CBUFFER_START(UnityPerMaterial)
             float4 _MacroTex_ST;
         CBUFFER_END
@@ -117,6 +119,10 @@ Shader "Ironhorse/Terrain"
                 // Streets and lots painted into the ground: soft-edged dirt tracks, gravel, worn earth.
                 float2 muv = (pos.xz - _TownMaskRect.xy) * _TownMaskRect.zw;
                 float4 town = _TownMaskRect.z > 0 && all(muv > 0) && all(muv < 1) ? SAMPLE_TEXTURE2D(_TownMask, sampler_TownMask, muv) : 0;
+                float2 ruv = (pos.xz - _RoadMaskRect.xy) * _RoadMaskRect.zw;
+                float2 haul = _RoadMaskRect.z > 0 && all(ruv > 0) && all(ruv < 1) ? SAMPLE_TEXTURE2D(_RoadMask, sampler_RoadMask, ruv).rg : 0;
+                town.r = max(town.r, haul.r * (1 - town.g)); // country roads fade into the town's gravel where they meet
+                town.a = max(town.a, haul.g);
                 float cover = saturate(town.r + town.g + town.b);
                 [unroll] for (int k0 = 0; k0 < 6; k0++) w[k0] *= 1 - cover;
                 w[2] += town.r + town.b; // dirt (roads and worn lots)

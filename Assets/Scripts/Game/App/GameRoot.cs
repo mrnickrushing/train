@@ -132,6 +132,7 @@ namespace Ironhorse.Game
             _loading.SetProgress(0.3f, "Planting the pines...");
             yield return null;
             Scenery.Build(world);
+            HaulWorld.Build(world);
             _loading.SetProgress(0.55f, "Laying track...");
             yield return null;
             Yard.Build(world);
@@ -151,6 +152,7 @@ namespace Ironhorse.Game
             Child<Life>("Townsfolk");
             Child<AudioManager>("Audio");
             Child<TrainManager>("Trains");
+            Child<HaulerViews>("Haulers");
             _loading.SetProgress(0.85f, "Raising the town...");
             yield return null;
             Child<TownView>("Town");
@@ -340,8 +342,16 @@ namespace Ironhorse.Game
                 if (c.position.x > 480) c.position -= new Vector3(960, 0, 0);
                 if (c.position.z > 470) c.position -= new Vector3(0, 0, 740);
                 if (!show) continue;
-                float d = new Vector2(c.position.x - focus.x, c.position.z - focus.z).magnitude;
-                _block.SetColor("_Color", new Color(1, 1, 1, zoomFade * Mathf.InverseLerp(60, 170, d)));
+                // Fade by where the cloud lands on screen: only the outer edges of the view keep their wisps, so the
+                // territory map stays clear in the middle (the camera is tilted, so ground distance doesn't tell).
+                float edge = 1;
+                if (rig != null && rig.Cam != null)
+                {
+                    var vp = rig.Cam.WorldToViewportPoint(c.position);
+                    float off = Mathf.Max(Mathf.Abs(vp.x - 0.5f), Mathf.Abs(vp.y - 0.5f));
+                    edge = vp.z < 0 ? 0 : Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.36f, 0.56f, off));
+                }
+                _block.SetColor("_Color", new Color(1, 1, 1, zoomFade * edge));
                 _renderers[i].SetPropertyBlock(_block);
             }
         }

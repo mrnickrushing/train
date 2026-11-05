@@ -46,6 +46,11 @@ namespace Ironhorse.Game
             return Get("bldg:" + d.Id, root => ModelRegistry.Spawn(ModelRegistry.Buildings, d.Id, root), building: true);
         }
 
+        public static Texture Hauler(HaulerDef d)
+        {
+            return Get("haul:" + d.Id, root => HaulerViews.BuildModel(d, root));
+        }
+
         /// <summary>A RawImage showing the model, sized w × h, for use inside layouts.</summary>
         public static RawImage Image(Transform parent, Texture tex, float w, float h)
         {

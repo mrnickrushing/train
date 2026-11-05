@@ -111,6 +111,7 @@ namespace Ironhorse.Game
 
         void Update()
         {
+            bool wasDirty = _dirty;
             if (_dirty)
             {
                 _dirty = false;
@@ -129,6 +130,7 @@ namespace Ironhorse.Game
                 UpdateCoach();
             }
             UpdateWelcome();
+            UpdateSiteView(wasDirty);
             UpdateMarkers();
             AnimateNextStep();
         }
@@ -731,6 +733,7 @@ namespace Ironhorse.Game
             if (level == Hooks.ExpressLevel) unlocks.Insert(0, "New: express telegrams and Full Steam combos");
             if (level == Frontier.CrewLevel) unlocks.Insert(0, "New: engineers ride your locomotives");
             if (level == Frontier.PeddlerLevel) unlocks.Insert(0, "New: the traveling peddler visits");
+            if (level == Haulage.UnlockLevel) unlocks.Insert(0, "New: haulers carry goods to projects on the map");
             if (!G.Session.StationComplete && !G.Session.LayingPlatform && level == G.Session.NextPlatformLevel)
                 unlocks.Insert(0, "New: lay platform " + (G.Session.PlatformsBuilt + 1) + " for another locomotive");
             if (level == Balance.GoldenAgeLevel) unlocks.Insert(0, "THE GOLDEN AGE BEGINS!");
@@ -860,7 +863,9 @@ namespace Ironhorse.Game
         void UpdateMarkers()
         {
             _markerUsed = 0;
-            if (S != null && !WindowOpen && TownView.Instance != null && TownView.Instance.PlacingDefId == null)
+            bool mapView = S != null && !WindowOpen && !SiteOpen && TownView.Instance != null && TownView.Instance.PlacingDefId == null;
+            UpdateProjectPins(mapView);
+            if (mapView)
             {
                 foreach (var t in S.State.trains)
                 {

@@ -105,7 +105,7 @@ namespace Ironhorse.Game
             if (ProjectSites.Instance != null && ProjectSites.Instance.HasSite(def.Id))
             {
                 string sid = def.Id;
-                var view = Big(photo.transform, "View site", BBlue, () => { CloseWindow(); ProjectSites.Instance.Show(sid); }, 200, 62, true, 28);
+                var view = Big(photo.transform, "View site", BBlue, () => OpenProjectSite(sid), 200, 62, true, 28);
                 var vle = view.GetComponent<LayoutElement>();
                 if (vle == null) vle = view.gameObject.AddComponent<LayoutElement>();
                 vle.ignoreLayout = true;
@@ -146,7 +146,8 @@ namespace Ironhorse.Game
             string id = def.Id, rid = st.ResourceId;
             var btns = HBox(card.transform, 12, 0, TextAnchor.MiddleCenter, -1, 92);
             bool any = S.Amount(rid) > 0;
-            Big(btns.transform, "Deliver", any ? UIKit.Green : UIKit.Disabled, () => Result(S.DeliverToProject(id), Sfx.Deliver), any ? 528 : 380, 88, any, 40);
+            // Goods travel by road or river now: the button takes the player to the site to pick a hauler.
+            Big(btns.transform, "Send haulers", any ? UIKit.Green : UIKit.WoodLight, () => OpenProjectSite(id), any ? 528 : 380, 88, true, 38);
             if (!any) Big(btns.transform, "Go", BBlue, () => GoGet(rid), 136, 88, true, 40);
         }
 

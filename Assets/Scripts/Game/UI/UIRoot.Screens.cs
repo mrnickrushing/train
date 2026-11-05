@@ -883,9 +883,11 @@ namespace Ironhorse.Game
             Big(right, "Locomotives", _depotTab == "locos" ? UIKit.Gold : UIKit.WoodLight, () => { _depotTab = "locos"; RebuildWindow(); }, 270, 76, true, 34);
             Big(right, "Wagons", _depotTab == "wagons" ? UIKit.Gold : UIKit.WoodLight, () => { _depotTab = "wagons"; RebuildWindow(); }, 200, 76, true, 34);
             var album = Big(right, "Album", _depotTab == "album" ? UIKit.Gold : UIKit.WoodLight, () => { _depotTab = "album"; RebuildWindow(); }, 180, 76, true, 34);
+            if (S.HaulageUnlocked) Big(right, "Haulers", _depotTab == "haulers" ? UIKit.Gold : UIKit.WoodLight, () => { _depotTab = "haulers"; RebuildWindow(); }, 210, 76, true, 34);
             if (S.CrewUnlocked) Big(right, "Crew", UIKit.WoodLight, () => OpenCrew(), 150, 76, true, 34);
             if (S.AlbumClaimable > 0) UIKit.Badge(album.transform, S.AlbumClaimable.ToString(), UIKit.Red);
             if (_depotTab == "album") AlbumDepot(body);
+            else if (_depotTab == "haulers") HaulerDepot(body);
             else if (_depotTab == "wagons") WagonDepot(body);
             else LocoDepot(body);
         }

@@ -79,6 +79,7 @@ namespace Ironhorse.Game
         /// <summary>True where a project site stands (no trees, cacti or rocks there).</summary>
         public static bool Blocks(float x, float z)
         {
+            if (HaulRoutes.Blocks(x, z)) return true; // haul roads, the freight yard and the landing
             if (Cutoff.SqrDistanceXZ(x, z) < 8 * 8) return true;
             if (Mathf.Abs(z - TrestleZ) < 14 && x > SpanW - 8 && x < SpanE + 8) return true; // the gorge under the span
             if (WireRoute.SqrDistanceXZ(x, z) < 5 * 5) return true;
@@ -164,6 +165,13 @@ namespace Ironhorse.Game
         }
 
         public bool HasSite(string projectId) { return _sites.Exists(x => x.Id == projectId); }
+
+        /// <summary>Where a project's map pin floats (above the site), or null.</summary>
+        public Vector3? PinAt(string projectId)
+        {
+            var s = _sites.Find(x => x.Id == projectId);
+            return s == null ? (Vector3?)null : s.Focus + Vector3.up * 12f;
+        }
 
         void Refresh(Site s, bool keepExtras)
         {
