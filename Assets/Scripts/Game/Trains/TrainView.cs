@@ -356,31 +356,53 @@ namespace Ironhorse.Game
         {
             var s = G.Session;
             if (s == null) return;
-            var path = WorldLayout.ScenicLoop;
+            var loop = WorldLayout.ScenicLoop;
             var want = new HashSet<int>();
             int n = 0;
             foreach (var t in s.State.trains)
             {
-                if (t.destinationId != RouteId || s.HasArrived(t)) continue;
+                if (t.IsIdle || s.HasArrived(t)) continue;
+                bool excursion = t.destinationId == RouteId;
+                if (!excursion && !DestinationRoutes.Has(t.destinationId)) continue;
                 var tv = TrainManager.Instance.View(t.uid);
                 if (tv == null || tv.Current != TrainView.Phase.Away) continue;
-                want.Add(t.uid);
                 ExcursionView v;
                 if (!_views.TryGetValue(t.uid, out v) || v == null)
                 {
-                    v = new GameObject("Excursion " + t.uid).AddComponent<ExcursionView>();
+                    v = new GameObject("Out " + t.uid).AddComponent<ExcursionView>();
                     v.transform.SetParent(transform, false);
                     _views[t.uid] = v;
                 }
+                if (excursion)
+                {
+                    // Laps from the moment it left, each excursion train a third of the loop behind the one before.
+                    float sAt = (float)(s.Now - t.departedAt) * Speed + n * loop.Length / 3f;
+                    v.gameObject.SetActive(true);
+                    v.Show(t, s);
+                    v.Run(loop, Mathf.Repeat(sAt, loop.Length));
+                    n++;
+                    want.Add(t.uid);
+                    continue;
+                }
+                // A spur trip: run out to the depot, stand at the platform loading, run back to the junction.
+                double total = t.arrivesAt - t.departedAt;
+                double awayFrom = t.departedAt + System.Math.Min(24, total * 0.45), awayTo = t.arrivesAt - System.Math.Min(28, total * 0.45);
+                double span = awayTo - awayFrom, at = s.Now - awayFrom;
+                var route = DestinationRoutes.Route(t.destinationId);
+                double run = System.Math.Min(route.Length / 11.0, span * 0.42);
+                want.Add(t.uid);
+                v.gameObject.SetActive(true);
                 v.Show(t, s);
-                // Laps from the moment it left, each excursion train a third of the loop behind the one before.
-                float sAt = (float)(s.Now - t.departedAt) * Speed + n * path.Length / 3f;
-                v.Run(path, Mathf.Repeat(sAt, path.Length));
-                n++;
+                if (at < run) v.Run(route, (float)(route.Length * Ease(at / run)));
+                else if (at > span - run) { var back = DestinationRoutes.Back(t.destinationId); v.Run(back, (float)(back.Length * Ease((at - (span - run)) / run))); }
+                else v.Run(route, route.Length - 6f);
             }
             foreach (var uid in _views.Keys.ToList())
                 if (!want.Contains(uid)) { if (_views[uid] != null) Destroy(_views[uid].gameObject); _views.Remove(uid); }
         }
+
+        /// <summary>Smooth start and stop for a run along a spur.</summary>
+        static double Ease(double u) { u = System.Math.Max(0, System.Math.Min(1, u)); return u * u * (3 - 2 * u); }
     }
 
     /// <summary>One train on the scenic loop: the real consist of the train on the excursion.</summary>

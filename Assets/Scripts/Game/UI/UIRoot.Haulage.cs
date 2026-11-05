@@ -234,6 +234,79 @@ namespace Ironhorse.Game
             void Update() { _t -= Time.unscaledDeltaTime; if (_t > 0) return; _t = 0.25f; Tick?.Invoke(); }
         }
 
+        // ================================================================ destination pins
+
+        readonly Dictionary<string, Pin> _destPins = new Dictionary<string, Pin>();
+
+        /// <summary>A pin over every destination on the map: its name and cargo (a lock and level while closed);
+        /// tapping it sends a train there.</summary>
+        void UpdateDestinationPins(bool show)
+        {
+            var seen = new HashSet<string>();
+            if (show && CameraRig.Instance != null)
+            {
+                var cam = CameraRig.Instance.Cam;
+                foreach (var d in GameDatabase.Destinations)
+                {
+                    var at = DestinationSites.PinAt(d.Id);
+                    if (at == null) continue;
+                    var sp = cam.WorldToScreenPoint(at.Value);
+                    if (sp.z < 0) continue;
+                    Vector2 local;
+                    if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_markers, sp, null, out local)) continue;
+                    seen.Add(d.Id);
+                    bool locked = !S.IsDestinationUnlocked(d);
+                    string key = locked ? "L" : "U";
+                    Pin pin;
+                    if (!_destPins.TryGetValue(d.Id, out pin) || pin.Key != key)
+                    {
+                        if (pin != null) Destroy(pin.Go);
+                        pin = new Pin { Go = BuildDestPin(d, locked), Key = key };
+                        _destPins[d.Id] = pin;
+                    }
+                    pin.Go.SetActive(true);
+                    var rt = UIKit.RT(pin.Go);
+                    rt.localScale = Vector3.one * Mathf.Lerp(0.95f, 0.66f, Mathf.InverseLerp(60, 320, CameraRig.Instance.Distance));
+                    rt.anchoredPosition = local;
+                }
+            }
+            foreach (var kv in _destPins) if (!seen.Contains(kv.Key)) kv.Value.Go.SetActive(false);
+        }
+
+        GameObject BuildDestPin(DestinationDef d, bool locked)
+        {
+            var go = UIKit.Node("Dest " + d.Id, _markers);
+            go.transform.SetAsFirstSibling(); // under the project pins
+            var rt = UIKit.RT(go);
+            rt.pivot = new Vector2(0.5f, 0);
+            rt.sizeDelta = new Vector2(300, 140);
+            var col = UIKit.VStack(go, -10, 0, TextAnchor.LowerCenter);
+            col.childForceExpandWidth = false;
+            col.childForceExpandHeight = false;
+            var badge = UIKit.Node("Badge", go.transform);
+            var bi = badge.AddComponent<Image>();
+            bi.sprite = UIKit.Circle;
+            bi.color = locked ? Palette.Hex(0x8A8F99) : Color.white;
+            UIKit.Size(badge, 84, 84);
+            HudShadow(badge);
+            var holder = UIKit.Node("Icon", badge.transform);
+            UIKit.Stretch(holder, 10);
+            UIKit.HStack(holder, 0, 0, TextAnchor.MiddleCenter);
+            if (locked) UIKit.Icon(holder.transform, "lock", 52);
+            else if (d.IsTown) UIKit.Icon(holder.transform, "people", 60);
+            else UIKit.ResIcon(holder.transform, d.ResourceId, 58);
+            var ribbon = Box(go.transform, BCardDeep, -1, 44, "Name");
+            ribbon.color = new Color(0.1f, 0.12f, 0.17f, 0.9f);
+            Row(ribbon.gameObject, 6, new RectOffset(14, 14, 0, 0), TextAnchor.MiddleCenter);
+            ribbon.gameObject.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            T(ribbon.transform, locked ? d.Name + "  ·  Lv " + d.UnlockLevel : d.Name, 26, locked ? BLabel : Color.white, TextAnchor.MiddleCenter, true).horizontalOverflow = HorizontalWrapMode.Overflow;
+            var hit = go.AddComponent<Image>();
+            hit.color = new Color(0, 0, 0, 0);
+            string id = d.Id;
+            Clickable(go, () => { if (locked) Toast(d.Name + " opens at level " + d.UnlockLevel + ".", false); else OpenTrainTo(id); });
+            return go;
+        }
+
         // ================================================================ the site view
 
         string _siteId;

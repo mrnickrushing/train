@@ -204,22 +204,22 @@ namespace Ironhorse.Game
             var root = new GameObject("Fog " + id);
             root.transform.SetParent(transform, false);
             var rng = new System.Random(id.GetHashCode());
-            for (int i = 0; i < 9; i++)
+            for (int i = 0; i < 16; i++)
             {
-                float a = (float)rng.NextDouble() * Mathf.PI * 2, d = (float)rng.NextDouble() * 34f;
-                float w = 46 + (float)rng.NextDouble() * 34, h = w * 0.62f;
+                float a = (float)rng.NextDouble() * Mathf.PI * 2, d = Mathf.Sqrt((float)rng.NextDouble()) * 40f;
+                float w = 40 + (float)rng.NextDouble() * 40, h = w * 0.62f;
                 int v = rng.Next(3);
                 var mesh = new Mesh { name = "Fog" };
                 mesh.vertices = new[] { new Vector3(-w / 2, 0, -h / 2), new Vector3(w / 2, 0, -h / 2), new Vector3(w / 2, 0, h / 2), new Vector3(-w / 2, 0, h / 2) };
                 float v0 = v / 3f, v1 = (v + 1) / 3f;
                 mesh.uv = new[] { new Vector2(0, v0), new Vector2(1, v0), new Vector2(1, v1), new Vector2(0, v1) };
-                var alpha = new Color(1, 1, 1, 0.85f + (float)rng.NextDouble() * 0.15f);
+                var alpha = new Color(1, 1, 1, 0.5f + (float)rng.NextDouble() * 0.25f);
                 mesh.colors = new[] { alpha, alpha, alpha, alpha };
                 mesh.triangles = new[] { 0, 2, 1, 0, 3, 2 };
                 mesh.RecalculateBounds();
                 var go = new GameObject("Puff");
                 go.transform.SetParent(root.transform, false);
-                go.transform.position = new Vector3(c.x + Mathf.Cos(a) * d, 14 + i * 2.2f, c.z + Mathf.Sin(a) * d);
+                go.transform.position = new Vector3(c.x + Mathf.Cos(a) * d, 12 + i * 1.6f, c.z + Mathf.Sin(a) * d);
                 go.transform.rotation = Quaternion.Euler(0, (float)rng.NextDouble() * 360, 0);
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 var mr = go.AddComponent<MeshRenderer>();

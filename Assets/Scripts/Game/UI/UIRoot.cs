@@ -864,6 +864,7 @@ namespace Ironhorse.Game
         {
             _markerUsed = 0;
             bool mapView = S != null && !WindowOpen && !SiteOpen && TownView.Instance != null && TownView.Instance.PlacingDefId == null;
+            UpdateDestinationPins(mapView);
             UpdateProjectPins(mapView);
             if (mapView)
             {
