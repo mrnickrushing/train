@@ -311,6 +311,55 @@ namespace Ironhorse.Game
         // ================================================================ the site view
 
         string _siteId;
+        string _siteFilter = "all";
+
+        /// <summary>"Get More Resources": where the goods come from (Go) and any finished batch waiting at the factory
+        /// that makes them (Claim).</summary>
+        void GetMore(string resId)
+        {
+            var res = GameDatabase.Resource(resId);
+            var maker = MakerOf(resId);
+            var src = SourceOf(resId);
+            var b = maker != null ? S.State.buildings.FirstOrDefault(x => x.defId == maker.Id) : null;
+            int waiting = 0;
+            if (b != null && S.IsProductionDone(b)) waiting = maker.Recipe.Output.amount * S.FinishedJobs(b);
+            var dim = UIKit.Panel(_popupLayer, new Color(0, 0, 0, 0.75f), "GetMore");
+            dim.sprite = null;
+            UIKit.Stretch(dim.gameObject);
+            var card = Box(dim.transform, BCardDeep, 900, 560, "Card");
+            UIKit.Place(card.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 560));
+            card.gameObject.AddComponent<WindowIntro>();
+            Stack(card.gameObject, 16, new RectOffset(28, 28, 22, 26), TextAnchor.UpperCenter);
+            var top = HBox(card.transform, 0, 0, TextAnchor.MiddleLeft, -1, 64);
+            UIKit.Size(T(top.transform, "Get More Resources", 44, BGold, TextAnchor.MiddleLeft, true).gameObject, -1, -1, 1);
+            var go = dim.gameObject;
+            Big(top.transform, "X", UIKit.Red, () => Destroy(go), 76, 64, true, 40);
+            var head = Box(card.transform, Palette.Hex(0xC9D3E3), 440, 130, "Res");
+            Row(head.gameObject, 16, new RectOffset(18, 18, 0, 0), TextAnchor.MiddleCenter);
+            UIKit.ResIcon(head.transform, resId, 96);
+            T(head.transform, res.Name, 38, Palette.Hex(0x1F2737), TextAnchor.MiddleLeft, true);
+            Pill(head.transform, tr => UIKit.Icon(tr, "crate", 34), Fmt.Num(S.Amount(resId)), 30, null, BTile);
+            var row = HBox(card.transform, 24, 0, TextAnchor.MiddleCenter, -1, 230);
+            var a = VBox(row.transform, 10, 0, TextAnchor.MiddleCenter, 380);
+            T(a.transform, "Get more", 30, BLabel, TextAnchor.MiddleCenter, false, UIKit.Heading);
+            string where = src != null ? src.Name : maker != null ? maker.Name : "the territory";
+            var place = Box(a.transform, BTile, 360, 110, "Where");
+            Row(place.gameObject, 10, new RectOffset(14, 14, 0, 0), TextAnchor.MiddleCenter);
+            UIKit.Icon(place.transform, "nav_territory", 54);
+            T1(place.transform, where, 30, Color.white, TextAnchor.MiddleLeft, true);
+            Big(a.transform, "Go", BBlue, () => { Destroy(go); CloseProjectSite(); GoGet(resId); }, 360, 84, true, 40);
+            if (maker != null)
+            {
+                var c = VBox(row.transform, 10, 0, TextAnchor.MiddleCenter, 380);
+                T(c.transform, "Factory produce", 30, BLabel, TextAnchor.MiddleCenter, false, UIKit.Heading);
+                var wait = Box(c.transform, BTile, 360, 110, "Waiting");
+                Row(wait.gameObject, 10, new RectOffset(14, 14, 0, 0), TextAnchor.MiddleCenter);
+                UIKit.ResIcon(wait.transform, resId, 54);
+                T(wait.transform, waiting.ToString(), 40, Color.white, TextAnchor.MiddleCenter, true);
+                int uid = b != null ? b.uid : 0;
+                Big(c.transform, "Claim", waiting > 0 ? UIKit.Green : UIKit.Disabled, () => { var r = S.CollectProduction(uid); Result(r); if (r.Ok) Destroy(go); }, 360, 84, waiting > 0, 40);
+            }
+        }
         GameObject _site;
         readonly List<Action> _siteLive = new List<Action>();
         float _siteTick;
@@ -506,11 +555,18 @@ namespace Ironhorse.Game
             if (toSend > 0 && S.Amount(stage.ResourceId) <= 0)
             {
                 string rid = stage.ResourceId;
-                Big(info.transform, "Get " + res.Name, BBlue, () => { CloseProjectSite(); GoGet(rid); }, 300, 60, true, 30);
+                Big(info.transform, "Get " + res.Name, BBlue, () => GetMore(rid), 300, 60, true, 30);
             }
             var route = Haulage.Route(def.Id);
             if (route != null && route.WaterMeters > 0) Pill(info.transform, null, "On the river: boats can reach it", 26, BGood, new Color(0.1f, 0.12f, 0.17f, 0.9f));
 
+            // Filter by how they travel, like the depot.
+            var tabs = HBox(info.transform, 8, 0, TextAnchor.MiddleRight, -1, 60, 1);
+            foreach (var f in new[] { ("all", "All"), ("road", "Road"), ("water", "River") })
+            {
+                string key = f.Item1;
+                Big(tabs.transform, f.Item2, _siteFilter == key ? UIKit.Gold : UIKit.WoodLight, () => { _siteFilter = key; BuildSiteView(); }, 150, 56, true, 28);
+            }
             var holder = HBox(area.transform, 0, 0, TextAnchor.UpperLeft, -1, 310);
             var list = Scroller(holder.transform, "sitehaulers", true, 18);
             // Haulers at work here first, then the idle ones, then the rest of the yard, then ones to buy.
@@ -518,9 +574,11 @@ namespace Ironhorse.Game
                 .OrderBy(h => h.projectId == def.Id ? 0 : h.IsIdle ? 1 : 2)
                 .ThenBy(h => { int l; double sec; return S.CantHaul(h, def.Id, out l, out sec) == null ? 0 : 1; })
                 .ThenByDescending(h => S.HaulCapacity(h)).ToList();
-            foreach (var h in owned) HaulerCard(list, h, def);
+            System.Func<HaulerDef, bool> pass = d => _siteFilter == "all" || (_siteFilter == "water") == d.OnWater;
+            foreach (var h in owned) if (pass(Haulage.Hauler(h.defId))) HaulerCard(list, h, def);
             foreach (var d in Haulage.Haulers)
             {
+                if (!pass(d)) continue;
                 bool reach = Haulage.Distance(d, route) > 0;
                 if (!reach || S.HaulersOwned(d.Id) > 0) continue;
                 BuyHaulerCard(list, d);
