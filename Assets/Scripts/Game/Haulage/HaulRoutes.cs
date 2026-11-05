@@ -36,6 +36,13 @@ namespace Ironhorse.Game
             // On past the trestle up the river's mountain valley to Eagle Lake and the lodge on its south shore.
             { "lodge", new[] { V(-64, 46), V(-62, 64), V(-56, 100), V(-50, 140), V(-46, 178), V(-52, 206), V(-56, 240), V(-62, 290), V(-66, 340),
                 V(-56, 390), V(-44, 430), V(-34, 462), V(-14, 484), V(18, 488), V(44, 482) } },
+            // Later storylines: the winery and the capitol up the valley road, the opera house east, the mission south-west.
+            { "winery", new[] { V(-64, 46), V(-62, 64), V(-56, 100), V(-50, 140), V(-46, 178), V(-52, 206), V(-56, 240), V(-62, 290), V(-66, 340),
+                V(-56, 390), V(-20, 404), V(30, 414), V(78, 420) } },
+            { "capitol", new[] { V(-64, 46), V(-62, 64), V(-56, 100), V(-50, 140), V(-46, 178), V(-52, 206), V(-56, 240), V(-62, 290), V(-66, 340),
+                V(-56, 372), V(-30, 380), V(-8, 382) } },
+            { "opera", new[] { V(-64, 46), V(-56, 38), V(-20, 38), V(20, 38), V(56, 38), V(80, 42), V(106, 46), V(150, 70), V(200, 92), V(236, 128), V(252, 152) } },
+            { "mission", new[] { V(-64, 46), V(-56, 34), V(-50, 14), V(-50, -8), V(-55, -20), V(-55, -64), V(-72, -76), V(-110, -80), V(-140, -100), V(-155, -150), V(-160, -200), V(-160, -232) } },
             // A short spur up to the dam's east abutment.
             { "dam", new[] { V(-64, 46), V(-72, 58), V(-84, 66) } },
             // West over the river bridge and along the north side of the roundhouse to the mine.

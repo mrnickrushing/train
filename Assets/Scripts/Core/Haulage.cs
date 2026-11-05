@@ -66,6 +66,10 @@ namespace Ironhorse.Core
             new SiteRoute { ProjectId = "lighthouse",  RoadMeters = 0,   WaterMeters = 350, Character = "engineer", CharacterName = "Clara Whitlock" },
             new SiteRoute { ProjectId = "lodge",       RoadMeters = 515, WaterMeters = 375, Character = "investor", CharacterName = "Mr. Pemberton" },
             new SiteRoute { ProjectId = "dam",         RoadMeters = 30, WaterMeters = 0,  Character = "engineer", CharacterName = "Clara Whitlock" },
+            new SiteRoute { ProjectId = "winery",      RoadMeters = 520, WaterMeters = 0,   Character = "foreman",  CharacterName = "Hank" },
+            new SiteRoute { ProjectId = "mission",     RoadMeters = 370, WaterMeters = 0,   Character = "engineer", CharacterName = "Clara Whitlock" },
+            new SiteRoute { ProjectId = "opera",       RoadMeters = 365, WaterMeters = 0,   Character = "investor", CharacterName = "Mr. Pemberton" },
+            new SiteRoute { ProjectId = "capitol",     RoadMeters = 385, WaterMeters = 0,   Character = "investor", CharacterName = "Mr. Pemberton" },
             new SiteRoute { ProjectId = "goldenspike", RoadMeters = 205, WaterMeters = 0,   Character = "investor", CharacterName = "Mr. Pemberton" },
         };
 

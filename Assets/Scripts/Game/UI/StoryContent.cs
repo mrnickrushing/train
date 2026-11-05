@@ -127,6 +127,48 @@ namespace Ironhorse.Game
                 L("clara", "And every guest bought a ticket on our line to get here."),
                 L("hank", "Blackwell tried to book a room. Under a false name. They turned him away."),
             }),
+            ["winery"] = (new[]
+            {
+                L("hank", "My granddad grew grapes back in the old country. Those slopes north of town get sun all day."),
+                L("silas", "A winery? The eastern hotels pay a king's ransom for a good red."),
+                L("hank", "Then let's plant the vines and build her proper. Stone walls, cool cellars."),
+            }, new[]
+            {
+                L("hank", "First barrels are in the cellar. Smells like home."),
+                L("silas", "And the first crates are already sold, to three hotels in the capital."),
+            }),
+            ["mission"] = (new[]
+            {
+                L("clara", "There's an old adobe mission out in the southern desert. The bell tower's still standing."),
+                L("clara", "The desert towns gather there for every fiesta. If we restore it, the whole south will ride our line."),
+                L("hank", "Adobe, timber and a new bell. We'll get it out there."),
+            }, new[]
+            {
+                L("clara", "The bell rang this morning for the first time in thirty years."),
+                L("hank", "Folks rode in from every ranch and camp in the south. Half of them came by train."),
+            }),
+            ["opera"] = (new[]
+            {
+                L("silas", "Prosperity has money now, and money wants culture. An opera house, the grandest in the West."),
+                L("clara", "Brick, steel and copper for the lights. And gold leaf for the boxes, I suppose."),
+                L("silas", "Naturally. Opening night will be the talk of the state."),
+            }, new[]
+            {
+                L("silas", "Opening night! Every seat sold, and a special train from the capital."),
+                L("clara", "The electric lights held all evening. I didn't breathe until the final curtain."),
+                L("hank", "Blackwell sent flowers. No card. We all know they were his."),
+            }),
+            ["capitol"] = (new[]
+            {
+                L("silas", "The legislature has chosen {town} for the capitol. A dome you'll see from the mountains."),
+                L("clara", "It will take more steel than the trestle, the dam and the spike together."),
+                L("hank", "Then we'd best get hauling."),
+            }, new[]
+            {
+                L("silas", "The flag is flying over the dome. {town} is a capital city."),
+                L("clara", "From a dust bowl with a water tower to this. Look at it."),
+                L("hank", "Every brick came in on our trains."),
+            }),
             ["goldenspike"] = (new[]
             {
                 L("silas", "The eastern line is three hundred miles out. Meet it, and the territory becomes a state."),

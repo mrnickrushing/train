@@ -118,6 +118,7 @@ namespace Ironhorse.Game
                 for (float s = 0; s <= r.Length; s += 2f) Stamp(r.PositionAt(s), 0);
                 Stamp(Site(id), SiteRadius);
             }
+            foreach (var kv in ProjectSites.Landmarks) Stamp(kv.Value.at, kv.Value.half + 8); // storyline lots are level too
         }
 
         static void Stamp(Vector3 c, float radius)

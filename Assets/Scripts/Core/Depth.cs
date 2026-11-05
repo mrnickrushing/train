@@ -79,6 +79,19 @@ namespace Ironhorse.Core
             Project("goldenspike", "The Golden Spike", "Join east and west. The territory becomes a state.", 15,
                 new[] { S("gold_bars", 20), S("steel", 150), S("tools", 50), S("copper_wire", 60), S("fuel", 40), S("gold_bars", 40), S("steel", 250), S("tools", 80), S("gold_bars", 60), S("fuel", 100) },
                 new Grant { Nuggets = 300, BlueprintLoco = "thunderhead", Blueprints = 10 }, CivicEffect.Income, 0.15f, "+15% town income"),
+            // Storylines past the Golden Spike: each leaves another landmark standing in the territory.
+            Project("winery", "Valley Winery", "Vines on the sunny slopes north of town, and a stone winery to press them.", 20,
+                new[] { S("timber", 150), S("planks", 120), S("tools", 30), S("steel", 80), S("provisions", 100), S("planks", 200) },
+                new Grant { Nuggets = 150, Resources = new[] { new ResourceAmount("gauges", 20) } }, CivicEffect.Income, 0.10f, "+10% town income"),
+            Project("mission", "San Ysidro Mission", "Restore the old adobe mission in the southern desert.", 23,
+                new[] { S("timber", 200), S("planks", 150), S("provisions", 120), S("tools", 40), S("flour", 150), S("steel", 100), S("planks", 250) },
+                new Grant { Nuggets = 180, BlueprintLoco = "sundown", Blueprints = 6 }, CivicEffect.Xp, 0.08f, "+8% XP forever"),
+            Project("opera", "Prosperity Opera House", "A grand brick opera house: culture comes to the frontier.", 26,
+                new[] { S("planks", 250), S("steel", 150), S("copper_wire", 80), S("tools", 60), S("gold_bars", 30), S("steel", 200) },
+                new Grant { Nuggets = 220, BlueprintLoco = "silverarrow", Blueprints = 8 }, CivicEffect.Income, 0.12f, "+12% town income"),
+            Project("capitol", "Territorial Capitol", "A domed capitol for the new state, built to last a hundred years.", 30,
+                new[] { S("steel", 300), S("tools", 100), S("copper_wire", 120), S("gold_bars", 60), S("planks", 300), S("fuel", 120), S("steel", 400) },
+                new Grant { Nuggets = 400, BlueprintLoco = "thunderhead", Blueprints = 12 }, CivicEffect.Yield, 0.12f, "+12% cargo from every run"),
         };
 
         static List<TaskSetDef> _handmade;
