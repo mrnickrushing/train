@@ -342,36 +342,63 @@ namespace Ironhorse.Game
     }
 
     /// <summary>
-    /// Ambient passenger excursion circling the scenic loop, pulled by the best locomotive you own —
-    /// a constant showcase of how far your railroad has come.
+    /// The Scenic Excursion route: every train sent to "excursion" leaves its platform like any other, and while it is
+    /// away it runs laps of the scenic loop north of town with its own locomotive and wagons, spaced apart when several
+    /// are out. The loop is empty when nobody is on an excursion.
     /// </summary>
-    public sealed class ExcursionTrain : ConsistView
+    public sealed class ExcursionTrain : MonoBehaviour
     {
-        string _locoId;
-        float _s;
-        TrackPath _path;
-
-        void Start()
-        {
-            _path = WorldLayout.ScenicLoop;
-            _s = Random.Range(0, _path.Length);
-        }
+        public const string RouteId = "excursion";
+        const float Speed = 9.5f;
+        readonly Dictionary<int, ExcursionView> _views = new Dictionary<int, ExcursionView>();
 
         void Update()
         {
-            var best = G.Session.State.trains.Select(t => GameDatabase.Locomotive(t.defId))
-                .OrderByDescending(d => (int)d.Rarity * 100 + d.Speed).FirstOrDefault();
-            if (best == null) return;
-            if (best.Id != _locoId)
+            var s = G.Session;
+            if (s == null) return;
+            var path = WorldLayout.ScenicLoop;
+            var want = new HashSet<int>();
+            int n = 0;
+            foreach (var t in s.State.trains)
             {
-                _locoId = best.Id;
-                var coach = G.Session.IsGoldenAge ? GameDatabase.Wagon("pullman") : GameDatabase.Wagon("mailcoach");
-                BuildConsist(best, 1, new[] { coach, coach, coach });
-                foreach (var c in GetComponentsInChildren<Collider>()) Destroy(c);
-                ResetMotion();
+                if (t.destinationId != RouteId || s.HasArrived(t)) continue;
+                var tv = TrainManager.Instance.View(t.uid);
+                if (tv == null || tv.Current != TrainView.Phase.Away) continue;
+                want.Add(t.uid);
+                ExcursionView v;
+                if (!_views.TryGetValue(t.uid, out v) || v == null)
+                {
+                    v = new GameObject("Excursion " + t.uid).AddComponent<ExcursionView>();
+                    v.transform.SetParent(transform, false);
+                    _views[t.uid] = v;
+                }
+                v.Show(t, s);
+                // Laps from the moment it left, each excursion train a third of the loop behind the one before.
+                float sAt = (float)(s.Now - t.departedAt) * Speed + n * path.Length / 3f;
+                v.Run(path, Mathf.Repeat(sAt, path.Length));
+                n++;
             }
-            _s += 9.5f * Time.deltaTime;
-            Place(_path, _s, Time.deltaTime);
+            foreach (var uid in _views.Keys.ToList())
+                if (!want.Contains(uid)) { if (_views[uid] != null) Destroy(_views[uid].gameObject); _views.Remove(uid); }
         }
+    }
+
+    /// <summary>One train on the scenic loop: the real consist of the train on the excursion.</summary>
+    public sealed class ExcursionView : ConsistView
+    {
+        string _sig;
+
+        public void Show(TrainState t, GameSession s)
+        {
+            var wagons = s.WagonsOf(t).Select(w => GameDatabase.Wagon(w.defId)).ToList();
+            string sig = t.defId + ":" + t.level + ":" + string.Join(",", wagons.Select(w => w.Id));
+            if (sig == _sig) return;
+            _sig = sig;
+            BuildConsist(GameDatabase.Locomotive(t.defId), t.level, wagons);
+            foreach (var c in GetComponentsInChildren<Collider>()) Destroy(c);
+            ResetMotion();
+        }
+
+        public void Run(TrackPath path, float s) { Place(path, s, Time.deltaTime); }
     }
 }
