@@ -68,18 +68,21 @@ namespace Ironhorse.Game
             Vector3 pos; Quaternion rot;
             if (v.Def.OnWater)
             {
-                // Tied up alongside the pier head, one behind another.
-                var dir = (HaulRoutes.Landing - HaulRoutes.PierRoot); dir.y = 0; dir.Normalize();
-                var right = Vector3.Cross(Vector3.up, dir);
-                pos = HaulRoutes.Landing + right * (5.5f + slot * 9f) - dir * 3f;
+                // Tied up alongside the pier head, bow upstream, one behind another down the river.
+                var river = WorldLayout.River;
+                Vector3 at, down;
+                river.Sample(river.Project(HaulRoutes.Landing), out at, out down); // River runs downstream
+                down.y = 0; down.Normalize();
+                var out_ = HaulRoutes.Landing - HaulRoutes.PierRoot; out_.y = 0; out_.Normalize();
+                pos = HaulRoutes.Landing + down * (9f + slot * 17f) + out_ * 1.5f;
                 pos.y = WorldLayout.WaterLevel + Mathf.Sin(Time.time * 0.9f + slot) * 0.06f;
-                rot = Quaternion.LookRotation(-dir);
+                rot = Quaternion.LookRotation(-down);
             }
             else
             {
-                // In a row across the yard, noses toward the gate.
+                // Side by side in lanes across the yard, noses toward the gate (east); a second rank behind when full.
                 var c = HaulRoutes.Yard;
-                pos = new Vector3(c.x - 6 + (slot % 3) * 5f, 0, c.z - 3.5f + (slot / 3) * 4.5f);
+                pos = new Vector3(c.x + 3 - (slot / 4) * 10f, 0, c.z - 5.5f + (slot % 4) * 3.6f);
                 pos.y = ValleyTerrain.Height(pos.x, pos.z);
                 rot = Quaternion.LookRotation(Vector3.right);
             }
@@ -139,6 +142,13 @@ namespace Ironhorse.Game
         /// animations go into <paramref name="team"/> when given; returns the paddle wheel of a steamer, if any.</summary>
         public static Transform BuildModel(HaulerDef d, Transform root, List<Animation> team = null)
         {
+            // AI-made models (Resources/Models/Haulers) when imported; boats sit down into the water to their waterline.
+            if (ModelRegistry.Has("Haulers", d.Id))
+            {
+                var art = ModelRegistry.Spawn("Haulers", d.Id, root);
+                if (d.OnWater) art.transform.localPosition += Vector3.down * (d.Id == "steamer" ? 1.3f : 0.8f);
+                return null;
+            }
             switch (d.Id)
             {
                 case "freightwagon": TeamWagon(root, team, 1f, 1); return null;
@@ -150,9 +160,11 @@ namespace Ironhorse.Game
             }
         }
 
-        static void Horse(Transform root, List<Animation> team, Vector3 at, float scale)
+        static void Horse(Transform root, List<Animation> team, Vector3 at, float scale) { Animal(root, team, "horse", at, scale); }
+
+        static void Animal(Transform root, List<Animation> team, string id, Vector3 at, float scale)
         {
-            var horse = ModelRegistry.Spawn("Animals", "horse", root);
+            var horse = ModelRegistry.Spawn("Animals", id, root);
             if (horse == null) return;
             horse.transform.localPosition += at;
             horse.transform.localScale *= scale;
@@ -181,8 +193,10 @@ namespace Ironhorse.Game
         /// <summary>Three pack mules in a string, crates and sacks lashed on.</summary>
         static void MuleTrain(Transform root, List<Animation> team)
         {
+            bool mules = ModelRegistry.Has("Animals", "mule");
             for (int i = 0; i < 3; i++)
             {
+                if (mules) { Animal(root, team, "mule", new Vector3(0, 0, -i * 2.5f), 1f); continue; }
                 Horse(root, team, new Vector3(0, 0, -i * 2.6f), 0.82f);
                 var mb = new MeshBuilder();
                 mb.Matte();

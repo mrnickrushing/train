@@ -150,6 +150,7 @@ namespace Ironhorse.Game
                 for (float s = 0; s <= road.Length; s += 1.5f) Mark(road.PositionAt(s), 5.5f);
             }
             Mark(Yard, 14f);
+            Mark(Yard + new Vector3(-2, 0, 15), 11f); // the freight barn
             for (float t = 0; t <= 1; t += 0.1f) Mark(Vector3.Lerp(PierRoot, Landing, t), 5f);
         }
 

@@ -75,6 +75,9 @@ namespace Ironhorse.Game
             var jetty = HaulRoutes.LighthouseDock;
             s.Pieces.Add(new Piece(jetty, mb => Jetty(mb, new Vector3(ic.x + 6, 0, ic.z - 10), jetty)));
 
+            s.DoneModel = "lighthouse_done";
+            s.DoneAt = At(ic.x + 1, ic.z - 1);
+            s.DoneYaw = 0;
             s.Stakes = mb => { foreach (var o in new[] { new Vector2(-4, -2), new Vector2(0, 4), new Vector2(7, -3), new Vector2(-8, -5) }) Stake(mb, At(ic.x + o.x, ic.z + o.y)); };
             s.Camp = mb => Camp(mb, new Vector2(ic.x + 2, ic.z - 9), CampKind.Stone);
             return s;
@@ -197,6 +200,9 @@ namespace Ironhorse.Game
                 s.Pieces.Add(new Piece(p, mb => Crates(mb, p)));
             }
 
+            s.DoneModel = "lodge_done";
+            s.DoneAt = new Vector3(LodgeX, floor - 0.6f, LodgeZ);
+            s.DoneYaw = 0; // the veranda (the model's front, -Z) faces south, toward the road
             s.Stakes = mb => { foreach (var o in new[] { new Vector2(-10, -5), new Vector2(10, -5), new Vector2(-10, 5), new Vector2(10, 5), new Vector2(-14, 13) }) Stake(mb, At(LodgeX + o.x, LodgeZ + o.y)); };
             s.Camp = mb => Camp(mb, new Vector2(LodgeX + 18, LodgeZ - 10), CampKind.Timber);
             return s;

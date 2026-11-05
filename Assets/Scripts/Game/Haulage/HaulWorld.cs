@@ -16,7 +16,11 @@ namespace Ironhorse.Game
         {
             PaintRoads();
             var mb = new MeshBuilder();
-            BuildYard(mb);
+            // The freight barn stands along the yard's north side, its wagon doors opening onto the yard (south).
+            bool barn = PlaceArt(root, "freightbarn", new Vector3(HaulRoutes.Yard.x - 2, 0, HaulRoutes.Yard.z + 16.5f), 0);
+            BuildYard(mb, !barn);
+            // The wharf warehouse on the bank beside the landing, its loading side facing the river (west).
+            PlaceArt(root, "wharf", HaulRoutes.PierRoot + new Vector3(4, 0, 9), 90);
             BuildLanding(mb);
             BuildBridge(mb);
             BuildCrossing(mb);
@@ -102,7 +106,19 @@ namespace Ironhorse.Game
 
         static float G(float x, float z) { return ValleyTerrain.Height(x, z); }
 
-        static void BuildYard(MeshBuilder mb)
+        /// <summary>Places AI building art (Models/Buildings/{id}) on the ground; false when it isn't imported.</summary>
+        static bool PlaceArt(Transform root, string id, Vector3 at, float yaw)
+        {
+            if (!ModelRegistry.Has(ModelRegistry.Buildings, id)) return false;
+            var art = ModelRegistry.Spawn(ModelRegistry.Buildings, id, root);
+            at.y = G(at.x, at.z);
+            // Turn on top of the model's own import rotation (single-mesh FBX files carry their stand-up turn on the root).
+            art.transform.SetPositionAndRotation(at, Quaternion.Euler(0, yaw, 0) * art.transform.rotation);
+            Station.Walkable(art);
+            return true;
+        }
+
+        static void BuildYard(MeshBuilder mb, bool stable = true)
         {
             var c = HaulRoutes.Yard;
             float y = G(c.x, c.z);
@@ -111,20 +127,31 @@ namespace Ironhorse.Game
             // Split-rail fence around three sides (open to the gate on the east).
             for (int side = 0; side < 3; side++)
             {
+                if (side == 2 && !stable) continue; // the barn closes the north side
                 Vector3 a, b;
                 if (side == 0) { a = new Vector3(c.x - 11, 0, c.z - 8); b = new Vector3(c.x + 11, 0, c.z - 8); }
                 else if (side == 1) { a = new Vector3(c.x - 11, 0, c.z - 8); b = new Vector3(c.x - 11, 0, c.z + 8); }
                 else { a = new Vector3(c.x - 11, 0, c.z + 8); b = new Vector3(c.x + 11, 0, c.z + 8); }
                 Fence(mb, a, b, weathered);
             }
-            // Stable and wagon shed along the north side.
+            // Stable and wagon shed along the north side (the freight barn's art replaces it when imported).
+            if (stable) StableShed(mb, c, y, wood, dark);
+            // Hay, feed troughs, crates and barrels waiting to be loaded.
+            Clutter(mb, c, y, weathered, dark);
+        }
+
+        static void StableShed(MeshBuilder mb, Vector3 c, float y, Color wood, Color dark)
+        {
             mb.Push().Translate(c.x - 3, y, c.z + 5);
             mb.Box(new Vector3(0, 1.7f, 0), new Vector3(12, 3.4f, 4.6f), wood, wood);
             mb.GableRoof(new Vector3(0, 3.4f, 0), new Vector3(12.6f, 1.8f, 5.4f), Palette.RoofShingle, wood, 0.35f);
             for (int i = 0; i < 4; i++) mb.Box(new Vector3(-4.5f + i * 3, 1.25f, -2.33f), new Vector3(2.1f, 2.5f, 0.08f), dark);
             mb.Box(new Vector3(0, 4.25f, -2.75f), new Vector3(5.5f, 0.7f, 0.1f), Palette.Cream); // sign board
             mb.Pop();
-            // Hay, feed troughs, crates and barrels waiting to be loaded.
+        }
+
+        static void Clutter(MeshBuilder mb, Vector3 c, float y, Color weathered, Color dark)
+        {
             for (int i = 0; i < 3; i++)
                 mb.Cylinder(new Vector3(c.x + 6 + i * 1.5f, y + 0.55f, c.z + 5.5f), new Vector3(c.x + 6 + i * 1.5f, y + 0.55f, c.z + 6.7f), 0.6f, 10, Palette.GrassDry);
             mb.Box(new Vector3(c.x - 9, y + 0.35f, c.z - 3), new Vector3(0.8f, 0.6f, 4), dark);
