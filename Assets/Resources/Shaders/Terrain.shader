@@ -155,6 +155,11 @@ Shader "Ironhorse/Terrain"
                 // Trodden town earth is dustier and greyer than the raw dirt layer.
                 albedo = lerp(albedo, dot(albedo, float3(0.3, 0.59, 0.11)) * float3(1.06, 1.0, 0.9), 0.4 * saturate(town.r + town.b));
 
+                // Rock: red sandstone in the southern desert, weathered grey granite in the green country to the north.
+                float rockW = saturate(w[4] / max(wsum, 1e-3));
+                float northRock = saturate((pos.z + 40) / 160);
+                float lumR = dot(albedo, float3(0.3, 0.59, 0.11));
+                albedo = lerp(albedo, lumR * float3(0.98, 0.98, 0.96) * 1.15, rockW * northRock * 0.85);
                 // Large-scale brightness/hue variation hides tiling from the high camera.
                 float m1 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.006).r;
                 float m2 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.021 + 0.37).r;
