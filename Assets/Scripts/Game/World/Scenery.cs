@@ -273,7 +273,7 @@ namespace Ironhorse.Game
                 foreach (int sgn in new[] { -1, 1 })
                 {
                     if (Mathf.PerlinNoise(sr * 0.05f + sgn * 7, 3) < 0.4f || R() < 0.35f) continue; // in runs, with sandy gaps
-                    float off = R(6.5f, 10f);
+                    float off = R(10f, 13.5f);
                     float x = rp.x + side.x * off * sgn, z = rp.z + side.z * off * sgn;
                     if (ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue;
                     var p = new Vector3(x, Mathf.Max(ValleyTerrain.Height(x, z), WorldLayout.WaterLevel - 0.5f), z);

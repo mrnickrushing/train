@@ -41,7 +41,7 @@ namespace Ironhorse.Game
         public static float WaterMask(float x, float z, out float depth)
         {
             float rd = Mathf.Sqrt(WorldLayout.River.SqrDistanceXZ(x, z));
-            float river = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(5, 13, rd));
+            float river = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(8, 16, rd)); // a broad river, well inside the bridges' spans
             float ld = Vector2.Distance(new Vector2(x, z), new Vector2(WorldLayout.LakeCenter.x, WorldLayout.LakeCenter.z));
             ld += (Mathf.PerlinNoise(x * 0.08f, z * 0.08f) - 0.5f) * 8;
             float lake = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(WorldLayout.LakeRadius - 6, WorldLayout.LakeRadius + 6, ld));
@@ -52,7 +52,7 @@ namespace Ironhorse.Game
             north *= Mathf.SmoothStep(0, 1, Mathf.InverseLerp(WorldLayout.IslandRadius - 3, WorldLayout.IslandRadius + 3, isl));
             float m = Mathf.Max(Mathf.Max(river, lake), north);
             // Deep blue water a few metres out from the bank (the shallow tint only along the edges).
-            depth = Mathf.Max(Mathf.Max(Mathf.Clamp01((9f - rd) / 4f), 1 - ld / WorldLayout.LakeRadius), north * Mathf.Clamp01((1 - nd) * 4));
+            depth = Mathf.Max(Mathf.Max(Mathf.Clamp01((12f - rd) / 5f), 1 - ld / WorldLayout.LakeRadius), north * Mathf.Clamp01((1 - nd) * 4));
             return m;
         }
 
