@@ -2,8 +2,8 @@ Shader "Ironhorse/Water"
 {
     Properties
     {
-        _ShallowColor ("Shallow", Color) = (0.25, 0.55, 0.55, 0.65)
-        _DeepColor ("Deep", Color) = (0.08, 0.22, 0.32, 0.9)
+        _ShallowColor ("Shallow", Color) = (0.24, 0.58, 0.56, 0.6)
+        _DeepColor ("Deep", Color) = (0.05, 0.23, 0.38, 0.93)
         _WaveTex ("Wave Noise", 2D) = "gray" {}
     }
 
@@ -51,14 +51,28 @@ Shader "Ironhorse/Water"
             {
                 float2 uv1 = i.positionWS.xz * 0.05 + _Time.y * float2(0.02, 0.013);
                 float2 uv2 = i.positionWS.xz * 0.08 - _Time.y * float2(0.017, 0.021);
-                float n = SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv1).r * 0.5 + SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv2).r * 0.5;
-                float4 c = lerp(_ShallowColor, _DeepColor, saturate(i.color.r));
+                float2 uv3 = i.positionWS.xz * 0.21 + _Time.y * float2(-0.031, 0.024); // small chop for the sun to glint on
+                const float e = 0.012;
+                float a1 = SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv1).r, a2 = SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv2).r, a3 = SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv3).r;
+                float n = a1 * 0.5 + a2 * 0.5;
+                // Wave slopes from finite differences of the two swells and the chop: a real normal, not a tilt.
+                float dx = (SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv1 + float2(e, 0)).r - a1) + (SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv2 + float2(e, 0)).r - a2) + (SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv3 + float2(e, 0)).r - a3) * 0.6;
+                float dz = (SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv1 + float2(0, e)).r - a1) + (SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv2 + float2(0, e)).r - a2) + (SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, uv3 + float2(0, e)).r - a3) * 0.6;
+                float depth = saturate(i.color.r);
+                float4 c = lerp(_ShallowColor, _DeepColor, smoothstep(0.0, 0.75, depth));
                 float3 view = GetWorldSpaceNormalizeViewDir(i.positionWS);
                 float fres = pow(1 - saturate(view.y), 3);
+                // Foam where the water laps the shore, broken up and drifting; flecks of white on the crests out deep.
+                float foamNoise = SAMPLE_TEXTURE2D(_WaveTex, sampler_WaveTex, i.positionWS.xz * 0.3 + _Time.y * float2(0.05, -0.04)).r;
+                float foam = saturate((0.16 - depth) / 0.16) * smoothstep(0.35, 0.7, foamNoise + (1 - depth) * 0.25);
+                // From far away the chop would alias into glitter: calm the normal and the flecks with distance.
+                float far = saturate((distance(i.positionWS, _WorldSpaceCameraPos) - 90) / 220);
+                float flecks = smoothstep(0.8, 0.92, a3 * 0.6 + n * 0.4) * smoothstep(0.25, 0.6, depth) * 0.25 * (1 - far);
 
                 InputData inputData = (InputData)0;
                 inputData.positionWS = i.positionWS;
-                inputData.normalWS = normalize(float3((n - 0.5) * 0.6, 1, (n - 0.5) * 0.6));
+                float bump = lerp(7, 1.6, far);
+                inputData.normalWS = normalize(float3(-dx * bump, 1, -dz * bump));
                 inputData.viewDirectionWS = view;
                 inputData.shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 inputData.fogCoord = i.fogCoord;
@@ -67,10 +81,10 @@ Shader "Ironhorse/Water"
                 inputData.shadowMask = half4(1, 1, 1, 1);
 
                 SurfaceData s = (SurfaceData)0;
-                s.albedo = c.rgb + n * 0.08;
-                s.smoothness = 0.92;
+                s.albedo = lerp(c.rgb + n * 0.06, float3(0.92, 0.95, 0.95), saturate(foam * 0.85 + flecks));
+                s.smoothness = lerp(0.93, 0.4, saturate(foam));
                 s.occlusion = 1;
-                s.alpha = saturate(c.a + fres * 0.3);
+                s.alpha = saturate(c.a + fres * 0.3 + foam * 0.5);
                 half4 col = UniversalFragmentPBR(inputData, s);
                 col.rgb = MixFog(col.rgb, inputData.fogCoord);
                 col.a = s.alpha;

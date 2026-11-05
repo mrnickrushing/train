@@ -21,6 +21,7 @@ namespace Ironhorse.Game
         {
             { "telegraph", "Fort Calder Wire" }, { "trestle", "Crooked River Trestle" }, { "mineshaft", "Deep Shaft" },
             { "resupply", "Fort Resupply" }, { "dam", "Silver Lake Dam" }, { "goldenspike", "The Golden Spike" },
+            { "lighthouse", "Eagle Point Light" }, { "lodge", "Eagle Lake Lodge" },
         };
 
         static string ShortName(ProjectDef d) { string n; return ShortNames.TryGetValue(d.Id, out n) ? n : d.Name; }

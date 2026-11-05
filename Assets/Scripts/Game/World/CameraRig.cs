@@ -22,7 +22,7 @@ namespace Ironhorse.Game
         public float Yaw = 20f;
         public float Pitch = 54f;
         public float MinDistance = 24f, MaxDistance = 330f;
-        public Rect Bounds = new Rect(-240, -170, 480, 420);
+        public Rect Bounds = new Rect(-240, -170, 480, 820); // up to Eagle Lake in the north
 
         /// <summary>Raised on a tap that did not hit a selectable (world position on ground).</summary>
         public System.Action<Vector3> GroundTapped;

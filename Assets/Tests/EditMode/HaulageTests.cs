@@ -94,10 +94,10 @@ namespace Ironhorse.Tests
             Assert.IsTrue(_s.BuyHauler("sternwheeler").Ok);
             var boat = _s.State.haulers.First(h => h.defId == "sternwheeler");
             _s.State.inventory.Change("timber", 100);
-            _s.State.inventory.Change("steel", 100);
+            _s.State.inventory.Change("planks", 100);
             int load; double secs;
             StringAssert.Contains("isn't on the water", _s.CantHaul(boat, "telegraph", out load, out secs));
-            Assert.IsNull(_s.CantHaul(boat, "dam", out load, out secs));
+            Assert.IsNull(_s.CantHaul(boat, "trestle", out load, out secs));
             Assert.Greater(load, 0);
         }
 

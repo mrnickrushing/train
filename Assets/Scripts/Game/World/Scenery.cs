@@ -212,7 +212,7 @@ namespace Ironhorse.Game
                 return b;
             }
 
-            for (int i = 0; i < 9000; i++)
+            for (int i = 0; i < 13000; i++) // about the same density over the map, Eagle Lake's basin included
             {
                 float x = R(ValleyTerrain.MinX + 10, ValleyTerrain.MaxX - 10), z = R(ValleyTerrain.MinZ + 10, ValleyTerrain.MaxZ - 10);
                 if (ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue; // the trestle cut-off and the Fort Calder wire
@@ -260,6 +260,38 @@ namespace Ironhorse.Game
                 if (q < 0.3f) Sage(Chunk(p), p, R(0.7f, 1.2f));
                 else if (q < 0.4f) Rock(Chunk(p), p, R(0.5f, 1.8f));
                 else if (q < 0.55f && clump > 0.35f) Pine(Chunk(p), p, R(0.8f, 1.3f));
+            }
+
+            // Eagle Lake: dense pine forest around the basin, with meadow clearings and open beaches at the shore,
+            // and stands along the river valley that climbs up to it.
+            for (int i = 0; i < 6500; i++)
+            {
+                float x = R(-260, 230), z = R(250, ValleyTerrain.MaxZ - 8);
+                float nd = ValleyTerrain.NorthShore(x, z);
+                float calm = ValleyTerrain.Calm(x, z);
+                if (calm < 0.25f || nd < 1.06f) continue;
+                if (ProjectSites.Blocks(x, z)) continue;
+                float depth;
+                if (ValleyTerrain.WaterMask(x, z, out depth) > 0.05f) continue;
+                float h = ValleyTerrain.Height(x, z);
+                float slope = Mathf.Abs(ValleyTerrain.Height(x + 2, z) - h) + Mathf.Abs(ValleyTerrain.Height(x, z + 2) - h);
+                if (slope > 3.5f) continue;
+                float clump = Mathf.PerlinNoise(x * 0.028f + 40, z * 0.028f - 7);
+                if (clump < 0.42f && nd < 1.7f) continue;                // meadow clearings near the water
+                if (nd < 1.18f && R() < 0.75f) continue;                 // keep the beach open
+                var p = new Vector3(x, h - 0.1f, z);
+                if (R() < 0.12f) Cottonwood(Chunk(p), p, R(0.9f, 1.3f));
+                else Pine(Chunk(p), p, R(0.85f, 1.6f));
+            }
+            // Pines and rocks on Eagle Point.
+            for (int i = 0; i < 40; i++)
+            {
+                var c = WorldLayout.IslandCenter;
+                float a = R(0, Mathf.PI * 2), d = Mathf.Sqrt(R()) * (WorldLayout.IslandRadius - 4);
+                float x = c.x + Mathf.Cos(a) * d, z = c.z + Mathf.Sin(a) * d;
+                if (ProjectSites.Blocks(x, z)) continue;
+                var p = new Vector3(x, ValleyTerrain.Height(x, z) - 0.1f, z);
+                if (R() < 0.6f) Pine(Chunk(p), p, R(0.7f, 1.2f)); else Rock(Chunk(p), p, R(0.8f, 2.0f));
             }
 
             // Scrub, junipers and the odd saguaro on the mesa tops.

@@ -9,8 +9,9 @@ namespace Ironhorse.Game
     /// </summary>
     public static class ValleyTerrain
     {
-        public const float MinX = -340, MaxX = 340, MinZ = -300, MaxZ = 420;
-        public const int Cells = 240;
+        public const float MinX = -340, MaxX = 340, MinZ = -300, MaxZ = 720;
+        /// <summary>Grid cells across and along the map (about 2.8 m square).</summary>
+        public const int CellsX = 240, CellsZ = 360;
 
         /// <summary>0 on the valley floor (town, rails), rising to 1 in open country.</summary>
         public static float Wildness(float x, float z)
@@ -42,9 +43,41 @@ namespace Ironhorse.Game
             float ld = Vector2.Distance(new Vector2(x, z), new Vector2(WorldLayout.LakeCenter.x, WorldLayout.LakeCenter.z));
             ld += (Mathf.PerlinNoise(x * 0.08f, z * 0.08f) - 0.5f) * 8;
             float lake = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(WorldLayout.LakeRadius - 6, WorldLayout.LakeRadius + 6, ld));
-            float m = Mathf.Max(river, lake);
-            depth = Mathf.Max(1 - rd / 9f, 1 - ld / WorldLayout.LakeRadius);
+            // Eagle Lake, its ragged shore and the island of Eagle Point.
+            float nd = NorthShore(x, z);
+            float north = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.965f, 1.0f, nd));
+            float isl = IslandDist(x, z);
+            north *= Mathf.SmoothStep(0, 1, Mathf.InverseLerp(WorldLayout.IslandRadius - 3, WorldLayout.IslandRadius + 3, isl));
+            float m = Mathf.Max(Mathf.Max(river, lake), north);
+            depth = Mathf.Max(Mathf.Max(1 - rd / 9f, 1 - ld / WorldLayout.LakeRadius), north * Mathf.Clamp01((1 - nd) * 4));
             return m;
+        }
+
+        /// <summary>Eagle Lake's shore distance with bays and points worked in (1 = the water's edge).</summary>
+        public static float NorthShore(float x, float z)
+        {
+            float wx = x + (Mathf.PerlinNoise(x * 0.01f + 3, z * 0.01f) - 0.5f) * 60f, wz = z + (Mathf.PerlinNoise(x * 0.01f, z * 0.01f + 9) - 0.5f) * 40f;
+            return WorldLayout.NorthLakeDist(wx, wz) + (Mathf.PerlinNoise(x * 0.016f + 11, z * 0.016f) - 0.5f) * 0.3f + (Mathf.PerlinNoise(x * 0.07f, z * 0.07f + 5) - 0.5f) * 0.05f;
+        }
+
+        static float IslandDist(float x, float z)
+        {
+            var c = WorldLayout.IslandCenter;
+            return Vector2.Distance(new Vector2(x, z), new Vector2(c.x, c.z)) + (Mathf.PerlinNoise(x * 0.12f, z * 0.12f) - 0.5f) * 6f;
+        }
+
+        /// <summary>0..1: how much the northern lake basin and the river's mountain valley flatten the mountains, so
+        /// the lake sits in a broad green basin and a road can follow the river up to it.</summary>
+        public static float Calm(float x, float z)
+        {
+            float basin = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(1.25f, 2.35f, WorldLayout.NorthLakeDist(x, z)));
+            float valley = 0;
+            if (z > 200)
+            {
+                float rd = Mathf.Sqrt(WorldLayout.River.SqrDistanceXZ(x, z));
+                valley = (1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(28, 80, rd))) * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(200, 260, z));
+            }
+            return Mathf.Max(basin, valley);
         }
 
         public static float Height(float x, float z)
@@ -55,10 +88,18 @@ namespace Ironhorse.Game
             float radial = Vector2.Distance(new Vector2(x, z), new Vector2(0, 50));
             float rim = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(190, 330, radial));
             float mountains = Noise2.Ridged(x * 0.008f, z * 0.008f, 4) * 95f * rim;
+            float calm = Calm(x, z);
+            mountains *= 1 - calm * 0.94f;
+            hills *= 1 - calm * 0.55f;
             float h = Mathf.Lerp(gentle * 0.06f, gentle + Mathf.Max(0, hills) + mountains, wild);
+
             float depth;
             float water = WaterMask(x, z, out depth);
             if (water > 0) h = Mathf.Lerp(h, -2.6f - Mathf.Clamp01(depth) * 1.2f, water);
+            // Eagle Point: a knoll that slopes up out of the lake (beach, then grass, then the lighthouse's crown).
+            float isl = IslandDist(x, z);
+            if (isl < WorldLayout.IslandRadius + 14)
+                h = Mathf.Max(h, -2.8f + 10.5f * Mathf.Pow(1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0, WorldLayout.IslandRadius + 12, isl)), 1.4f));
             return h;
         }
 
@@ -84,12 +125,13 @@ namespace Ironhorse.Game
             float strata = Mathf.Sin(h * 0.55f + n1 * 3) * 0.5f + 0.5f;
             Color rock = Color.Lerp(Palette.RedRock, Palette.RockPale, strata * 0.6f);
             rock = Color.Lerp(rock, Palette.RockDark, Mathf.Clamp01((h - 40) / 60f) * 0.4f);
-            float rockiness = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.28f, 0.6f, slope)) + Mathf.SmoothStep(0, 1, Mathf.InverseLerp(18, 40, h)) * 0.7f;
+            float calm = z > 200 ? Calm(x, z) : 0;
+            float rockiness = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.28f, 0.6f, slope)) + Mathf.SmoothStep(0, 1, Mathf.InverseLerp(18, 40, h)) * 0.7f * (1 - calm);
             c = Color.Lerp(c, rock, Mathf.Clamp01(rockiness));
             if (h > 70) c = Color.Lerp(c, Palette.Snow, Mathf.SmoothStep(0, 1, Mathf.InverseLerp(70, 90, h)) * (1 - slope));
 
             // Banks and lake bed.
-            if (h < 0.2f) c = Color.Lerp(c, Color.Lerp(Palette.Sand, Palette.Dirt, 0.5f), Mathf.Clamp01(-h * 0.8f + 0.2f));
+            if (h < 0.2f) c = Color.Lerp(c, Color.Lerp(Palette.Sand, Palette.Dirt, z > 440 ? 0.15f : 0.5f), Mathf.Clamp01(-h * 0.8f + 0.2f));
             return c;
         }
 
@@ -119,14 +161,20 @@ namespace Ironhorse.Game
                 float d = Mathf.Sqrt(ex * ex + ez * ez);
                 if (d < 8) Mix(w, 5, (1 - d / 8f) * 0.75f);
             }
-            float rockiness = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.28f, 0.6f, slope)) + Mathf.SmoothStep(0, 1, Mathf.InverseLerp(18, 40, h)) * 0.7f;
+            float calm = z > 200 ? Calm(x, z) : 0;
+            // Eagle Lake's basin is lush meadow and forest floor, with a pale beach where the water meets it.
+            if (calm > 0) { Mix(w, 0, calm * 0.8f); }
+            float nd = WorldLayout.NorthLakeDist(x, z);
+            nd = NorthShore(x, z);
+            if (nd > 0.9f && nd < 1.12f) Mix(w, 3, (1 - Mathf.Abs(nd - 1.0f) / 0.12f) * 0.75f * Mathf.SmoothStep(0.3f, 0.7f, Mathf.PerlinNoise(x * 0.05f, z * 0.05f)));
+            float rockiness = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.28f, 0.6f, slope)) + Mathf.SmoothStep(0, 1, Mathf.InverseLerp(18, 40, h)) * 0.7f * (1 - calm);
             Mix(w, 4, Mathf.Clamp01(rockiness));
             if (h > 70) Mix(w, -1, Mathf.SmoothStep(0, 1, Mathf.InverseLerp(70, 90, h)) * (1 - slope));
             if (h < 0.2f)
             {
                 float bank = Mathf.Clamp01(-h * 0.8f + 0.2f);
-                Mix(w, 3, bank * 0.5f);
-                Mix(w, 2, bank * 0.5f);
+                if (z > 440) { Mix(w, 3, bank * 0.8f); Mix(w, 5, bank * 0.15f); } // Eagle Lake: pale sand and pebbles
+                else { Mix(w, 3, bank * 0.5f); Mix(w, 2, bank * 0.5f); }
             }
         }
 
@@ -140,27 +188,27 @@ namespace Ironhorse.Game
 
         public static GameObject Build(Transform parent)
         {
-            int n = Cells + 1;
-            float sx = (MaxX - MinX) / Cells, sz = (MaxZ - MinZ) / Cells;
-            var heights = new float[n * n];
-            for (int j = 0; j < n; j++)
+            int n = CellsX + 1, nz = CellsZ + 1;
+            float sx = (MaxX - MinX) / CellsX, sz = (MaxZ - MinZ) / CellsZ;
+            var heights = new float[n * nz];
+            for (int j = 0; j < nz; j++)
                 for (int i = 0; i < n; i++)
                     heights[j * n + i] = Height(MinX + i * sx, MinZ + j * sz);
 
-            var verts = new Vector3[n * n];
-            var normals = new Vector3[n * n];
-            var colors = new Color32[n * n];
-            var w01 = new Vector2[n * n];
-            var w23 = new Vector2[n * n];
-            var w45 = new Vector2[n * n];
+            var verts = new Vector3[n * nz];
+            var normals = new Vector3[n * nz];
+            var colors = new Color32[n * nz];
+            var w01 = new Vector2[n * nz];
+            var w23 = new Vector2[n * nz];
+            var w45 = new Vector2[n * nz];
             var w = new float[6];
-            for (int j = 0; j < n; j++)
+            for (int j = 0; j < nz; j++)
                 for (int i = 0; i < n; i++)
                 {
                     int k = j * n + i;
                     float x = MinX + i * sx, z = MinZ + j * sz;
                     float hl = heights[j * n + Mathf.Max(0, i - 1)], hr = heights[j * n + Mathf.Min(n - 1, i + 1)];
-                    float hd = heights[Mathf.Max(0, j - 1) * n + i], hu = heights[Mathf.Min(n - 1, j + 1) * n + i];
+                    float hd = heights[Mathf.Max(0, j - 1) * n + i], hu = heights[Mathf.Min(nz - 1, j + 1) * n + i];
                     var nrm = new Vector3(hl - hr, 2 * sx, hd - hu).normalized;
                     verts[k] = new Vector3(x, heights[k], z);
                     normals[k] = nrm;
@@ -171,16 +219,16 @@ namespace Ironhorse.Game
                     c.a = 255;
                     colors[k] = c;
                 }
-            var tris = new int[Cells * Cells * 6];
+            var tris = new int[CellsX * CellsZ * 6];
             int t = 0;
-            for (int j = 0; j < Cells; j++)
-                for (int i = 0; i < Cells; i++)
+            for (int j = 0; j < CellsZ; j++)
+                for (int i = 0; i < CellsX; i++)
                 {
                     int a = j * n + i, b = a + 1, c = a + n, d = c + 1;
                     tris[t++] = a; tris[t++] = c; tris[t++] = d;
                     tris[t++] = a; tris[t++] = d; tris[t++] = b;
                 }
-            var surf = new Vector2[n * n];
+            var surf = new Vector2[n * nz];
             for (int k = 0; k < surf.Length; k++) surf[k] = new Vector2(0.08f, 0);
 
             var mesh = new Mesh { name = "Valley", indexFormat = IndexFormat.UInt32 };
@@ -211,8 +259,8 @@ namespace Ironhorse.Game
         {
             var mb = new MeshBuilder();
             const float step = 4f;
-            for (float z = -40; z < 430; z += step)
-                for (float x = -170; x < -30; x += step)
+            for (float z = -40; z < 690; z += step)
+                for (float x = -170; x < 140; x += step)
                 {
                     float d0, d1, d2, d3;
                     float m0 = WaterMask(x, z, out d0), m1 = WaterMask(x + step, z, out d1), m2 = WaterMask(x + step, z + step, out d2), m3 = WaterMask(x, z + step, out d3);

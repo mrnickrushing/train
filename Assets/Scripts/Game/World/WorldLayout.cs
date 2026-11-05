@@ -25,6 +25,20 @@ namespace Ironhorse.Game
         public static readonly Vector3 LoopCenter = new Vector3(0, 0, 150);
         public const float LoopRx = 150f, LoopRz = 46f;
 
+        /// <summary>Eagle Lake: the big mountain lake north of the valley the river flows out of (the map's north region).</summary>
+        public static readonly Vector3 NorthLakeCenter = new Vector3(-20, 0, 588);
+        public const float NorthLakeRx = 140f, NorthLakeRz = 82f;
+        /// <summary>Eagle Point: the rocky island in Eagle Lake (the lighthouse stands on it).</summary>
+        public static readonly Vector3 IslandCenter = new Vector3(-62, 0, 604);
+        public const float IslandRadius = 18f;
+
+        /// <summary>Distance from Eagle Lake's centre in shore units (1 = on the shore line, before the shore noise).</summary>
+        public static float NorthLakeDist(float x, float z)
+        {
+            float dx = (x - NorthLakeCenter.x) / NorthLakeRx, dz = (z - NorthLakeCenter.z) / NorthLakeRz;
+            return Mathf.Sqrt(dx * dx + dz * dz);
+        }
+
         public static readonly Vector3 LakeCenter = new Vector3(-104, 0, 22);
         public const float LakeRadius = 22f;
         public const float WaterLevel = -1.1f;
@@ -72,7 +86,9 @@ namespace Ironhorse.Game
             {
                 if (_river != null) return _river;
                 _river = new TrackPath();
-                _river.Add(new Vector3(-70, 0, 420))
+                // Out of Eagle Lake's south shore, down the valley through the mountains, into the valley and Silver Lake.
+                _river.Add(new Vector3(-46, 0, 516))
+                      .Bezier(new Vector3(-52, 0, 482), new Vector3(-66, 0, 452), new Vector3(-70, 0, 420))
                       .Bezier(new Vector3(-80, 0, 360), new Vector3(-110, 0, 330), new Vector3(-92, 0, 260))
                       .Bezier(new Vector3(-75, 0, 200), new Vector3(-70, 0, 170), new Vector3(-96, 0, 120))
                       .Bezier(new Vector3(-118, 0, 80), new Vector3(-96, 0, 60), new Vector3(LakeCenter.x, 0, LakeCenter.z + 6));

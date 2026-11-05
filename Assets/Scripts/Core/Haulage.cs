@@ -59,12 +59,14 @@ namespace Ironhorse.Core
 
         public static readonly List<SiteRoute> Routes = new List<SiteRoute>
         {
-            new SiteRoute { ProjectId = "telegraph",   RoadMeters = 150, WaterMeters = 0,   Character = "engineer", CharacterName = "Clara Whitlock" },
-            new SiteRoute { ProjectId = "trestle",     RoadMeters = 290, WaterMeters = 230, Character = "foreman",  CharacterName = "Hank" },
-            new SiteRoute { ProjectId = "mineshaft",   RoadMeters = 230, WaterMeters = 0,   Character = "rival",    CharacterName = "Cyrus Blackwell" },
-            new SiteRoute { ProjectId = "resupply",    RoadMeters = 200, WaterMeters = 0,   Character = "foreman",  CharacterName = "Hank" },
-            new SiteRoute { ProjectId = "dam",         RoadMeters = 170, WaterMeters = 80,  Character = "engineer", CharacterName = "Clara Whitlock" },
-            new SiteRoute { ProjectId = "goldenspike", RoadMeters = 180, WaterMeters = 0,   Character = "investor", CharacterName = "Mr. Pemberton" },
+            new SiteRoute { ProjectId = "telegraph",   RoadMeters = 240, WaterMeters = 0,   Character = "engineer", CharacterName = "Clara Whitlock" },
+            new SiteRoute { ProjectId = "trestle",     RoadMeters = 180, WaterMeters = 14, Character = "foreman",  CharacterName = "Hank" },
+            new SiteRoute { ProjectId = "mineshaft",   RoadMeters = 140, WaterMeters = 0,   Character = "rival",    CharacterName = "Cyrus Blackwell" },
+            new SiteRoute { ProjectId = "resupply",    RoadMeters = 190, WaterMeters = 0,   Character = "foreman",  CharacterName = "Hank" },
+            new SiteRoute { ProjectId = "lighthouse",  RoadMeters = 0,   WaterMeters = 350, Character = "engineer", CharacterName = "Clara Whitlock" },
+            new SiteRoute { ProjectId = "lodge",       RoadMeters = 515, WaterMeters = 375, Character = "investor", CharacterName = "Mr. Pemberton" },
+            new SiteRoute { ProjectId = "dam",         RoadMeters = 30, WaterMeters = 0,  Character = "engineer", CharacterName = "Clara Whitlock" },
+            new SiteRoute { ProjectId = "goldenspike", RoadMeters = 205, WaterMeters = 0,   Character = "investor", CharacterName = "Mr. Pemberton" },
         };
 
         static HaulerDef H(string id, string name, HaulKind kind, Era era, Rarity r, int cap, float speed, int lvl, int coins, int nuggets, string blurb)

@@ -15,9 +15,13 @@ namespace Ironhorse.Game
         /// <summary>The teamsters' freight yard (wagons park here) and its gate onto the roads.</summary>
         public static readonly Vector3 Yard = new Vector3(-73, 0, 46);
         public static readonly Vector3 YardGate = new Vector3(-64, 0, 46);
-        /// <summary>The boat landing: the end of the pier on the lake's north-east shore.</summary>
-        public static readonly Vector3 Landing = new Vector3(-93, 0, 33);
-        public static readonly Vector3 PierRoot = new Vector3(-83, 0, 40);
+        /// <summary>The boat landing on the river's east bank just above the trestle, upstream of every rail bridge, so
+        /// the boats have open water to the trestle and up to Eagle Lake: the pier head, and where it meets the bank.</summary>
+        public static readonly Vector3 Landing = new Vector3(-88, 0, 248);
+        public static readonly Vector3 PierRoot = new Vector3(-75, 0, 251);
+        /// <summary>Boat landings at the Eagle Lake projects.</summary>
+        public static readonly Vector3 LighthouseDock = new Vector3(-47, 0, 586);
+        public static readonly Vector3 LodgeDock = new Vector3(42, 0, 515);
         /// <summary>The timber road bridge over the river below the dam (the road west to the mine).</summary>
         public static readonly Vector3 BridgeEast = new Vector3(-90, 0, 54), BridgeWest = new Vector3(-114, 0, 54);
         /// <summary>The level crossing over the station throat, west of the platforms.</summary>
@@ -25,8 +29,13 @@ namespace Ironhorse.Game
 
         static readonly Dictionary<string, Vector3[]> RoadPoints = new Dictionary<string, Vector3[]>
         {
+            // The cart track down to the river landing (not a project road: the boats' wharf).
+            { "landing", new[] { V(-64, 46), V(-62, 64), V(-56, 100), V(-50, 140), V(-46, 178), V(-52, 206), V(-58, 236), V(-73, 251) } },
             // North along the river's east bank, over the scenic loop, to the trestle camp.
             { "trestle", new[] { V(-64, 46), V(-62, 64), V(-56, 100), V(-50, 140), V(-46, 178), V(-52, 206), V(-64, 220) } },
+            // On past the trestle up the river's mountain valley to Eagle Lake and the lodge on its south shore.
+            { "lodge", new[] { V(-64, 46), V(-62, 64), V(-56, 100), V(-50, 140), V(-46, 178), V(-52, 206), V(-56, 240), V(-62, 290), V(-66, 340),
+                V(-56, 390), V(-44, 430), V(-34, 462), V(-14, 484), V(18, 488), V(44, 482) } },
             // A short spur up to the dam's east abutment.
             { "dam", new[] { V(-64, 46), V(-72, 58), V(-84, 66) } },
             // West over the river bridge and along the north side of the roundhouse to the mine.
@@ -65,17 +74,22 @@ namespace Ironhorse.Game
             if (_water.TryGetValue(projectId, out p)) return p;
             var route = Haulage.Route(projectId);
             if (route == null || route.WaterMeters <= 0) return null;
-            // Out of the landing into the lake, then up the river (River runs from its source down to the lake).
-            var pts = new List<Vector3> { Landing, new Vector3(-100, 0, 30) };
+            // From the landing along the river: a few lengths downstream to the trestle, or all the way up
+            // into Eagle Lake and across it to the lighthouse or the lodge (River runs from the lake down to Silver Lake).
             var river = WorldLayout.River;
-            float stopZ = projectId == "dam" ? 60f : 214f; // below the dam wall / under the trestle
-            for (float s = river.Length; s >= 0; s -= 6f)
+            float from = river.Project(Landing);
+            float to = projectId == "trestle" ? river.Project(new Vector3(-86, 0, 236)) : 0;
+            var pts = new List<Vector3> { Landing };
+            float dir = Mathf.Sign(to - from);
+            for (float s = from + dir * 6f; dir > 0 ? s < to : s > to; s += dir * 6f)
             {
                 var q = river.PositionAt(s);
-                if (q.z < 36) continue;
-                if (q.z > stopZ) break;
                 pts.Add(new Vector3(q.x, 0, q.z));
             }
+            var end = river.PositionAt(to);
+            pts.Add(new Vector3(end.x, 0, end.z));
+            if (projectId == "lighthouse") { pts.Add(V(-50, 545)); pts.Add(V(-46, 572)); pts.Add(LighthouseDock); }
+            if (projectId == "lodge") { pts.Add(V(-24, 530)); pts.Add(V(10, 528)); pts.Add(LodgeDock); }
             p = Smooth(pts.ToArray(), 2f, false);
             _water[projectId] = p;
             return p;

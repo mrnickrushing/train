@@ -85,6 +85,7 @@ namespace Ironhorse.Game
             if (WireRoute.SqrDistanceXZ(x, z) < 5 * 5) return true;
             if (CampRect.Contains(new Vector2(x, z)) || WireCampRect.Contains(new Vector2(x, z))) return true;
             foreach (var r in MoreSiteRects) if (r.Contains(new Vector2(x, z))) return true;
+            if (LighthouseRect.Contains(new Vector2(x, z)) || LodgeRect.Contains(new Vector2(x, z))) return true;
             return false;
         }
 
@@ -107,6 +108,8 @@ namespace Ironhorse.Game
             _sites.Add(Depot());
             _sites.Add(Dam());
             _sites.Add(Spike());
+            _sites.Add(Lighthouse());
+            _sites.Add(Lodge());
         }
 
         void Start()
