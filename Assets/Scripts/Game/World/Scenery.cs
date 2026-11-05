@@ -263,6 +263,24 @@ namespace Ironhorse.Game
                 else if (q < 0.55f && clump > 0.35f) Pine(Chunk(p), p, R(0.8f, 1.3f));
             }
 
+            // Rocky banks: runs of boulders along both banks of the river, where the water meets the land.
+            var river = WorldLayout.River;
+            for (float sr = 0; sr < river.Length; sr += 1.6f)
+            {
+                Vector3 rp, rf;
+                river.Sample(sr, out rp, out rf);
+                var side = Vector3.Cross(Vector3.up, rf).normalized;
+                foreach (int sgn in new[] { -1, 1 })
+                {
+                    if (Mathf.PerlinNoise(sr * 0.05f + sgn * 7, 3) < 0.4f || R() < 0.35f) continue; // in runs, with sandy gaps
+                    float off = R(6.5f, 10f);
+                    float x = rp.x + side.x * off * sgn, z = rp.z + side.z * off * sgn;
+                    if (ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue;
+                    var p = new Vector3(x, Mathf.Max(ValleyTerrain.Height(x, z), WorldLayout.WaterLevel - 0.5f), z);
+                    Rock(Chunk(p), p, R(0.7f, 1.8f));
+                }
+            }
+
             // Ground cover over the open country: shrub clumps, sagebrush and the odd rock, so meadows and hillsides
             // read busy and natural from the top of the zoom (instanced, so thousands cost little).
             for (int i = 0; i < 9000; i++)
