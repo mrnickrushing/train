@@ -59,6 +59,10 @@ namespace Ironhorse.Core
         public int hiredCrew;
         public List<ResourceAmount> blueprints = new List<ResourceAmount>();
         public List<ProjectProgress> projects = new List<ProjectProgress>();
+        /// <summary>Road and river vehicles that carry goods out to territory projects (see GameSession.Haulage.cs).</summary>
+        public List<HaulerState> haulers = new List<HaulerState>();
+        /// <summary>The free starter freight wagon has been handed out.</summary>
+        public bool haulerGranted;
         public int taskSet;
         public List<int> taskBaselines = new List<int>();
         /// <summary>Per task in the current set: true when it was swapped for a repeatable fallback at set start.</summary>
@@ -234,6 +238,24 @@ namespace Ironhorse.Core
     {
         public double startsAt;
         public double endsAt;
+    }
+
+    [Serializable]
+    public class HaulerState
+    {
+        public int uid;
+        public string defId;
+        public int level = 1;
+        /// <summary>Project the current load is bound for (empty when the vehicle is in the yard).</summary>
+        public string projectId = "";
+        public string resourceId = "";
+        public int amount;
+        /// <summary>Which stage the load is for: it only counts toward that stage.</summary>
+        public int stage;
+        public double departedAt;
+        public double arrivesAt;
+
+        public bool IsIdle { get { return string.IsNullOrEmpty(projectId); } }
     }
 
     [Serializable]

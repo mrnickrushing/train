@@ -76,9 +76,21 @@ namespace Ironhorse.Core
             var res = GameDatabase.Resource(stage.ResourceId);
             if (give <= 0) return ActionResult.Fail("No " + res.Name + " in the warehouse");
             State.inventory.Change(stage.ResourceId, -give);
+            string msg = CreditProject(def, pr, give);
+            RaiseChanged();
+            return ActionResult.Success(msg);
+        }
+
+        /// <summary>Counts goods that reached a project (already out of the warehouse): fills the stage, pays it out
+        /// and finishes the project. Returns what happened, for a toast.</summary>
+        string CreditProject(ProjectDef def, ProjectProgress pr, int give)
+        {
+            var stage = def.Stages[pr.stage];
+            var res = GameDatabase.Resource(stage.ResourceId);
+            give = Math.Min(give, stage.Amount - pr.delivered);
             pr.delivered += give;
             State.stats.projectDeliveries += give;
-            string msg = "Delivered " + give + " " + res.Name;
+            string msg = "Delivered " + give + " " + res.Name + " to " + def.Name;
             if (pr.delivered >= stage.Amount)
             {
                 EarnCoins(stage.Coins);
@@ -95,8 +107,7 @@ namespace Ironhorse.Core
                     ProjectCompleted?.Invoke(def);
                 }
             }
-            RaiseChanged();
-            return ActionResult.Success(msg);
+            return msg;
         }
 
         // ================================================================ Foreman's orders
