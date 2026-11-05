@@ -21,7 +21,8 @@ namespace Ironhorse.Core
         Cabin, ClapboardHouse, BoardingHouse, BrickRowhouse, GrandHotel,
         Sawmill, Smelter, GristMill, PackingHouse, ToolWorks, WireWorks, AssayOffice, Refinery,
         WaterTower, Saloon, Schoolhouse, TelegraphOffice, Bank, ClockTower,
-        LampPost, Garden, Fountain
+        LampPost, Garden, Fountain,
+        Garage
     }
 
     public enum CivicEffect { None, TrainSpeed, Income, ContractSlot, CoinCap, Xp, Yield }

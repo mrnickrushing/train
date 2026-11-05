@@ -151,6 +151,7 @@ namespace Ironhorse.Game
             Child<Life>("Townsfolk");
             Child<AudioManager>("Audio");
             Child<TrainManager>("Trains");
+            Child<TruckManager>("Trucks");
             _loading.SetProgress(0.85f, "Raising the town...");
             yield return null;
             Child<TownView>("Town");
