@@ -85,6 +85,7 @@ namespace Ironhorse.Game
         public static bool Blocks(float x, float z)
         {
             if (HaulRoutes.Blocks(x, z)) return true; // haul roads, the freight yard and the landing
+            if (DestinationRoutes.Blocks(x, z)) return true; // destination spurs and sites
             if (Cutoff.SqrDistanceXZ(x, z) < 8 * 8) return true;
             if (Mathf.Abs(z - TrestleZ) < 14 && x > SpanW - 8 && x < SpanE + 8) return true; // the gorge under the span
             if (WireRoute.SqrDistanceXZ(x, z) < 5 * 5) return true;

@@ -148,6 +148,7 @@ namespace Ironhorse.Game
             Child<DayNightCycle>("Day & Night");
             Child<CameraRig>("Camera");
             Child<ProjectSites>("Project Sites");
+            Child<DestinationSites>("Destinations");
             Child<Museum>("Museum");
             Child<PostFx>("Post FX");
             Child<Life>("Townsfolk");

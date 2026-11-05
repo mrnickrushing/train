@@ -27,6 +27,8 @@ namespace Ironhorse.Game
             // Rail corridor along the main line.
             float main = Mathf.Abs(z - WorldLayout.MainZ) - 22f;
             if (Mathf.Abs(x) < WorldLayout.PathEndX) d = Mathf.Min(d, Mathf.Max(0, main));
+            // Destination spurs and the places at their ends are level ground.
+            d = Mathf.Min(d, Mathf.Max(0, DestinationRoutes.Distance(x, z) - 6));
             // Scenic loop corridor.
             float ex = (x - WorldLayout.LoopCenter.x) / WorldLayout.LoopRx, ez = (z - WorldLayout.LoopCenter.z) / WorldLayout.LoopRz;
             float ell = Mathf.Abs(Mathf.Sqrt(ex * ex + ez * ez) - 1) * Mathf.Min(WorldLayout.LoopRx, WorldLayout.LoopRz);

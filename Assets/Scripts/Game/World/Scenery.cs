@@ -43,6 +43,7 @@ namespace Ironhorse.Game
             {
                 var p = new Vector2(R(-320, 320), R(-290, -95));
                 if (Mathf.Abs(p.x) > 170 && Mathf.Abs(p.y - mz) < 70) continue;
+                if (DestinationRoutes.Distance(p.x, p.y) < 48) continue; // keep buttes off the spurs and sites
                 bool near = false;
                 foreach (var s in spots) if (Vector2.Distance(s, p) < 70) near = true;
                 if (near) continue;
