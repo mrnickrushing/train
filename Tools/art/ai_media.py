@@ -73,6 +73,8 @@ SCENES = {
     "scene_mineshaft": "a big new timbered mine headframe over a deep shaft on a rocky hillside, ore carts and a rail spur, lamps glowing",
     "scene_resupply": "a wooden cavalry fort in the snow at dusk receiving a supply train, warm lit windows, flags flying",
     "scene_dam": "a massive new curved stone dam holding back a blue lake in a red rock canyon, a railroad bridge across the canyon below, the valley town lights coming on",
+    "scene_lighthouse": "a tall white and red striped brick lighthouse with a keeper's cottage on a pine-covered rocky island in a big blue mountain lake, a paddle steamer passing, evergreen forest shores and snowy peaks behind",
+    "scene_lodge": "a grand two-storey log lodge with a green roof, stone chimneys and a long veranda on the shore of a blue mountain lake, a boathouse and dock, pine forest and peaks behind",
     "scene_goldenspike": "two steam locomotives meeting nose to nose on a desert plain where the rails join, flags and bunting, a crowd's tents and wagons in the distance",
 }
 
