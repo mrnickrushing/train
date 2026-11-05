@@ -118,6 +118,11 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   each; platforms 4-6 cost coins plus factory goods and a track-crew timer (rushable). Old saves keep a platform for every
   engine. A bought locomotive that finds the station full gets a platform laid for it. `SellLocomotive` frees a platform
   (half price + a quarter of overhauls; wagons to the depot). The tracks and the work site are `World/Platforms.cs`.
+- **Motor Age (Act II, 1.1)**: `docs/CHAPTER_2.md` is the plan. `Core/GameSession.Trucks.cs` (content and tuning in `Core/Motor.cs`):
+  the Motor Garage (level 12, `garage`, bays = 1 + level) gives a free Dart Runabout when it finishes; the local delivery board
+  (4 orders, one good each for a valley customer) is filled by truck: goods leave at once, pay comes when the truck is back.
+  Trucks burn no fuel. World: `Game/Motor/TruckView.cs` (bays on the garage apron and inside the doors, out of town to the north),
+  `TruckFactory.cs` (procedural until `Models/Trucks/<id>` exists). Board: `UI/UIRoot.Garage.cs`.
 - **Balance simulator**: `Tools/BalanceSim` runs a bot that plays the game logic for a month of five short daily sessions
   and prints level, coins, nuggets and blueprints (and where each came from). `dotnet run --project Tools/BalanceSim/current
   -c Release -- 30 3` (days, seeds); `baseline` runs the same bot on the logic from before the daily hooks (extract it first,

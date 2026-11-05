@@ -2,7 +2,7 @@ using System.Linq;
 
 namespace Ironhorse.Core
 {
-    public enum AdviceKind { Unload, WarehouseFull, Deliver, Payday, CollectGoods, DailyTask, LayPlatform, Dispatch, Rent }
+    public enum AdviceKind { Unload, WarehouseFull, Deliver, Payday, CollectGoods, DailyTask, LayPlatform, Dispatch, Rent, CollectTruck, SendTruck }
 
     /// <summary>The one thing worth doing right now, for the HUD's next-step button.</summary>
     public sealed class Advice
@@ -23,7 +23,7 @@ namespace Ironhorse.Core
         /// <summary>
         /// The most useful next step, or null when there's nothing to do but wait. Money waiting to be picked up
         /// comes first (trains home, orders you can fill, payday, finished goods), then what keeps the railroad
-        /// moving (a free platform, idle trains), then rent piling up.
+        /// moving (a free platform, idle trains, a truck order that's ready to go), then rent piling up.
         /// </summary>
         public Advice NextAction()
         {
@@ -37,6 +37,11 @@ namespace Ironhorse.Core
                                         Detail = res != null && home.cargoAmount > 0 ? "+" + home.cargoAmount + " " + res.Name : "" };
                 return new Advice { Kind = AdviceKind.WarehouseFull, Text = "Warehouse full", Detail = ShortName(home) + " can't unload: upgrade or sell goods" };
             }
+
+            var truckBack = State.trucks.Where(TruckBack).OrderBy(t => t.returnsAt).FirstOrDefault();
+            if (truckBack != null)
+                return new Advice { Kind = AdviceKind.CollectTruck, Uid = truckBack.uid, Text = TruckName(truckBack) + " is back",
+                                    Detail = "+" + truckBack.job.rewardCoins.ToString("#,0") + " coins" };
 
             var order = State.contracts.Where(CanDeliver).OrderByDescending(c => c.express).ThenByDescending(c => c.rewardCoins).FirstOrDefault();
             if (order != null)
@@ -65,6 +70,15 @@ namespace Ironhorse.Core
 
             var idle = State.trains.Where(t => t.IsIdle && WagonsOf(t).Count > 0).OrderBy(t => t.platform).FirstOrDefault();
             if (idle != null) return new Advice { Kind = AdviceKind.Dispatch, Uid = idle.uid, Text = "Send " + ShortName(idle) + " out", Detail = "Idle at platform " + (idle.platform + 1) };
+
+            TruckState truck;
+            var job = BestDelivery(out truck);
+            if (job != null)
+            {
+                var c = Motor.Customer(job.customerId);
+                return new Advice { Kind = AdviceKind.SendTruck, Uid = job.uid, Icon = job.resourceId, Text = "Truck " + job.amount + " " + GameDatabase.Resource(job.resourceId).Name + " to " + c.Short,
+                                    Detail = "+" + job.rewardCoins.ToString("#,0") + " coins · " + TruckName(truck) };
+            }
 
             var full = State.buildings.FirstOrDefault(b => PendingRent(b) > 0 && Now - b.lastCollectAt >= RentStorageSeconds);
             if (full != null)
