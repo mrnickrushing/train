@@ -171,6 +171,7 @@ namespace Ironhorse.Game
             CoachStep step = null;
             bool blocked = (Celebrations.Instance != null && Celebrations.Instance.Busy) || _popupLayer.Find("LevelUp") != null;
             if (!st.settings.tutorialDone && !blocked) step = CoachNow();
+            else if (!blocked) step = TipNow();
             if (step != null && _coachDismissed.Contains(step.Key)) step = null;
             string key = step != null ? step.Key : null;
             if (key != _coachKey)
@@ -260,6 +261,14 @@ namespace Ironhorse.Game
             var foot = UIKit.Node("Foot", bubble.transform);
             UIKit.Anchor(foot, Vector2.zero, new Vector2(1, 0), new Vector2(34, 12), new Vector2(-20, 70));
             UIKit.HStack(foot, 10, 0, TextAnchor.MiddleLeft);
+            if (step.Key.StartsWith("tip."))
+            {
+                // A feature tip: no tutorial progress dots, just Got it.
+                string tip = step.Key;
+                UIKit.Spacer(foot.transform);
+                UIKit.Btn(foot.transform, "Got it", UIKit.Green, () => { MarkTip(tip); UpdateCoach(); }, 26, 190, 58);
+                return;
+            }
             int at = System.Array.IndexOf(CoachGoals, S.CurrentGoal != null ? S.CurrentGoal.Id : "");
             if (at < 0) at = CoachGoals.Length;
             for (int i = 0; i <= CoachGoals.Length; i++)

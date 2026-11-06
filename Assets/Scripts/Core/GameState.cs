@@ -320,6 +320,8 @@ namespace Ironhorse.Core
         public bool haptics = true;
         public bool notifications = true; // local reminders (train arrivals, fuel, production)
         public bool tutorialDone;
+        /// <summary>One-time feature tips already shown (after the first-launch guide).</summary>
+        public List<string> tipsSeen = new List<string>();
     }
 
     public static class ResourceListExt
