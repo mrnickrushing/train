@@ -19,7 +19,11 @@ namespace Ironhorse.Game
         const float StallStart = 95f, StallStep = 15f;
         /// <summary>Open storage tracks off the turntable (angle in degrees from +X toward +Z, length from the centre).</summary>
         static readonly (float ang, float len)[] OpenTracks = { (40, 26), (25, 28), (10, 34), (-5, 40), (-20, 38), (-35, 34), (-72, 22), (-87, 22) };
-        const float LeadAng = -112f, ShopAng = 68f;
+        const float LeadAng = -55f, ShopAng = 68f;
+        /// <summary>Where the lead meets the main line (west of the station throat at x = -120).</summary>
+        const float LeadMergeX = -124f;
+        /// <summary>The lead from the turntable rim to the main line, and the distance along it where its rails join the main line's.</summary>
+        public static TrackPath Lead; public static float LeadStop;
         /// <summary>Outer edge of the turntable's stone rim (tracks run onto it).</summary>
         const float RimR = PitR + 1.8f;
 
@@ -75,17 +79,12 @@ namespace Ironhorse.Game
                 float r0 = Mathf.Sqrt(PitR * PitR - off * off) + 0.3f;
                 TrackBuilder.Build(mb, new TrackPath().Add(Pt(r0, ShopAng, rail) + side).Line(Pt(30, ShopAng, rail) + side).Build());
             }
-            // Lead down to the main line.
-            // Lead: leaves the turntable to the south-west and swings round into a long, shallow turnout on the main line
-            // (trailing for trains from the west tunnel), with a switch stand by the points.
-            var ls = Pt(PitR + 0.1f, LeadAng, rail);
-            float mz = WorldLayout.MainZ, my = WorldLayout.RailTop;
-            var lead = new TrackPath().Add(ls).Bezier(ls + Dir(LeadAng) * 15, new Vector3(-176, my, mz + 0.4f), new Vector3(-214, my, mz)).Build();
-            // Stop where the lead's rails meet the main line's, so the two never draw over each other.
-            float stop = lead.Length;
-            for (float sl = lead.Length; sl > 0; sl -= 0.25f) { if (Mathf.Abs(lead.PositionAt(sl).z - mz) > 0.12f) { stop = sl + 0.25f; break; } }
-            TrackBuilder.Build(mb, lead, 0, stop);
-            SwitchStand(mb, new Vector3(-196, ValleyTerrain.Height(-196, mz - 3.2f), mz - 3.2f));
+            // Lead: leaves the turntable to the south-east and swings into a shallow turnout on the north side of the
+            // main line in open ground, between the west tunnel and the station throat, with a switch stand at the points.
+            float mz = WorldLayout.MainZ;
+            Lead = LeadPath(out LeadStop);
+            TrackBuilder.Build(mb, Lead, 0, LeadStop);
+            SwitchStand(mb, new Vector3(LeadMergeX + 6, ValleyTerrain.Height(LeadMergeX + 6, mz + 3.4f), mz + 3.4f));
             Pit(mb);
             RoundhouseBuilding(mb);
             Props(mb);
@@ -94,6 +93,17 @@ namespace Ironhorse.Game
             Bridge(root);
             MachineShop(root);
             ParkedEngines(root);
+            if (ShunterId != null) new GameObject("Shunter", typeof(Shunter)).transform.SetParent(root, false);
+        }
+
+        static TrackPath LeadPath(out float stop)
+        {
+            float mz = WorldLayout.MainZ, my = WorldLayout.RailTop;
+            var ls = Pt(PitR + 0.1f, LeadAng, WorldLayout.RailTop);
+            var lead = new TrackPath().Add(ls).Bezier(ls + Dir(LeadAng) * 10, new Vector3(LeadMergeX - 12, my, mz), new Vector3(LeadMergeX, my, mz)).Build();
+            stop = lead.Length;
+            for (float sl = lead.Length; sl > 0; sl -= 0.25f) { if (Mathf.Abs(lead.PositionAt(sl).z - mz) > 0.12f) { stop = sl + 0.25f; break; } }
+            return lead;
         }
 
         // ---------------------------------------------------------------- turntable
@@ -334,7 +344,7 @@ namespace Ironhorse.Game
             var rng = new System.Random(77);
             System.Func<float> R = () => (float)rng.NextDouble();
             // Cable drums, crates and barrels by the stall doors and the shop.
-            foreach (var (r, a) in new[] { (Inner - 2.5f, 100f), (Inner - 2.2f, 152f), (Inner - 2.6f, 204f), (21f, 52f), (22f, 84f), (17f, -45f) })
+            foreach (var (r, a) in new[] { (Inner - 2.5f, 100f), (Inner - 2.2f, 152f), (Inner - 2.6f, 204f), (21f, 52f), (22f, 84f), (16f, -120f) })
             {
                 var c = Pt(r, a);
                 for (int k = 0; k < 4; k++)
@@ -374,12 +384,35 @@ namespace Ironhorse.Game
 
         /// <summary>Engines resting in the stalls and on the open tracks: ones the player doesn't own yet first, so
         /// the terminal doubles as a showroom and never duplicates a train on the platforms.</summary>
+        /// <summary>Tracks with an engine parked on them (the shunter keeps off these).</summary>
+        static string ShunterId;
+
+        /// <summary>Free tracks the shunter can park on: (angle, true for a roundhouse stall).</summary>
+        public static List<(float ang, bool stall)> FreeTracks()
+        {
+            var l = new List<(float, bool)>();
+            for (int i = 0; i < Stalls; i++) { float a = StallStart + (i + 0.5f) * StallStep; if (!ParkedAt.Exists(p => Mathf.Abs(Mathf.DeltaAngle(p, a)) < 1)) l.Add((a, true)); }
+            foreach (var t in OpenTracks) if (t.len >= 26 && !ParkedAt.Exists(p => Mathf.Abs(Mathf.DeltaAngle(p, t.ang)) < 1)) l.Add((t.ang, false));
+            return l;
+        }
+
+        public static string Shunter_Id { get { return ShunterId; } }
+        public static Vector3 Centre { get { return Pt(0, 0, WorldLayout.RailTop); } }
+        public static Vector3 TrackPoint(float r, float ang) { return Pt(r, ang, WorldLayout.RailTop); }
+        public static Vector3 Direction(float ang) { return Dir(ang); }
+        public static float ParkRadius(bool stall, float len) { return stall ? Inner + len / 2 - 3.5f : PitR + 3 + len / 2; }
+        public const float LeadAngle = LeadAng;
+
+        static readonly List<float> ParkedAt = new List<float>();
+
         static void ParkedEngines(Transform root)
         {
             var owned = new HashSet<string>(G.Session != null ? G.Session.State.trains.Select(t => t.defId) : Enumerable.Empty<string>());
             var ids = GameDatabase.Locomotives.Select(l => l.Id).Where(id => ModelRegistry.Has(ModelRegistry.Locomotives, id))
                 .OrderBy(id => owned.Contains(id) ? 1 : 0).ToList();
             if (ids.Count == 0) return;
+            ParkedAt.Clear();
+            ShunterId = ids[5 % ids.Count];
             var spots = new List<(float ang, bool stall)>
             {
                 (StallStart + 1.5f * StallStep, true), (StallStart + 4.5f * StallStep, true), (StallStart + 6.5f * StallStep, true),
@@ -388,6 +421,7 @@ namespace Ironhorse.Game
             for (int k = 0; k < spots.Count; k++)
             {
                 var (ang, stall) = spots[k];
+                ParkedAt.Add(ang);
                 var go = ModelRegistry.Spawn(ModelRegistry.Locomotives, ids[k % ids.Count], root);
                 if (go == null) continue;
                 var b = ModelRegistry.RendererBounds(go);
@@ -404,18 +438,27 @@ namespace Ironhorse.Game
         }
     }
 
-    /// <summary>Swings the turntable bridge to a new track now and then.</summary>
+    /// <summary>Swings the turntable bridge to a new track now and then, or where the shunter asks.</summary>
     public sealed class Turntable : MonoBehaviour
     {
-        float _target, _wait = 4;
+        public static Turntable Instance { get; private set; }
+        /// <summary>True while the shunter drives the bridge (no idle swinging).</summary>
+        public bool Manual;
+        public float Target;
+        float _wait = 4;
         float[] _angles;
+        void Awake() { Instance = this; Target = transform.eulerAngles.y; }
+        public bool Aligned { get { return Mathf.Abs(Mathf.DeltaAngle(transform.eulerAngles.y, Target)) < 0.05f; } }
         void Update()
         {
-            if (_angles == null) _angles = Yard.TrackAngles().ToArray();
-            _wait -= Time.deltaTime;
-            if (_wait <= 0) { _wait = Random.Range(10f, 22f); _target = 90f - _angles[Random.Range(0, _angles.Length)]; }
+            if (!Manual)
+            {
+                if (_angles == null) _angles = Yard.TrackAngles().ToArray();
+                _wait -= Time.deltaTime;
+                if (_wait <= 0) { _wait = Random.Range(10f, 22f); Target = 90f - _angles[Random.Range(0, _angles.Length)]; }
+            }
             var e = transform.eulerAngles;
-            e.y = Mathf.MoveTowardsAngle(e.y, _target, 6f * Time.deltaTime);
+            e.y = Mathf.MoveTowardsAngle(e.y, Target, (Manual ? 11f : 7f) * Time.deltaTime);
             transform.eulerAngles = e;
         }
     }
