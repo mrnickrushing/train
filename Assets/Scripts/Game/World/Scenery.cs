@@ -65,12 +65,53 @@ namespace Ironhorse.Game
                 placed++;
             }
             mb.ToObject("Mesas", root);
+            CliffDressing();
+        }
+
+        /// <summary>Foot of every mesa and butte (centre, base outline, height, tunnel face angle or -999).</summary>
+        static readonly List<(Vector2 c, List<Vector2> poly, float h, float face, float y)> _mesaFeet = new List<(Vector2, List<Vector2>, float, float, float)>();
+
+        /// <summary>Crumbling sandstone buttresses (art) set into the foot of the cliffs all round, half buried in the
+        /// walls, so the mesas read as eroded rock instead of smooth stacked slabs. The tunnel mouths and spurs stay clear.</summary>
+        static void CliffDressing()
+        {
+            if (!Vegetation.HasArt(ModelRegistry.Buildings, "cliffrock")) { _mesaFeet.Clear(); return; }
+            var rng = new System.Random(5150);
+            float mz = WorldLayout.MainZ;
+            foreach (var (c, poly, h, face, ledge) in _mesaFeet)
+            {
+                bool upper = ledge > -900;
+                float perim = 0;
+                for (int i = 0; i < poly.Count; i++) perim += Vector2.Distance(poly[i], poly[(i + 1) % poly.Count]);
+                float step = upper ? 17f : h > 30 ? 11f : 13f, next = (float)rng.NextDouble() * step;
+                float walked = 0;
+                for (int i = 0; i < poly.Count; i++)
+                {
+                    Vector2 a = poly[i], b = poly[(i + 1) % poly.Count];
+                    float len = Vector2.Distance(a, b);
+                    while (next <= walked + len)
+                    {
+                        var q = Vector2.Lerp(a, b, (next - walked) / len);
+                        next += step * (0.75f + (float)rng.NextDouble() * 0.5f);
+                        var outward = (q - c).normalized;
+                        if (face > -900 && Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(outward.y, outward.x) * Mathf.Rad2Deg, face)) < 16) continue;
+                        // Half inside the wall so the buttress grows out of it.
+                        var at = q - outward * (2.5f + (float)rng.NextDouble() * 2f);
+                        if (!upper && Mathf.Abs(at.y - mz) < 12 && Mathf.Abs(at.x) > 140) continue;
+                        if (!upper && DestinationRoutes.Distance(at.x, at.y) < 10) continue;
+                        float yaw = Mathf.Atan2(outward.x, outward.y) * Mathf.Rad2Deg + (float)rng.NextDouble() * 70 - 35;
+                        Vegetation.AddModel(ModelRegistry.Buildings, "cliffrock", new Vector3(at.x, upper ? ledge - 0.4f : ValleyTerrain.Height(at.x, at.y) - 0.6f, at.y), Quaternion.Euler(0, yaw, 0));
+                    }
+                    walked += len;
+                }
+            }
+            _mesaFeet.Clear();
         }
 
         /// <summary>Layered sandstone mesa. faceDeg = angle (degrees) of a flat cliff face for a tunnel, or -999.</summary>
         static void Mesa(MeshBuilder mb, Vector2 c, float radius, float height, float faceDeg, int seed)
         {
-            const int sides = 40;
+            const int sides = 72;
             int layers = Mathf.Clamp(Mathf.RoundToInt(height / 6f), 3, 9);
             float lh = height / layers;
             float baseY = -3;
@@ -86,15 +127,23 @@ namespace Ironhorse.Game
                     // Broad shape shared by every layer, plus a per-layer wobble so strata step in and out as ledges.
                     float n = Mathf.PerlinNoise(seed * 3.1f + Mathf.Cos(a) * 1.4f, seed * 1.7f + Mathf.Sin(a) * 1.4f + l * 0.15f);
                     float w = Mathf.PerlinNoise(seed * 5.3f + Mathf.Cos(a) * 3.2f + l * 1.9f, seed * 0.9f + Mathf.Sin(a) * 3.2f) - 0.5f;
-                    float r = radius * shrink * (0.82f + n * 0.36f + w * 0.07f);
+                    // Crags: a sharper high-frequency in-and-out so walls break into ribs and gullies.
+                    float crag = Mathf.PerlinNoise(seed * 7.7f + Mathf.Cos(a) * 9f + l * 0.6f, seed * 2.3f + Mathf.Sin(a) * 9f) - 0.5f;
+                    float r = radius * shrink * (0.82f + n * 0.36f + w * 0.1f + crag * 0.09f);
                     if (faceDeg > -900)
                     {
+                        // A flat face only right at the tunnel mouth; beyond it the cliff is as ragged as anywhere.
                         float d = Mathf.DeltaAngle(a * Mathf.Rad2Deg, faceDeg);
-                        if (Mathf.Abs(d) < 32) r = radius * shrink / Mathf.Cos(d * Mathf.Deg2Rad);
+                        float flat = radius * shrink / Mathf.Cos(Mathf.Min(Mathf.Abs(d), 60) * Mathf.Deg2Rad);
+                        float k = Mathf.SmoothStep(1, 0, Mathf.InverseLerp(10, 30, Mathf.Abs(d)));
+                        if (Mathf.Abs(d) < 32) r = Mathf.Lerp(flat * (1 + w * 0.1f + crag * 0.09f), flat, k);
                     }
                     poly.Add(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r);
                 }
                 float y0 = baseY + l * lh, y1 = baseY + (l + 1) * lh;
+                if (l == 0) _mesaFeet.Add((c, poly, height, faceDeg, -999f));
+                // A second tier of buttresses on a ledge halfway up the tall ones.
+                if (height > 30 && l == layers / 2) _mesaFeet.Add((c, poly, height, faceDeg, y0));
                 bool topLayer = l == layers - 1;
                 Color top = topLayer ? Palette.Hex(0x8C7A4E) : MeshBuilder.Darken(bands[(l + seed) % bands.Length], 0.92f);
                 mb.Matte();
