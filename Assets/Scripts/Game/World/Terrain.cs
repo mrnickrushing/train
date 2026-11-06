@@ -161,11 +161,14 @@ namespace Ironhorse.Game
                 float edge = Mathf.Min(Mathf.Min(x - (r.xMin - 6), (r.xMax + 6) - x), Mathf.Min(z - (r.yMin + 40), (r.yMax + 6) - z));
                 // Town ground stays green; streets and worn patches come from TownStreets' ground mask.
             }
-            foreach (var yard in new[] { WorldLayout.YardRect, WorldLayout.RoundhouseRect })
             {
+                var yard = WorldLayout.YardRect;
                 float ex = Mathf.Max(yard.xMin - x, 0, x - yard.xMax), ez = Mathf.Max(yard.yMin - z, 0, z - yard.yMax);
                 float d = Mathf.Sqrt(ex * ex + ez * ez);
                 if (d < 8) Mix(w, 5, (1 - d / 8f) * 0.75f);
+                // The engine terminal is grass with a worn cinder apron round the turntable pit.
+                float apron = Yard.Apron(x, z);
+                if (apron > 0) Mix(w, 5, apron * 0.8f);
             }
             float calm = z > 200 ? Calm(x, z) : 0;
             // Eagle Lake's basin is lush meadow and forest floor, with a pale beach where the water meets it.

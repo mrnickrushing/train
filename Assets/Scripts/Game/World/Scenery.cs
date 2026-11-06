@@ -546,7 +546,7 @@ namespace Ironhorse.Game
 
         static void BuildWindmills(Transform root)
         {
-            var spots = new[] { new Vector3(92, 0, 40), new Vector3(70, 0, 230), new Vector3(-150, 0, -10), new Vector3(150, 0, -110) };
+            var spots = new[] { new Vector3(92, 0, 40), new Vector3(70, 0, 230), new Vector3(150, 0, -110) };
             foreach (var s in spots)
             {
                 var p = new Vector3(s.x, ValleyTerrain.Height(s.x, s.z), s.z);
