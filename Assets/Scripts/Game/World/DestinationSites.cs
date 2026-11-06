@@ -19,24 +19,33 @@ namespace Ironhorse.Game
         /// <summary>Waypoints from the junction to the depot at the site (the last point is the site's centre).</summary>
         static readonly Dictionary<string, Vector3[]> Points = new Dictionary<string, Vector3[]>
         {
-            // South-west, off the west throat.
-            { "blackhollow", new[] { V(-150, M), V(-168, -60), V(-188, -95), V(-212, -135), V(-228, -172) } },
-            { "coppertop",   new[] { V(-150, M), V(-145, -70), V(-130, -110), V(-108, -160), V(-92, -212) } },
-            // South-east, off the east throat.
-            { "rattlesnake", new[] { V(150, M), V(160, -62), V(178, -95), V(194, -128), V(205, -160) } },
-            { "blackgold",   new[] { V(150, M), V(160, -62), V(178, -95), V(215, -125), V(248, -160), V(266, -195) } },
-            { "fortcalder",  new[] { V(150, M), V(138, -70), V(122, -100), V(96, -160), V(62, -210), V(38, -236) } },
-            { "capitaljct",  new[] { V(150, M), V(138, -70), V(122, -100), V(115, -160), V(128, -215), V(150, -250) } },
-            // North, off the scenic loop.
-            { "willowflats", new[] { V(150, 150), V(170, 138), V(196, 122), V(216, 108) } },
-            { "prosperity",  new[] { V(150, 150), V(172, 168), V(198, 192), V(224, 224) } },
-            { "ironback",    new[] { V(110, 184), V(126, 220), V(140, 260), V(148, 300), V(152, 335) } },
-            { "silversprings", new[] { V(0, 196), V(10, 222), V(26, 250), V(44, 276), V(58, 296) } },
-            { "pinecrest",   new[] { V(-150, 150), V(-172, 162), V(-200, 176), V(-230, 190) } },
-            { "eldorado",    new[] { V(-150, 150), V(-168, 182), V(-195, 235), V(-218, 282), V(-236, 322) } },
+            // Every spur starts ON its parent line and peels off it gradually, like a real turnout (never at a right
+            // angle); spurs heading the same way share a trunk and fork further out, so no two lines cross.
+            // South-west, off the west throat (diverging for trains heading west).
+            { "blackhollow", new[] { V(-118, M), V(-132, M), V(-152, -52), V(-170, -68), V(-188, -95), V(-212, -135), V(-228, -172) } },
+            { "coppertop",   new[] { V(-118, M), V(-132, M), V(-152, -52), V(-156, -72), V(-144, -96), V(-128, -118), V(-108, -160), V(-92, -212) } },
+            // South-east, off the east throat (diverging for trains heading east).
+            { "rattlesnake", new[] { V(122, M), V(136, M), V(156, -52), V(166, -70), V(178, -95), V(194, -128), V(205, -160) } },
+            { "blackgold",   new[] { V(122, M), V(136, M), V(156, -52), V(166, -70), V(178, -95), V(215, -125), V(248, -160), V(266, -195) } },
+            { "fortcalder",  new[] { V(122, M), V(136, M), V(156, -52), V(158, -72), V(144, -96), V(120, -126), V(96, -160), V(62, -210), V(38, -236) } },
+            { "capitaljct",  new[] { V(122, M), V(136, M), V(156, -52), V(158, -72), V(144, -96), V(124, -126), V(115, -160), V(128, -215), V(150, -250) } },
+            // North, off the scenic loop: the first two points lie on the loop, the third already a little outside it.
+            { "willowflats", new[] { V(144.9f, 138.1f), V(148.7f, 144f), V(150, 150), V(154, 166), V(170, 170), V(186, 156), V(200, 132), V(216, 108) } },
+            { "prosperity",  new[] { V(144.9f, 138.1f), V(148.7f, 144f), V(150, 150), V(154, 166), V(170, 186), V(198, 204), V(224, 224) } },
+            { "ironback",    new[] { V(63.4f, 191.7f), V(92.3f, 186.2f), V(116, 192), V(130, 222), V(140, 260), V(148, 300), V(152, 335) } },
+            { "silversprings", new[] { V(-51.3f, 193.2f), V(-13.1f, 195.8f), V(14, 206), V(30, 240), V(44, 276), V(58, 296) } },
+            { "pinecrest",   new[] { V(-144.9f, 138.1f), V(-148.7f, 144f), V(-150, 150), V(-154, 166), V(-170, 177), V(-200, 186), V(-230, 190) } },
+            { "eldorado",    new[] { V(-144.9f, 138.1f), V(-148.7f, 144f), V(-150, 150), V(-154, 166), V(-163, 186), V(-180, 210), V(-195, 235), V(-218, 282), V(-236, 322) } },
         };
 
         public static IEnumerable<string> Ids { get { return Points.Keys; } }
+
+        /// <summary>True while a point is still on the main line or the scenic loop (within a rail's width).</summary>
+        public static bool OnParent(Vector3 p)
+        {
+            if (Mathf.Abs(p.z - M) < 0.15f && Mathf.Abs(p.x) > 110) return true;
+            return WorldLayout.ScenicLoop.SqrDistanceXZ(p.x, p.z) < 0.15f * 0.15f;
+        }
         public static bool Has(string id) { return Points.ContainsKey(id); }
         public static Vector3 Site(string id) { var p = Points[id]; return p[p.Length - 1]; }
 
@@ -67,6 +76,21 @@ namespace Ironhorse.Game
             return p;
         }
 
+        static HashSet<Vector3> _shared;
+        /// <summary>True for a waypoint used by more than one spur.</summary>
+        static bool Shared(Vector3 p)
+        {
+            if (_shared == null)
+            {
+                _shared = new HashSet<Vector3>();
+                var seen = new HashSet<Vector3>();
+                foreach (var pts in Points.Values)
+                    foreach (var q in new HashSet<Vector3>(pts))
+                        if (!seen.Add(q)) _shared.Add(q);
+            }
+            return _shared.Contains(p);
+        }
+
         static TrackPath Smooth(Vector3[] src, bool reverse)
         {
             var pts = (Vector3[])src.Clone();
@@ -74,14 +98,37 @@ namespace Ironhorse.Game
             var path = new TrackPath();
             float y = WorldLayout.RailTop;
             path.Add(new Vector3(pts[0].x, y, pts[0].z));
-            for (int i = 0; i < pts.Length - 1; i++)
+            // Catmull-Rom tangents, except where a point sits on the parent line next to another one that does: there
+            // the tangent runs along the parent, so the spur leaves it like a turnout instead of bulging across its rails.
+            int last = pts.Length - 1;
+            var m = new Vector3[pts.Length];
+            for (int i = 0; i <= last; i++)
             {
-                Vector3 p0 = pts[Mathf.Max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Mathf.Min(pts.Length - 1, i + 2)];
+                Vector3 prev = pts[Mathf.Max(0, i - 1)], next = pts[Mathf.Min(last, i + 1)];
+                m[i] = (next - prev) * 0.5f;
+                bool on = OnParent(pts[i]);
+                if (on && i > 0 && OnParent(pts[i - 1]) && i < last && !OnParent(pts[i + 1]))
+                    m[i] = (pts[i] - pts[i - 1]).normalized * (pts[i + 1] - pts[i]).magnitude;
+                else if (on && i < last && OnParent(pts[i + 1]) && i > 0 && !OnParent(pts[i - 1]))
+                    m[i] = (pts[i + 1] - pts[i]).normalized * (pts[i] - pts[i - 1]).magnitude;
+                else if (on && ((i > 0 && OnParent(pts[i - 1])) || (i < last && OnParent(pts[i + 1]))))
+                    m[i] = (next - prev).normalized * Vector3.Distance(pts[i], next == pts[i] ? prev : next);
+                // A point shared with another spur (a common trunk and its fork): its tangent may only depend on the
+                // trunk, so both spurs lay exactly the same rails up to where they part.
+                else if (Shared(pts[i]) && i > 0 && i < last)
+                {
+                    bool fwd = Shared(prev);
+                    m[i] = fwd ? pts[i] - prev : next - pts[i];
+                }
+            }
+            for (int i = 0; i < last; i++)
+            {
+                Vector3 p1 = pts[i], p2 = pts[i + 1];
                 int n = Mathf.Max(2, Mathf.CeilToInt(Vector3.Distance(p1, p2) / 2f));
                 for (int k = 1; k <= n; k++)
                 {
                     float t = k / (float)n, t2 = t * t, t3 = t2 * t;
-                    var q = 0.5f * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (3 * p1 - p0 - 3 * p2 + p3) * t3);
+                    var q = (2 * t3 - 3 * t2 + 1) * p1 + (t3 - 2 * t2 + t) * m[i] + (-2 * t3 + 3 * t2) * p2 + (t3 - t2) * m[i + 1];
                     path.Line(new Vector3(q.x, y, q.z), 1000);
                 }
             }
@@ -171,7 +218,10 @@ namespace Ironhorse.Game
             foreach (var id in DestinationRoutes.Ids)
             {
                 var r = DestinationRoutes.Route(id);
-                TrackBuilder.Build(rails, r, 0, -1, trestleOverWater: true);
+                // Draw from where the spur's rails leave the parent line's, so the two never overlap.
+                float from = 0;
+                while (from < r.Length - 1 && DestinationRoutes.OnParent(r.PositionAt(from))) from += 0.25f;
+                TrackBuilder.Build(rails, r, Mathf.Max(0, from - 0.25f), -1, trestleOverWater: true);
                 Depot(rails, r);
             }
             rails.ToObject("Destination Spurs", transform);

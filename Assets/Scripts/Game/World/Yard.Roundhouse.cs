@@ -19,7 +19,9 @@ namespace Ironhorse.Game
         const float StallStart = 95f, StallStep = 15f;
         /// <summary>Open storage tracks off the turntable (angle in degrees from +X toward +Z, length from the centre).</summary>
         static readonly (float ang, float len)[] OpenTracks = { (40, 26), (25, 28), (10, 34), (-5, 40), (-20, 38), (-35, 34), (-72, 22), (-87, 22) };
-        const float LeadAng = -55f, ShopAng = 68f;
+        const float LeadAng = -112f, ShopAng = 68f;
+        /// <summary>Outer edge of the turntable's stone rim (tracks run onto it).</summary>
+        const float RimR = PitR + 1.8f;
 
         static Vector3 C { get { return WorldLayout.TurntableCenter; } }
         static float _gy;
@@ -45,6 +47,8 @@ namespace Ironhorse.Game
         static void BuildRoundhouse(Transform root)
         {
             _gy = ValleyTerrain.Height(C.x, C.z);
+            for (int k = 0; k < 16; k++)  // the pit floor must sit above the ground everywhere under it
+                for (float r = 3; r <= PitR; r += 3.5f) _gy = Mathf.Max(_gy, ValleyTerrain.Height(C.x + Mathf.Cos(k * 0.3927f) * r, C.z + Mathf.Sin(k * 0.3927f) * r));
             var mb = new MeshBuilder();
             float rail = WorldLayout.RailTop;
 
@@ -52,11 +56,11 @@ namespace Ironhorse.Game
             for (int i = 0; i < Stalls; i++)
             {
                 float a = StallStart + (i + 0.5f) * StallStep;
-                TrackBuilder.Build(mb, new TrackPath().Add(Pt(PitR + 0.4f, a, rail)).Line(Pt(Outer - 1.5f, a, rail)).Build());
+                TrackBuilder.Build(mb, new TrackPath().Add(Pt(PitR + 0.1f, a, rail)).Line(Pt(Outer - 1.5f, a, rail)).Build());
             }
             foreach (var t in OpenTracks)
             {
-                TrackBuilder.Build(mb, new TrackPath().Add(Pt(PitR + 0.4f, t.ang, rail)).Line(Pt(t.len, t.ang, rail)).Build());
+                TrackBuilder.Build(mb, new TrackPath().Add(Pt(PitR + 0.1f, t.ang, rail)).Line(Pt(t.len, t.ang, rail)).Build());
                 var end = Pt(t.len + 0.6f, t.ang);
                 mb.Push().Translate(end).Rotate(Quaternion.LookRotation(Dir(t.ang)));
                 mb.Matte();
@@ -72,10 +76,16 @@ namespace Ironhorse.Game
                 TrackBuilder.Build(mb, new TrackPath().Add(Pt(r0, ShopAng, rail) + side).Line(Pt(30, ShopAng, rail) + side).Build());
             }
             // Lead down to the main line.
-            var ls = Pt(PitR + 0.4f, LeadAng, rail);
-            var lead = new TrackPath().Add(ls).Bezier(ls + Dir(LeadAng) * 13, new Vector3(-126, _gy + rail, WorldLayout.MainZ), new Vector3(-110, _gy + rail, WorldLayout.MainZ)).Build();
-            TrackBuilder.Build(mb, lead, 0, lead.Length - 3);
-
+            // Lead: leaves the turntable to the south-west and swings round into a long, shallow turnout on the main line
+            // (trailing for trains from the west tunnel), with a switch stand by the points.
+            var ls = Pt(PitR + 0.1f, LeadAng, rail);
+            float mz = WorldLayout.MainZ, my = WorldLayout.RailTop;
+            var lead = new TrackPath().Add(ls).Bezier(ls + Dir(LeadAng) * 15, new Vector3(-176, my, mz + 0.4f), new Vector3(-214, my, mz)).Build();
+            // Stop where the lead's rails meet the main line's, so the two never draw over each other.
+            float stop = lead.Length;
+            for (float sl = lead.Length; sl > 0; sl -= 0.25f) { if (Mathf.Abs(lead.PositionAt(sl).z - mz) > 0.12f) { stop = sl + 0.25f; break; } }
+            TrackBuilder.Build(mb, lead, 0, stop);
+            SwitchStand(mb, new Vector3(-196, ValleyTerrain.Height(-196, mz - 3.2f), mz - 3.2f));
             Pit(mb);
             RoundhouseBuilding(mb);
             Props(mb);
@@ -90,67 +100,86 @@ namespace Ironhorse.Game
 
         static void Pit(MeshBuilder mb)
         {
-            Color floor = Palette.Hex(0x34332F), ring = Palette.Hex(0x45433E), rim = Palette.Hex(0x8A857C);
+            // A broad dressed-stone rim flush with the track bed, its inner wall dropping into a dark pit floor with
+            // worn concentric rings, the circle rail the bridge wheels run on and the centre pivot.
+            Color floor = Palette.Hex(0x2E2D2A), ring = Palette.Hex(0x3C3A36), rim = Palette.Hex(0x9C978D), wall = Palette.Hex(0x5E5A53);
             mb.Matte();
             mb.Surf = SurfaceKind.Gravel;
-            mb.Cylinder(Pt(0, 0, -0.3f), Pt(0, 0, 0.1f), PitR, 48, floor);
-            // Concentric wear rings and the circle rail the bridge wheels run on.
-            mb.Cylinder(Pt(0, 0, 0.1f), Pt(0, 0, 0.115f), PitR * 0.72f, 40, ring, true);
-            mb.Cylinder(Pt(0, 0, 0.115f), Pt(0, 0, 0.125f), PitR * 0.66f, 40, floor, true);
-            mb.Cylinder(Pt(0, 0, 0.125f), Pt(0, 0, 0.135f), PitR * 0.34f, 32, ring, true);
-            mb.Cylinder(Pt(0, 0, 0.135f), Pt(0, 0, 0.145f), PitR * 0.28f, 32, floor, true);
+            mb.Cylinder(Pt(0, 0, -0.4f), Pt(0, 0, 0.06f), PitR, 56, floor);
+            mb.Cylinder(Pt(0, 0, 0.06f), Pt(0, 0, 0.07f), PitR * 0.8f, 48, ring, true);
+            mb.Cylinder(Pt(0, 0, 0.07f), Pt(0, 0, 0.08f), PitR * 0.74f, 48, floor, true);
+            mb.Cylinder(Pt(0, 0, 0.08f), Pt(0, 0, 0.09f), PitR * 0.42f, 40, ring, true);
+            mb.Cylinder(Pt(0, 0, 0.09f), Pt(0, 0, 0.1f), PitR * 0.36f, 40, floor, true);
             mb.Surf = SurfaceKind.Auto;
-            mb.Mat(0.5f, 0.6f);
-            mb.Cylinder(Pt(0, 0, 0.1f), Pt(0, 0, 0.22f), PitR - 0.55f, 48, Palette.Steel, false);
+            mb.Mat(0.55f, 0.7f);
+            mb.Cylinder(Pt(0, 0, 0.06f), Pt(0, 0, 0.16f), PitR - 0.7f, 56, Palette.Steel, false);
+            mb.Cylinder(Pt(0, 0, 0.06f), Pt(0, 0, 0.165f), PitR - 0.85f, 56, Palette.Hex(0x2A2A2A), false);
             mb.Matte();
-            mb.Cylinder(Pt(0, 0, 0.1f), Pt(0, 0, 0.5f), 0.9f, 12, Palette.Iron);
-            // Dressed-stone rim.
-            mb.Surf = SurfaceKind.Concrete;
-            const int segs = 48;
+            mb.Cylinder(Pt(0, 0, 0), Pt(0, 0, 0.35f), 1.1f, 14, Palette.Hex(0x6A665E));
+            mb.Cylinder(Pt(0, 0, 0.35f), Pt(0, 0, 0.5f), 0.6f, 12, Palette.Iron);
+            const int segs = 64;
+            float w = RimR - PitR, mid = (RimR + PitR) / 2, top = WorldLayout.RailTop - 0.17f;
             for (int k = 0; k < segs; k++)
             {
-                float a = k * 360f / segs;
-                var p = Pt(PitR + 0.45f, a, 0.2f);
-                mb.Push().Translate(p).Rotate(Quaternion.LookRotation(Dir(a)));
-                mb.Box(Vector3.zero, new Vector3(2 * Mathf.PI * (PitR + 0.45f) / segs + 0.05f, 0.6f, 0.9f), rim, MeshBuilder.Lighten(rim, 0.15f));
+                float a = (k + 0.5f) * 360f / segs;
+                mb.Push().Translate(Pt(mid, a, (top - 0.5f) / 2)).Rotate(Quaternion.LookRotation(Dir(a)));
+                float arc = 2 * Mathf.PI * RimR / segs + 0.06f;
+                mb.Surf = SurfaceKind.Concrete;
+                mb.Box(Vector3.zero, new Vector3(arc, top + 0.5f, w), wall, rim);
+                mb.Surf = SurfaceKind.Auto;
+                // a dark joint between the coping stones
+                mb.Box(new Vector3(arc / 2 - 0.03f, (top + 0.5f) / 2 + 0.005f, 0), new Vector3(0.05f, 0.01f, w), Palette.Hex(0x6E6A62));
                 mb.Pop();
             }
-            mb.Surf = SurfaceKind.Auto;
+        }
+
+        static void SwitchStand(MeshBuilder mb, Vector3 p)
+        {
+            mb.Matte();
+            mb.Box(p + new Vector3(0, 0.15f, 0), new Vector3(1.2f, 0.3f, 0.6f), Palette.WoodDark);
+            mb.Cylinder(p + Vector3.up * 0.3f, p + Vector3.up * 2.0f, 0.06f, 6, Palette.Iron);
+            mb.Cylinder(p + new Vector3(-0.28f, 1.85f, 0), p + new Vector3(0.28f, 1.85f, 0), 0.32f, 12, Palette.PaintRed);
+            mb.Cylinder(p + new Vector3(-0.3f, 1.85f, 0), p + new Vector3(0.3f, 1.85f, 0), 0.12f, 8, Palette.White);
+            mb.Box(p + new Vector3(0.5f, 0.55f, 0), new Vector3(0.08f, 0.6f, 0.08f), Palette.Iron); // throw lever
+            // Points rods across to the main line.
+            mb.Box(p + new Vector3(0, 0.2f, 2.0f), new Vector3(0.08f, 0.06f, 3.2f), Palette.Iron);
         }
 
         static void Bridge(Transform root)
         {
+            // A broad deck girder bridge spanning the pit: deep dark side girders, a plated deck level with the rim,
+            // ties and rails lined up with the radiating tracks, handrails along both edges.
             var b = new MeshBuilder();
-            float len = PitR * 2 - 0.5f;
-            Color girder = Palette.Hex(0x34383C);
+            float len = PitR * 2 - 0.3f, rt = WorldLayout.RailTop;
+            Color girder = Palette.Hex(0x2E3236), deck = Palette.Hex(0x6A6C6C);
             b.Mat(0.35f, 0.4f);
-            b.Box(new Vector3(0, 0.32f, 0), new Vector3(2.6f, 0.16f, len), Palette.Hex(0x3C3F42));
-            foreach (float x in new[] { -1.45f, 1.45f })
+            b.Box(new Vector3(0, rt - 0.3f, 0), new Vector3(3.4f, 0.1f, len), deck);
+            foreach (float x in new[] { -1.55f, 1.55f })
             {
-                b.Box(new Vector3(x, 0.95f, 0), new Vector3(0.3f, 0.12f, len), girder);
-                b.Box(new Vector3(x, 0.3f, 0), new Vector3(0.3f, 0.12f, len), girder);
-                for (float z = -len / 2 + 0.8f; z < len / 2 - 0.5f; z += 1.6f)
-                {
-                    b.Box(new Vector3(x, 0.62f, z), new Vector3(0.12f, 0.66f, 0.12f), girder);
-                    b.Push().Translate(x, 0.62f, z + 0.8f).Rotate(Quaternion.Euler(45, 0, 0));
-                    b.Box(Vector3.zero, new Vector3(0.08f, 0.9f, 0.08f), girder);
-                    b.Pop();
-                }
+                b.Box(new Vector3(x, (rt - 0.35f - 0.4f) / 2, 0), new Vector3(0.35f, rt - 0.35f + 0.4f, len - 0.4f), girder);
+                for (float z = -len / 2 + 1f; z < len / 2 - 0.5f; z += 1.8f)
+                    b.Box(new Vector3(x * 1.07f, (rt - 0.75f) / 2, z), new Vector3(0.08f, rt - 0.35f + 0.4f, 0.18f), Palette.Hex(0x3A3F44)); // stiffeners
+                // handrail
+                for (float z = -len / 2 + 0.4f; z <= len / 2 - 0.3f; z += 2.4f)
+                    b.Box(new Vector3(x * 1.08f, rt + 0.2f, z), new Vector3(0.06f, 1.0f, 0.06f), Palette.Hex(0xC9C2B0));
+                b.Box(new Vector3(x * 1.08f, rt + 0.68f, 0), new Vector3(0.06f, 0.06f, len - 0.6f), Palette.Hex(0xC9C2B0));
             }
-            // Ties and rails.
+            // End carriages with wheels on the circle rail.
+            foreach (float z in new[] { -len / 2 + 0.5f, len / 2 - 0.5f })
+                b.Box(new Vector3(0, rt - 0.45f, z), new Vector3(3.6f, 0.5f, 0.8f), girder);
             b.Matte();
             for (float z = -len / 2 + 0.3f; z < len / 2; z += 0.65f)
-                b.Box(new Vector3(0, 0.44f, z), new Vector3(2.2f, 0.1f, 0.24f), Palette.Hex(0x4A3A2C));
+                b.Box(new Vector3(0, rt - 0.2f, z), new Vector3(2.3f, 0.1f, 0.24f), Palette.Hex(0x4A3A2C));
             b.Mat(0.6f, 0.8f);
             foreach (float x in new[] { -0.72f, 0.72f })
-                b.Box(new Vector3(x, WorldLayout.RailTop + 0.12f, 0), new Vector3(0.09f, 0.14f, len), Palette.Steel);
+                b.Box(new Vector3(x, rt - 0.08f, 0), new Vector3(0.09f, 0.14f, len), Palette.Steel);
             // Operator's hut at one end.
             b.Matte();
-            b.Box(new Vector3(2.2f, 1.3f, len / 2 - 1.2f), new Vector3(1.6f, 2.2f, 1.6f), Palette.PaintGreen);
+            b.Box(new Vector3(2.6f, rt + 0.8f, len / 2 - 1.4f), new Vector3(1.5f, 2.2f, 1.6f), Palette.PaintGreen);
             b.Lit();
-            b.Box(new Vector3(2.2f, 1.6f, len / 2 - 0.39f), new Vector3(1.0f, 0.6f, 0.04f), Palette.Window);
+            b.Box(new Vector3(2.6f, rt + 1.2f, len / 2 - 0.59f), new Vector3(1.0f, 0.6f, 0.04f), Palette.Window);
             b.Matte();
-            b.GableRoof(new Vector3(2.2f, 2.4f, len / 2 - 1.2f), new Vector3(1.8f, 0.7f, 1.8f), Palette.RoofRed, Palette.PaintGreen, 0.15f);
+            b.GableRoof(new Vector3(2.6f, rt + 1.9f, len / 2 - 1.4f), new Vector3(1.7f, 0.7f, 1.8f), Palette.RoofRed, Palette.PaintGreen, 0.15f);
             var go = b.ToObject("Turntable", root);
             go.transform.position = C + Vector3.up * _gy;
             go.AddComponent<Turntable>();
@@ -305,7 +334,7 @@ namespace Ironhorse.Game
             var rng = new System.Random(77);
             System.Func<float> R = () => (float)rng.NextDouble();
             // Cable drums, crates and barrels by the stall doors and the shop.
-            foreach (var (r, a) in new[] { (Inner - 2.5f, 100f), (Inner - 2.2f, 152f), (Inner - 2.6f, 204f), (21f, 52f), (22f, 84f), (16f, -48f) })
+            foreach (var (r, a) in new[] { (Inner - 2.5f, 100f), (Inner - 2.2f, 152f), (Inner - 2.6f, 204f), (21f, 52f), (22f, 84f), (17f, -45f) })
             {
                 var c = Pt(r, a);
                 for (int k = 0; k < 4; k++)
@@ -318,10 +347,10 @@ namespace Ironhorse.Game
                 }
             }
             // Water tank and coaling stage by the west tracks.
-            Vegetation.AddModel(ModelRegistry.Buildings, "watertower", Pt(26, 236), Quaternion.Euler(0, 40, 0));
-            var coal = Pt(20, -100);
+            Vegetation.AddModel(ModelRegistry.Buildings, "watertower", Pt(31, 222), Quaternion.Euler(0, 40, 0));
+            var coal = Pt(17, -87); // straddling the coaling track
             mb.Matte();
-            mb.Push().Translate(coal).Rotate(Quaternion.LookRotation(Dir(-100)));
+            mb.Push().Translate(coal).Rotate(Quaternion.LookRotation(Dir(-87)));
             for (int k = -1; k <= 1; k += 2)
                 for (int j = -1; j <= 1; j++)
                     mb.Box(new Vector3(k * 2.2f, 2.0f, j * 2.4f), new Vector3(0.4f, 4f, 0.4f), Palette.WoodDark);
@@ -329,9 +358,9 @@ namespace Ironhorse.Game
             mb.Box(new Vector3(0, 5.3f, 0), new Vector3(4.6f, 1.4f, 5.4f), Palette.WoodDark);
             mb.Sphere(new Vector3(0, 6.0f, 0), new Vector3(2.0f, 0.8f, 2.4f), 8, Palette.Hex(0x232326), false);
             mb.Pop();
-            Station.Lamp(mb, Pt(PitR + 2.5f, 20));
-            Station.Lamp(mb, Pt(PitR + 2.5f, 200));
-            Station.Lamp(mb, Pt(PitR + 2.5f, -110));
+            Station.Lamp(mb, Pt(RimR + 1.5f, 18));
+            Station.Lamp(mb, Pt(RimR + 1.5f, 218));
+            Station.Lamp(mb, Pt(RimR + 1.5f, -100));
         }
 
         static void Spool(MeshBuilder mb, Vector3 p, float yaw)
