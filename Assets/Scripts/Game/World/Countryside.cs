@@ -72,6 +72,7 @@ namespace Ironhorse.Game
         public static void Build(Transform root)
         {
             var mb = new MeshBuilder();
+            bool hay = Vegetation.HasArt(ModelRegistry.Buildings, "haystack");
             Color[] crops = { Palette.Hex(0xB8963E), Palette.Hex(0x6E9440), Palette.Hex(0xA0884A), Palette.Hex(0x84A444), Palette.Hex(0x9C7A3A) };
             foreach (var f in Farms)
             {
@@ -103,18 +104,37 @@ namespace Ironhorse.Game
                     mb.Box(Vector3.zero, new Vector3(sideways ? 12.5f : 13f, 0.12f, 19f), Palette.Hex(0x6E5034));
                     mb.Pop();
                     mb.Surf = SurfaceKind.Auto;
-                    for (int row = 0; row < 6; row++)
+                    bool golden = col.r > col.g; // ripe grain: cut and stooked in sheaves instead of standing rows
+                    if (golden && hay)
                     {
-                        var c = sideways ? P(fx, fz - 9 + row * 3.2f) : P(fx - 5 + row * 2.1f, fz);
-                        mb.Push().Translate(c + Vector3.up * 0.18f).Rotate(rot * Quaternion.Euler(0, sideways ? 90 : 0, 0));
-                        mb.Box(Vector3.zero, new Vector3(1.6f, 0.3f, sideways ? 11.5f : 18f), MeshBuilder.Darken(col, 0.88f + 0.12f * (row % 2)));
-                        mb.Pop();
+                        for (int row = 0; row < 4; row++)
+                            for (int j = 0; j < 4; j++)
+                            {
+                                var q = P(fx - 4.5f + j * 3f + (row % 2) * 1.2f, fz - 7 + row * 4.5f);
+                                Vegetation.AddModel(ModelRegistry.Buildings, "haystack", q, rot * Quaternion.Euler(0, row * 47 + j * 31, 0), 0.38f);
+                            }
+                        continue;
+                    }
+                    for (int row = 0; row < 7; row++)
+                    {
+                        // Rounded ridges of crop with a darker furrow between, a little uneven along their length.
+                        float along = sideways ? 11.5f : 18f;
+                        for (int seg = 0; seg < 3; seg++)
+                        {
+                            float o = -along / 2 + (seg + 0.5f) * along / 3;
+                            var c = sideways ? P(fx + o, fz - 9 + row * 2.75f) : P(fx - 5.4f + row * 1.8f, fz + o);
+                            var dir = rot * (sideways ? Vector3.right : Vector3.forward);
+                            float r = 0.42f + 0.06f * Mathf.Sin(row * 1.7f + seg * 2.3f + f.Seed);
+                            mb.Cylinder(c + Vector3.up * 0.1f - dir * (along / 6), c + Vector3.up * 0.1f + dir * (along / 6), r, 6,
+                                MeshBuilder.Darken(col, 0.84f + 0.16f * Mathf.Repeat(row * 0.37f + seg * 0.21f, 1f)), false);
+                        }
                     }
                 }
                 // Haystacks and a split-rail fence along the fields' far edge.
                 for (int k = 0; k < 3; k++)
                 {
-                    var c = P(-4 + k * 3.4f, 4 + (float)rng.NextDouble() * 2);
+                    var c = P(-4 + k * 4.2f, 4 + (float)rng.NextDouble() * 2);
+                    if (hay) { Vegetation.AddModel(ModelRegistry.Buildings, "haystack", c, Quaternion.Euler(0, k * 77 + f.Yaw, 0), 0.8f); continue; }
                     mb.Matte();
                     mb.Cylinder(c, c + Vector3.up * 1.6f, 1.25f, 0.5f, 10, Palette.GrassDry, true);
                 }

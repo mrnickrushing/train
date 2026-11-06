@@ -96,10 +96,16 @@ namespace Ironhorse.Game
                 if (Vegetation.HasArt(ModelRegistry.Buildings, "gantrycrane")) Vegetation.AddModel(ModelRegistry.Buildings, "gantrycrane", gc, Quaternion.Euler(0, GantryYaw, 0));
                 else GantryCrane(props, gc);
             }
-            GoodsShed(props, new Vector3(96, 0, r.yMax - 4));
+            if (Vegetation.HasArt(ModelRegistry.Buildings, "goodsshed")) Vegetation.AddModel(ModelRegistry.Buildings, "goodsshed", new Vector3(96, 0, r.yMax - 1), Quaternion.Euler(0, GoodsShedYaw, 0), 1.25f);
+            else GoodsShed(props, new Vector3(96, 0, r.yMax - 4));
             if (Vegetation.HasArt(ModelRegistry.Buildings, "coalheap")) Vegetation.AddModel(ModelRegistry.Buildings, "coalheap", new Vector3(160, 0, r.yMax - 6), Quaternion.Euler(0, 30, 0));
             else CoalHeap(props, new Vector3(160, 0, r.yMax - 6));
-            for (int i = 0; i < 6; i++) LogStack(props, new Vector3(120 + i * 5.5f, 0, r.yMax - 5));
+            for (int i = 0; i < 6; i++)
+            {
+                var lp = new Vector3(120 + i * 5.5f, 0, r.yMax - 5);
+                if (Vegetation.HasArt(ModelRegistry.Buildings, "logstack")) { if (i % 2 == 0) Vegetation.AddModel(ModelRegistry.Buildings, "logstack", lp + Vector3.right * 2.75f, Quaternion.Euler(0, 90 + i * 7, 0), 1.1f); }
+                else LogStack(props, lp);
+            }
             for (int i = 0; i < 40; i++)
             {
                 var p = new Vector3(R(x0 + 4, x1 - 8), 0, WorldLayout.SidingZ(2) + R(-1.2f, 1.2f) * 0 + (R() < 0.5f ? 2.7f : -2.7f));
@@ -112,6 +118,8 @@ namespace Ironhorse.Game
 
         /// <summary>Turn of the crane art so its girder spans the sidings.</summary>
         const float GantryYaw = 90f;
+        /// <summary>Turn of the goods shed art so its long side and loading dock face the sidings.</summary>
+        const float GoodsShedYaw = 90f;
 
         static void GantryCrane(MeshBuilder mb, Vector3 c)
         {

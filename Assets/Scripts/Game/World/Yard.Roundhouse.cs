@@ -22,6 +22,7 @@ namespace Ironhorse.Game
         const float LeadAng = -55f, ShopAng = 68f;
         /// <summary>Where the lead meets the main line (west of the station throat at x = -120).</summary>
         const float LeadMergeX = -124f;
+        const float CoalStageYaw = 90f;
         /// <summary>The lead from the turntable rim to the main line, and the distance along it where its rails join the main line's.</summary>
         public static TrackPath Lead; public static float LeadStop;
         /// <summary>Outer edge of the turntable's stone rim (tracks run onto it).</summary>
@@ -362,6 +363,14 @@ namespace Ironhorse.Game
             // Water tank and coaling stage by the west tracks.
             Vegetation.AddModel(ModelRegistry.Buildings, "watertower", Pt(31, 222), Quaternion.Euler(0, 40, 0));
             var coal = Pt(17, -87); // straddling the coaling track
+            if (Vegetation.HasArt(ModelRegistry.Buildings, "coalstage"))
+            {
+                // The coaling stage beside the coaling track, chutes over it.
+                var side = Vector3.Cross(Vector3.up, Dir(-87));
+                Vegetation.AddModel(ModelRegistry.Buildings, "coalstage", coal + side * 5.5f, Quaternion.LookRotation(Dir(-87)) * Quaternion.Euler(0, CoalStageYaw, 0));
+            }
+            else
+            {
             mb.Matte();
             mb.Push().Translate(coal).Rotate(Quaternion.LookRotation(Dir(-87)));
             for (int k = -1; k <= 1; k += 2)
@@ -371,6 +380,7 @@ namespace Ironhorse.Game
             mb.Box(new Vector3(0, 5.3f, 0), new Vector3(4.6f, 1.4f, 5.4f), Palette.WoodDark);
             mb.Sphere(new Vector3(0, 6.0f, 0), new Vector3(2.0f, 0.8f, 2.4f), 8, Palette.Hex(0x232326), false);
             mb.Pop();
+            }
             Station.Lamp(mb, Pt(RimR + 1.5f, 18));
             Station.Lamp(mb, Pt(RimR + 1.5f, 218));
             Station.Lamp(mb, Pt(RimR + 1.5f, -100));

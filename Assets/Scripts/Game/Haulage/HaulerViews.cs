@@ -194,7 +194,7 @@ namespace Ironhorse.Game
         /// animations go into <paramref name="team"/> when given; returns the paddle wheel of a steamer, if any.</summary>
         public static Transform BuildModel(HaulerDef d, Transform root, List<Animation> team = null, List<(Transform t, float len)> cars = null)
         {
-            if (d.OnRail) { WorkTrain(root, d.Id == "ballasttrain" ? "redmesa" : "dusty", d.Id == "ballasttrain" ? 4 : 2, cars); return null; }
+            if (d.OnRail) { WorkTrain(root, d.Id == "ballasttrain" ? "redmesa" : "dusty", cars == null ? 1 : d.Id == "ballasttrain" ? 4 : 2, cars); return null; } // a card shows the engine and one loaded car
             // AI-made models (Resources/Models/Haulers) when imported; boats sit down into the water to their waterline.
             if (ModelRegistry.Has("Haulers", d.Id))
             {
@@ -228,7 +228,7 @@ namespace Ironhorse.Game
                 art.transform.localPosition -= new Vector3(b.center.x, 0, b.center.z);
                 float len = Mathf.Max(4, b.size.z);
                 if (i > 0) Load(holder, b.size.y, len, i);
-                if (i == 0)
+                if (i == 0 && cars != null) // steam on the map only (it would throw off a card picture's framing)
                 {
                     var stacks = ModelRegistry.Anchors(art, "Smoke");
                     if (stacks.Count > 0) Fx.Create(FxKind.Steam, stacks[0], Vector3.zero);

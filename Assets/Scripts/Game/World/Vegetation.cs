@@ -100,12 +100,14 @@ namespace Ironhorse.Game
         /// Registers one static model instance (e.g. a parked wagon) centred on <paramref name="center"/> at ground
         /// height <paramref name="center"/>.y. Returns the model's length along its local Z (0 when there is no art).
         /// </summary>
-        public static float AddModel(string category, string id, Vector3 center, Quaternion rot)
+        public static float AddModel(string category, string id, Vector3 center, Quaternion rot) { return AddModel(category, id, center, rot, 1f); }
+
+        public static float AddModel(string category, string id, Vector3 center, Quaternion rot, float scale)
         {
             var k = Get(category, id);
             if (k == null) return 0;
             var lb = k.LocalBounds;
-            var place = Matrix4x4.TRS(center, rot, Vector3.one) * Matrix4x4.Translate(new Vector3(-lb.center.x, 0, -lb.center.z));
+            var place = Matrix4x4.TRS(center, rot, Vector3.one * scale) * Matrix4x4.Translate(new Vector3(-lb.center.x, 0, -lb.center.z));
             var cell = new Vector2Int(Mathf.FloorToInt(center.x / CellSize), Mathf.FloorToInt(center.z / CellSize));
             List<Matrix4x4> list;
             if (!k.Cells.TryGetValue(cell, out list)) k.Cells[cell] = list = new List<Matrix4x4>();

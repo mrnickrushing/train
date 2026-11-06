@@ -106,6 +106,31 @@ namespace Ironhorse.Game
                 }
             }
             _mesaFeet.Clear();
+            HillOutcrops(rng);
+        }
+
+        /// <summary>Weathered sandstone outcrops breaking through the steep hillsides (the bare brown slopes otherwise read
+        /// as smooth clay): smaller buttresses half sunk into the slope, leaning with it.</summary>
+        static void HillOutcrops(System.Random rng)
+        {
+            int placed = 0;
+            for (int tries = 0; tries < 20000 && placed < 220; tries++)
+            {
+                float x = ValleyTerrain.MinX + (float)rng.NextDouble() * (ValleyTerrain.MaxX - ValleyTerrain.MinX);
+                float z = ValleyTerrain.MinZ + (float)rng.NextDouble() * (RegionFog.EdgeZ - 20 - ValleyTerrain.MinZ);
+                float h = ValleyTerrain.Height(x, z);
+                if (h < 2.5f) continue;
+                float gx = ValleyTerrain.Height(x + 3, z) - ValleyTerrain.Height(x - 3, z), gz = ValleyTerrain.Height(x, z + 3) - ValleyTerrain.Height(x, z - 3);
+                float slope = Mathf.Sqrt(gx * gx + gz * gz) / 6f;
+                if (slope < 0.28f) continue;
+                if (DestinationRoutes.Distance(x, z) < 14 || ProjectSites.Blocks(x, z) || Countryside.Blocks(x, z)) continue;
+                if (HaulRoutes.Blocks(x, z)) continue;
+                var down = new Vector3(-gx, 0, -gz).normalized;
+                float sc = 0.35f + (float)rng.NextDouble() * 0.35f;
+                var rot = Quaternion.LookRotation(down) * Quaternion.Euler(-Mathf.Min(25, slope * 20), (float)rng.NextDouble() * 60 - 30, 0);
+                Vegetation.AddModel(ModelRegistry.Buildings, "cliffrock", new Vector3(x, h - 1.2f * sc * 3, z), rot, sc);
+                placed++;
+            }
         }
 
         /// <summary>Layered sandstone mesa. faceDeg = angle (degrees) of a flat cliff face for a tunnel, or -999.</summary>
@@ -143,7 +168,7 @@ namespace Ironhorse.Game
                 float y0 = baseY + l * lh, y1 = baseY + (l + 1) * lh;
                 if (l == 0) _mesaFeet.Add((c, poly, height, faceDeg, -999f));
                 // A second tier of buttresses on a ledge halfway up the tall ones.
-                if (height > 30 && l == layers / 2) _mesaFeet.Add((c, poly, height, faceDeg, y0));
+                if (height > 30 && (l == layers / 2 || l == layers * 3 / 4) && l > 0) _mesaFeet.Add((c, poly, height, faceDeg, y0));
                 bool topLayer = l == layers - 1;
                 Color top = topLayer ? Palette.Hex(0x8C7A4E) : MeshBuilder.Darken(bands[(l + seed) % bands.Length], 0.92f);
                 mb.Matte();

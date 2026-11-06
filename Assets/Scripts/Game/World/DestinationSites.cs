@@ -481,6 +481,7 @@ namespace Ironhorse.Game
 
         static void LogPile(MeshBuilder mb, Vector3 p, float yaw, System.Random rng)
         {
+            if (Art("logstack", p, yaw + 90, 0.85f)) return;
             p.y = G(p.x, p.z);
             mb.Matte();
             var rot = Quaternion.Euler(0, yaw + 90, 0);
@@ -607,8 +608,17 @@ namespace Ironhorse.Game
             mb.Pop();
         }
 
+        /// <summary>Places a prop's art (instanced) on the ground at p, or returns false when it isn't imported.</summary>
+        static bool Art(string id, Vector3 p, float yaw, float scale = 1f)
+        {
+            if (!Vegetation.HasArt(ModelRegistry.Buildings, id)) return false;
+            Vegetation.AddModel(ModelRegistry.Buildings, id, new Vector3(p.x, G(p.x, p.z), p.z), Quaternion.Euler(0, yaw, 0), scale);
+            return true;
+        }
+
         static void Tent(MeshBuilder mb, Vector3 p, float yaw)
         {
+            if (Art("tent", p, yaw + 180)) return;
             p.y = G(p.x, p.z);
             mb.Matte();
             mb.Push().Translate(p).RotateY(yaw);
@@ -618,6 +628,7 @@ namespace Ironhorse.Game
 
         static void Sluice(MeshBuilder mb, Vector3 p, float yaw)
         {
+            if (Art("sluice", p, yaw)) return;
             p.y = G(p.x, p.z);
             mb.Matte();
             mb.Push().Translate(p).RotateY(yaw);
@@ -631,6 +642,7 @@ namespace Ironhorse.Game
 
         static void Derrick(MeshBuilder mb, Vector3 p)
         {
+            if (Art("derrick", p, Mathf.Repeat(p.x * 31 + p.z * 17, 360))) return;
             p.y = G(p.x, p.z);
             mb.Matte();
             for (int k = 0; k < 4; k++)
@@ -649,6 +661,7 @@ namespace Ironhorse.Game
 
         static void Tank(MeshBuilder mb, Vector3 p)
         {
+            if (Art("oiltank", p, Mathf.Repeat(p.x * 13 + p.z * 7, 360))) return;
             p.y = G(p.x, p.z);
             mb.Paint();
             mb.Cylinder(p, p + Vector3.up * 4.2f, 2.6f, 16, Palette.Hex(0x3A3A3C));
