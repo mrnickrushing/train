@@ -223,6 +223,15 @@ namespace Ironhorse.Game
                 while (from < r.Length - 1 && DestinationRoutes.OnParent(r.PositionAt(from))) from += 0.25f;
                 TrackBuilder.Build(rails, r, Mathf.Max(0, from - 0.25f), -1, trestleOverWater: true);
                 Depot(rails, r);
+                if (DepotArt)
+                {
+                    // The station building (art) beside the end of the line, its platform and front to the track.
+                    Vector3 e, f;
+                    r.Sample(r.Length - 0.5f, out e, out f);
+                    f.y = 0; f.Normalize();
+                    var rt = Vector3.Cross(Vector3.up, f);
+                    PlaceAt("outpostdepot", e - f * 14 + rt * 7.5f, Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg + 90);
+                }
             }
             rails.ToObject("Destination Spurs", transform);
             foreach (var id in DestinationRoutes.Ids) BuildSite(id);
@@ -283,6 +292,8 @@ namespace Ironhorse.Game
 
         // ---------------------------------------------------------------- the depot at the end of the line
 
+        static bool DepotArt { get { return ModelRegistry.Has(ModelRegistry.Buildings, "outpostdepot"); } }
+
         static void Depot(MeshBuilder mb, TrackPath r)
         {
             Vector3 end, fwd;
@@ -297,6 +308,7 @@ namespace Ironhorse.Game
             mb.Box(new Vector3(-0.9f, 0.4f, -0.6f), new Vector3(0.3f, 0.8f, 1.6f), Palette.WoodDark);
             mb.Box(new Vector3(0.9f, 0.4f, -0.6f), new Vector3(0.3f, 0.8f, 1.6f), Palette.WoodDark);
             mb.Pop();
+            if (DepotArt) return;
             // A plank platform and a small depot shed beside the last car lengths.
             var pc = end - fwd * 14 + right * 4.2f;
             mb.Surf = SurfaceKind.Planks;
@@ -448,6 +460,14 @@ namespace Ironhorse.Game
 
         static void Heap(MeshBuilder mb, Vector3 p, float r, Color col)
         {
+            // Coal (dark) or ore heaps from the art when there is some, at a random turn.
+            string art = col.r + col.g + col.b < 0.6f ? "coalheap" : "oreheap";
+            if (Vegetation.HasArt(ModelRegistry.Buildings, art))
+            {
+                p.y = G(p.x, p.z);
+                Vegetation.AddModel(ModelRegistry.Buildings, art, p, Quaternion.Euler(0, Mathf.Repeat(p.x * 37 + p.z * 11, 360), 0));
+                return;
+            }
             p.y = G(p.x, p.z) - 0.3f;
             mb.Matte();
             mb.Sphere(p, new Vector3(r, r * 0.45f, r * 0.85f), 10, col, false);
@@ -505,9 +525,18 @@ namespace Ironhorse.Game
             }
             // Cattle: brown and white bodies grazing.
             var rng = new System.Random((int)(c.x * 13 + c.z));
+            bool longhorns = Vegetation.HasArt("Props", "longhorn");
+            var toWorld = mb.Matrix;
             for (int i = 0; i < (int)(w * d / 30); i++)
             {
                 var p = new Vector3(((float)rng.NextDouble() - 0.5f) * (w - 3), 0, ((float)rng.NextDouble() - 0.5f) * (d - 3));
+                if (longhorns)
+                {
+                    var wp = toWorld.MultiplyPoint3x4(p);
+                    wp.y = G(wp.x, wp.z);
+                    Vegetation.AddModel("Props", "longhorn", wp, Quaternion.Euler(0, (float)rng.NextDouble() * 360, 0));
+                    continue;
+                }
                 mb.Push().Translate(p).RotateY((float)rng.NextDouble() * 360);
                 var coat = rng.Next(3) == 0 ? Palette.Cream : Palette.Hex(0x7A4A2A);
                 mb.Box(new Vector3(0, 0.95f, 0), new Vector3(0.75f, 0.7f, 1.7f), coat);

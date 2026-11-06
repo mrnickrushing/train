@@ -90,10 +90,15 @@ namespace Ironhorse.Game
             }
 
             var props = new MeshBuilder();
-            GantryCrane(props, new Vector3(108, 0, WorldLayout.SidingZ(2)));
-            GantryCrane(props, new Vector3(146, 0, WorldLayout.SidingZ(2)));
+            foreach (float gx in new[] { 108f, 146f })
+            {
+                var gc = new Vector3(gx, 0, WorldLayout.SidingZ(2));
+                if (Vegetation.HasArt(ModelRegistry.Buildings, "gantrycrane")) Vegetation.AddModel(ModelRegistry.Buildings, "gantrycrane", gc, Quaternion.Euler(0, GantryYaw, 0));
+                else GantryCrane(props, gc);
+            }
             GoodsShed(props, new Vector3(96, 0, r.yMax - 4));
-            CoalHeap(props, new Vector3(160, 0, r.yMax - 6));
+            if (Vegetation.HasArt(ModelRegistry.Buildings, "coalheap")) Vegetation.AddModel(ModelRegistry.Buildings, "coalheap", new Vector3(160, 0, r.yMax - 6), Quaternion.Euler(0, 30, 0));
+            else CoalHeap(props, new Vector3(160, 0, r.yMax - 6));
             for (int i = 0; i < 6; i++) LogStack(props, new Vector3(120 + i * 5.5f, 0, r.yMax - 5));
             for (int i = 0; i < 40; i++)
             {
@@ -104,6 +109,9 @@ namespace Ironhorse.Game
             for (float lx = x0 + 6; lx < x1; lx += 22) Station.Lamp(props, new Vector3(lx, 0, WorldLayout.SidingZ(2) + 2.75f));
             props.ToObject("Yard Props", root).isStatic = true;
         }
+
+        /// <summary>Turn of the crane art so its girder spans the sidings.</summary>
+        const float GantryYaw = 90f;
 
         static void GantryCrane(MeshBuilder mb, Vector3 c)
         {

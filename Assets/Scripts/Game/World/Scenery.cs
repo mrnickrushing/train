@@ -33,8 +33,19 @@ namespace Ironhorse.Game
             float mz = WorldLayout.MainZ;
             Mesa(mb, new Vector2(WorldLayout.TunnelX + 52, mz), 52, 38, 180f, 7);
             Mesa(mb, new Vector2(-WorldLayout.TunnelX - 52, mz), 52, 34, 0f, 8);
-            Portal(mb, WorldLayout.TunnelX - 0.2f, mz, -1);
-            Portal(mb, -WorldLayout.TunnelX + 0.2f, mz, 1);
+            foreach (int facing in new[] { -1, 1 })
+            {
+                float px = facing < 0 ? WorldLayout.TunnelX - 0.2f : -WorldLayout.TunnelX + 0.2f;
+                // Stone portal art (its arch faces the valley), else the procedural one.
+                var art = ModelRegistry.Spawn(ModelRegistry.Buildings, "tunnelportal", root);
+                if (art != null)
+                {
+                    art.transform.SetPositionAndRotation(new Vector3(px - facing * PortalInset, 0, mz),
+                        Quaternion.Euler(0, (facing > 0 ? 90 : -90) + PortalYaw, 0) * art.transform.rotation);
+                    art.transform.localScale *= PortalScale;
+                }
+                else Portal(mb, px, mz, facing);
+            }
 
             // Desert buttes and mesas scattered to the south and on the rim.
             int placed = 0, guard = 0;
@@ -155,6 +166,8 @@ namespace Ironhorse.Game
                 }
             mb.Surf = keep;
         }
+
+        const float PortalYaw = 180f, PortalScale = 1.35f, PortalInset = -1.5f;
 
         static void Portal(MeshBuilder mb, float x, float z, int facing)
         {
