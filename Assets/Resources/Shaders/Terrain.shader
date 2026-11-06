@@ -183,6 +183,23 @@ Shader "Ironhorse/Terrain"
                 float northRock = saturate((pos.z + 40) / 160);
                 float lumR = dot(albedo, float3(0.3, 0.59, 0.11));
                 albedo = lerp(albedo, lumR * float3(0.98, 0.98, 0.96) * 1.15, rockW * northRock * 0.85);
+                // Desert rock faces: horizontal sandstone strata (wavy, alternating rust, buff and dark bands) and
+                // vertical weathering streaks running down the cliff, so steep slopes read as layered rock, not clay.
+                float bare = saturate(1 - (w[0] + w[1]) / max(wsum, 1e-3) * 1.5); // rock and dirt, not grass
+                float steep = saturate((0.85 - nGeo.y) * 4) * bare * (1 - northRock);
+                UNITY_BRANCH if (steep > 0.01)
+                {
+                    float wob = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.012).r * 6;
+                    float layer = pos.y * 0.42 + wob;
+                    float band = frac(layer);
+                    float idx = floor(layer);
+                    float pick = frac(sin(idx * 12.9898) * 43758.5453);
+                    float3 tint = pick < 0.33 ? float3(1.2, 0.9, 0.72) : pick < 0.66 ? float3(0.86, 0.68, 0.56) : float3(1.3, 1.12, 0.88);
+                    float seam = smoothstep(0.0, 0.07, band) * smoothstep(1.0, 0.9, band);
+                    float streak = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, float2((pos.x + pos.z) * 0.09, pos.y * 0.008)).r;
+                    float3 rock = albedo * tint * lerp(0.45, 1.0, seam) * lerp(0.72, 1.12, streak);
+                    albedo = lerp(albedo, rock, steep);
+                }
                 // Large-scale brightness/hue variation hides tiling from the high camera.
                 float m1 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.006).r;
                 float m2 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.021 + 0.37).r;
