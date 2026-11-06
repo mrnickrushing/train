@@ -90,7 +90,7 @@ Shader "Ironhorse/Terrain"
             }
 
             // Flat layers sample the XZ plane; rock is triplanar so cliffs don't stretch.
-            void SampleLayer(int i, float3 pos, float3 blend, float3 dx, float3 dy, out float4 alb, out float4 nrm)
+            void SampleLayer(int i, float3 pos, float3 blend, float3 dx, float3 dy, float anti, out float4 alb, out float4 nrm)
             {
                 float t = 1.0 / kTile[i];
                 UNITY_BRANCH if (i == 4)
@@ -104,8 +104,30 @@ Shader "Ironhorse/Terrain"
                 }
                 else
                 {
-                    alb = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainAlbedo, sampler_TerrainAlbedo, pos.xz * t, i, dx.xz * t, dy.xz * t);
-                    nrm = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainNormal, sampler_TerrainNormal, pos.xz * t, i, dx.xz * t, dy.xz * t);
+                    // Anti-tiling: a second copy, turned 37 degrees and 2.3x larger, faded in and out by world noise
+                    // (anti), so the photo tile never lines up into a visible grid.
+                    const float2x2 R = float2x2(0.7986, -0.6018, 0.6018, 0.7986);
+                    float t2 = t * 0.435;
+                    float2 uv2 = mul(R, pos.xz) * t2 + float2(0.37, 0.71);
+                    float2 dx2 = mul(R, dx.xz) * t2, dy2 = mul(R, dy.xz) * t2;
+                    float4 a1 = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainAlbedo, sampler_TerrainAlbedo, pos.xz * t, i, dx.xz * t, dy.xz * t);
+                    float4 n1 = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainNormal, sampler_TerrainNormal, pos.xz * t, i, dx.xz * t, dy.xz * t);
+                    float4 a2 = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainAlbedo, sampler_TerrainAlbedo, uv2, i, dx2, dy2);
+                    float4 n2 = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainNormal, sampler_TerrainNormal, uv2, i, dx2, dy2);
+                    // Height-aware crossfade: the taller detail of either copy wins in the blend zone, so there's no smear.
+                    float k = saturate((anti - 0.5) * 3 + (a2.a - a1.a) * 1.5 + 0.5);
+                    alb = lerp(a1, a2, k);
+                    // Grass: soften the photo's hard bright speckles toward a blurred copy (a low mip of the same tile),
+                    // so blades read as a soft carpet with clumps rather than glitter.
+                    UNITY_BRANCH if (i <= 1)
+                    {
+                        float3 soft = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainAlbedo, sampler_TerrainAlbedo, pos.xz * t, i, dx.xz * t * 14, dy.xz * t * 14).rgb;
+                        alb.rgb = lerp(soft, alb.rgb, 0.5);
+                    }
+                    nrm = lerp(n1, n2, k);
+                    // Rotate the second copy's tangent-plane normal back into world XZ.
+                    float2 nx2 = n2.ag * 2 - 1; nx2 = mul(transpose(R), nx2);
+                    nrm.ag = lerp(n1.ag, nx2 * 0.5 + 0.5, k);
                 }
                 alb.rgb *= kTint[i];
             }
@@ -135,19 +157,20 @@ Shader "Ironhorse/Terrain"
                 // Height blend: layers with taller texture detail (pebbles, tufts) win at transitions.
                 float4 alb[6]; float4 nrm[6];
                 float hmax = -1;
+                float anti = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.043 + float2(0.29, 0.53)).r;
                 [unroll] for (int k2 = 0; k2 < 6; k2++)
                 {
                     alb[k2] = 0; nrm[k2] = float4(1, 0.5, 0.8, 0.5);
                     UNITY_BRANCH if (w[k2] > 0.003)
                     {
-                        SampleLayer(k2, pos, blend, dx, dy, alb[k2], nrm[k2]);
+                        SampleLayer(k2, pos, blend, dx, dy, anti, alb[k2], nrm[k2]);
                         hmax = max(hmax, alb[k2].a + w[k2]);
                     }
                 }
                 float3 albedo = 0; float4 n = 0; float total = 0;
                 [unroll] for (int k3 = 0; k3 < 6; k3++)
                 {
-                    float hw = w[k3] > 0.003 ? max(alb[k3].a + w[k3] - (hmax - 0.25), 0) : 0;
+                    float hw = w[k3] > 0.003 ? max(alb[k3].a + w[k3] - (hmax - (k3 <= 1 ? 0.6 : 0.25)), 0) : 0; // the two grasses mix softly (no speckle)
                     albedo += alb[k3].rgb * hw; n += nrm[k3] * hw; total += hw;
                 }
                 albedo /= max(total, 1e-4); n /= max(total, 1e-4);
@@ -175,6 +198,12 @@ Shader "Ironhorse/Terrain"
                 float3 lush = albedo * float3(0.62, 0.86, 0.6);
                 albedo = lerp(albedo, m3 > 0 ? cured : lush, saturate(abs(m3) * 2.8) * green * 0.9);
                 albedo *= 1 + m4 * 0.22 * green;
+                // Tufts and clumps: metre-scale light and dark mottling on the grass, readable from mid zoom, and a
+                // slightly darker, cooler shade in the hollows between them.
+                float c1 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.045 + float2(0.11, 0.47)).r - 0.5;
+                float c2 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.13 + float2(0.83, 0.19)).r - 0.5;
+                float clump = c1 * 0.7 + c2 * 0.3;
+                albedo *= lerp(float3(1, 1, 1), clump > 0 ? float3(1.2, 1.14, 0.86) : float3(0.7, 0.82, 0.76), smoothstep(0.02, 0.3, abs(clump)) * green);
                 // Big patches you can read from the top of the zoom: whole hillsides of yellow-green, deep green and olive.
                 float m5 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.0032 + float2(0.43, 0.29)).r - 0.5;
                 float m6 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.0071 + float2(0.17, 0.83)).r - 0.5;
@@ -197,7 +226,7 @@ Shader "Ironhorse/Terrain"
                 albedo = lerp(albedo, vcol, remainder);
 
                 float2 nxy = float2(n.a, n.g) * 2 - 1;
-                float3 normalWS = normalize(nGeo + float3(nxy.x, 0, nxy.y) * (1 - remainder) * 0.8);
+                float3 normalWS = normalize(nGeo + float3(nxy.x, 0, nxy.y) * (1 - remainder) * 1.15);
 
                 InputData inputData = (InputData)0;
                 inputData.positionWS = pos;
