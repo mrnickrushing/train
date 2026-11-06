@@ -322,6 +322,8 @@ namespace Ironhorse.Core
         public bool tutorialDone;
         /// <summary>One-time feature tips already shown (after the first-launch guide).</summary>
         public List<string> tipsSeen = new List<string>();
+        /// <summary>Graphics: 0 = automatic (battery saver on phones with little memory), 1 = full detail, 2 = battery saver.</summary>
+        public int graphics;
     }
 
     public static class ResourceListExt

@@ -25,6 +25,7 @@ namespace Ironhorse.Game
             /// <summary>A work train's cars, engine first (centre-pivoted, length along +Z).</summary>
             public readonly List<(Transform t, float len)> Cars = new List<(Transform, float)>();
             public float LastS = float.NaN;
+            public MapSound Sound;
             public void OnTapped()
             {
                 AudioManager.Play(Sfx.Click);
@@ -37,6 +38,18 @@ namespace Ironhorse.Game
         readonly Dictionary<int, View> _views = new Dictionary<int, View>();
 
         void Awake() { Instance = this; }
+
+        void Start() { if (G.Session != null) G.Session.HaulerSent += OnSent; }
+        void OnDestroy() { if (G.Session != null) G.Session.HaulerSent -= OnSent; }
+
+        /// <summary>A crack of the whip or the steamboat's whistle as a hauler sets off.</summary>
+        static void OnSent(HaulerState h)
+        {
+            var d = Haulage.Hauler(h.defId);
+            if (d == null) return;
+            if (d.OnWater) AudioManager.PlayNamed("horn", 0.5f);
+            else if (d.Kind == HaulKind.Wagon) AudioManager.PlayNamed("whip", 0.6f);
+        }
 
         void Update()
         {
@@ -167,6 +180,7 @@ namespace Ironhorse.Game
 
         static void SetPace(View v, float speed)
         {
+            if (v.Sound != null) v.Sound.Active = speed > 0.3f;
             foreach (var a in v.Team)
                 foreach (AnimationState st in a) st.speed = speed / 1.4f; // one stride ≈ 1.4 m; standing still when parked
             if (v.Paddle != null) v.Paddle.Rotate(Vector3.right, speed * 40f * Time.deltaTime, Space.Self);
@@ -183,6 +197,9 @@ namespace Ironhorse.Game
             v.Uid = h.uid;
             v.Def = d;
             v.Paddle = BuildModel(d, go.transform, v.Team, v.Cars);
+            // Hooves and creaking wheels for the horse-drawn ones, the paddle wheel for boats (only while moving).
+            if (d.OnWater) v.Sound = MapSound.Attach(go, "loop_paddle", 70, 0.45f);
+            else if (d.Kind == HaulKind.Wagon) v.Sound = MapSound.Attach(go, "loop_wagon", 55, 0.5f);
             var b = ModelRegistry.RendererBounds(go);
             var col = go.AddComponent<BoxCollider>();
             col.center = go.transform.InverseTransformPoint(b.center);

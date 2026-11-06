@@ -32,6 +32,9 @@ SFX = {
     "bell":    ("bell.wav",    None, 5.00, 0.75, 1.50),
     "whistle": ("whistle.wav", 0.75, 2.60, 0.85, 0.50),
     "chuff":   ("chuff.wav",   None, 0.60, 0.85, 0.25),
+    # Map deliveries (Seed Audio, 2026-11-06).
+    "horn":    ("horn.wav",    None, 4.50, 0.80, 1.20),
+    "whip":    ("whip.wav",    None, 1.60, 0.75, 0.40),
 }
 # name: (source, start s, end s, crossfade s, peak, channels, ffmpeg filter or None)
 LOOPS = {
@@ -39,6 +42,15 @@ LOOPS = {
     "amb_day":   ("amb_day.mp3",   0.2, 10.0, 2.0, 0.30, 1, "highpass=f=90,lowpass=f=900"),
     "amb_night": ("amb_night.mp3", 0.2, 10.0, 2.0, 0.40, 1, None),
     "music":     ("music.m4a",     4.0, 84.0, 3.0, 0.70, 2, None),
+    # Positional loops on the map (Seed Audio, 2026-11-06): vehicles and the places they go.
+    "loop_wagon":     ("wagon.wav",       0.5, 13.0, 1.5, 0.80, 1, None),
+    "loop_paddle":    ("paddle.wav",      0.5, 21.5, 2.0, 0.80, 1, None),
+    "loop_turntable": ("turntable.wav",   0.5, 19.0, 2.0, 0.80, 1, None),
+    "amb_sawmill":    ("amb_sawmill.wav", 0.5, 21.5, 2.0, 0.75, 1, None),
+    "amb_mine":       ("amb_mine.wav",    0.5, 23.0, 2.0, 0.75, 1, None),
+    "amb_ranch":      ("amb_ranch.wav",   0.5, 33.0, 2.0, 0.75, 1, None),
+    "amb_river":      ("amb_river.wav",   0.5, 19.0, 2.0, 0.70, 1, None),
+    "amb_oil":        ("amb_oil.wav",     0.5, 27.5, 2.0, 0.75, 1, None),
 }
 
 

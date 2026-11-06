@@ -61,6 +61,14 @@ namespace Ironhorse.Game
                 string name = !string.IsNullOrEmpty(t.nickname) ? t.nickname : loco != null ? loco.Name : "Your train";
                 list.Add((t.arrivesAt - now, name + " is back", dest != null ? "Home from " + dest.Name + " with a full load. Unload it at the station!" : "Unload its cargo at the station!"));
             }
+            // Haulers: one alert per project, when the last load on the way gets there.
+            foreach (var g in s.State.haulers.Where(h => !h.IsIdle && h.arrivesAt > now + 30).GroupBy(h => h.projectId)
+                         .Select(g => g.OrderBy(h => h.arrivesAt).Last()).OrderBy(h => h.arrivesAt).Take(2))
+            {
+                var p = DepthContent.Project(g.projectId);
+                if (p == null) continue;
+                list.Add((g.arrivesAt - now, "Delivered to " + p.Name, "Your haulers dropped off their loads. Send the next batch to keep the crew building!"));
+            }
             double fuel = s.FullFuelIn;
             if (fuel > 600) list.Add((fuel, "Fuel's topped up", "Your coal bunkers are full. Time to send the trains out!"));
             // The factory whose conveyor empties first (the legacy productionEndsAt field is always 0 now).

@@ -197,6 +197,8 @@ namespace Ironhorse.Game
             var go = b.ToObject("Turntable", root);
             go.transform.position = C + Vector3.up * _gy;
             go.AddComponent<Turntable>();
+            var snd = MapSound.Attach(go, "loop_turntable", 60, 0.45f);
+            if (snd != null) go.GetComponent<Turntable>().Sound = snd;
         }
 
         // ---------------------------------------------------------------- roundhouse
@@ -458,6 +460,7 @@ namespace Ironhorse.Game
         /// <summary>True while the shunter drives the bridge (no idle swinging).</summary>
         public bool Manual;
         public float Target;
+        public MapSound Sound;
         float _wait = 4;
         float[] _angles;
         void Awake() { Instance = this; Target = transform.eulerAngles.y; }
@@ -473,6 +476,7 @@ namespace Ironhorse.Game
             var e = transform.eulerAngles;
             e.y = Mathf.MoveTowardsAngle(e.y, Target, (Manual ? 11f : 7f) * Time.deltaTime);
             transform.eulerAngles = e;
+            if (Sound != null) Sound.Active = !Aligned;
         }
     }
 }

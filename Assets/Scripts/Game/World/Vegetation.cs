@@ -155,11 +155,13 @@ namespace Ironhorse.Game
             GeometryUtility.CalculateFrustumPlanes(cam, _planes);
             float zoom = CameraRig.Instance != null ? CameraRig.Instance.Distance : 95f;
             float thin = Mathf.Lerp(1f, 0.7f, Mathf.InverseLerp(180f, 300f, zoom));
+            bool lite = QualitySetup.Lite;
+            if (lite) thin = Mathf.Min(thin, Mathf.Lerp(0.8f, 0.5f, Mathf.InverseLerp(120f, 300f, zoom))); // battery saver
             foreach (var k in _kinds.Values)
             {
                 if (k == null) continue;
                 var near = new RenderParams(k.Material) { shadowCastingMode = ShadowCastingMode.On, receiveShadows = true, layer = 0 };
-                var far = new RenderParams(k.FarMaterial) { shadowCastingMode = k.FarShadows ? ShadowCastingMode.On : ShadowCastingMode.Off, receiveShadows = true, layer = 0 };
+                var far = new RenderParams(k.FarMaterial) { shadowCastingMode = k.FarShadows && !lite ? ShadowCastingMode.On : ShadowCastingMode.Off, receiveShadows = true, layer = 0 };
                 var camPos = cam.transform.position;
                 foreach (var kv in k.Cells)
                 {
@@ -167,7 +169,8 @@ namespace Ironhorse.Game
                     if (!GeometryUtility.TestPlanesAABB(_planes, b)) continue;
                     // Cells close to the camera draw the detailed mesh with shadows; distant ones the light mesh.
                     float d2 = b.SqrDistance(camPos);
-                    bool close = d2 < NearDistance * NearDistance;
+                    float nearD = lite ? NearDistance * 0.7f : NearDistance;
+                    bool close = d2 < nearD * nearD;
                     if (k.SmallPlant && d2 > 200f * 200f) continue; // shrubs vanish into the terrain texture
                     var list = kv.Value;
                     List<Matrix4x4> farList;

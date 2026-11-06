@@ -109,6 +109,7 @@ namespace Ironhorse.Game
             bool fresh = state == null;
             if (fresh) state = GameSession.NewGame(Clock.Now, Environment.TickCount);
             G.Session = new GameSession(state, Clock);
+            QualitySetup.SetLite(QualitySetup.WantsLite(state.settings));
             ReadTimeZone();
             AudioManager.MusicOn = state.settings.music;
             AudioManager.SfxOn = state.settings.sfx;
@@ -285,6 +286,24 @@ namespace Ironhorse.Game
             QualitySettings.anisotropicFiltering = AnisotropicFiltering.Enable;
             QualitySettings.lodBias = 1.5f;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
+        }
+
+        /// <summary>Battery saver: thinner distant scenery, shorter shadows, a slightly lower render resolution.</summary>
+        public static bool Lite { get; private set; }
+
+        /// <summary>Automatic means battery saver on phones with under about 3.5 GB of memory (iPhone X and older).</summary>
+        public static bool WantsLite(Settings s) { return s.graphics == 2 || (s.graphics == 0 && SystemInfo.systemMemorySize > 0 && SystemInfo.systemMemorySize < 3500); }
+
+        public static void SetLite(bool lite)
+        {
+            Lite = lite;
+            QualitySettings.shadowDistance = lite ? 150 : 260;
+            QualitySettings.antiAliasing = lite ? 2 : 4;
+            QualitySettings.shadowResolution = lite ? ShadowResolution.Medium : ShadowResolution.High;
+#if IRONHORSE_URP && !UNITY_EDITOR // at runtime in the Editor this would rewrite the pipeline asset on disk
+            var urp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline as UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset;
+            if (urp != null) { urp.renderScale = lite ? 0.85f : 1f; urp.shadowDistance = lite ? 150 : 260; urp.msaaSampleCount = lite ? 2 : 4; }
+#endif
         }
     }
 

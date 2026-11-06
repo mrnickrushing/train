@@ -14,6 +14,9 @@ namespace Ironhorse.Game
 
         public static void Build(Transform root)
         {
+            // Running water along the river (heard when the camera is down by the banks).
+            var river = WorldLayout.River;
+            for (float d = 40; d < river.Length; d += 110) MapSound.At(root, river.PositionAt(d), "amb_river", 70, 0.35f);
             PaintRoads();
             var mb = new MeshBuilder();
             // The freight barn stands along the yard's north side, its wagon doors opening onto the yard (south).

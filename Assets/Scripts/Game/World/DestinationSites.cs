@@ -375,6 +375,10 @@ namespace Ironhorse.Game
         {
             Look look;
             if (!Looks.TryGetValue(id, out look)) return;
+            // The place's sound: saws at the logging camp, picks at the mines, cattle at the ranches, pumps at the wells.
+            string amb = look == Look.Logging ? "amb_sawmill" : look == Look.Mine || look == Look.IronMine || look == Look.GoldCamp || look == Look.Boomtown ? "amb_mine"
+                : look == Look.Ranch || look == Look.Farm ? "amb_ranch" : look == Look.OilField ? "amb_oil" : null;
+            if (amb != null) MapSound.At(transform, DestinationRoutes.Site(id), amb, 110, 0.5f);
             var c = DestinationRoutes.Site(id);
             var r = DestinationRoutes.Route(id);
             Vector3 end, fwd;
