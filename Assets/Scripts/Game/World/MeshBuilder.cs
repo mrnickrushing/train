@@ -30,6 +30,8 @@ namespace Ironhorse.Game
 
         // ------------------------------------------------------------ transform stack
 
+        /// <summary>The current local-to-world transform (for placing art inside a pushed frame).</summary>
+        public Matrix4x4 Matrix { get { return _m; } }
         public MeshBuilder Push() { _stack.Push(_m); return this; }
         public MeshBuilder Pop() { _m = _stack.Pop(); return this; }
         public MeshBuilder Translate(Vector3 t) { _m = _m * Matrix4x4.Translate(t); return this; }

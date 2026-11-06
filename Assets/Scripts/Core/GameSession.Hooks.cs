@@ -347,16 +347,16 @@ namespace Ironhorse.Core
 
         MapEventState RollEvent(Random rng)
         {
-            var weights = new[] { (MapEventKind.Tumbleweed, 35), (MapEventKind.Traveler, 25), (MapEventKind.GoldStrike, 20), (MapEventKind.Bandits, 20) };
+            var weights = new[] { (MapEventKind.Tumbleweed, 30), (MapEventKind.Traveler, 20), (MapEventKind.Windfall, 30), (MapEventKind.GoldStrike, 15), (MapEventKind.Bandits, 15) };
             var free = FreeOutposts();
             var options = weights.Where(w => State.level >= Hooks.EventLevelFor(w.Item1) && State.events.All(e => e.kind != w.Item1)
-                && (free.Count > 0 || (w.Item1 != MapEventKind.GoldStrike && w.Item1 != MapEventKind.Bandits))).ToList();
+                && (free.Count > 0 || (w.Item1 != MapEventKind.GoldStrike && w.Item1 != MapEventKind.Bandits && w.Item1 != MapEventKind.Windfall))).ToList();
             if (options.Count == 0) return null;
             int roll = rng.Next(options.Sum(o => o.Item2));
             var kind = options[0].Item1;
             foreach (var o in options) { if (roll < o.Item2) { kind = o.Item1; break; } roll -= o.Item2; }
             var ev = new MapEventState { uid = NewUid(), kind = kind, spot = rng.Next(1000), startsAt = Now, expiresAt = Now + Hooks.EventSeconds(kind) };
-            if (kind == MapEventKind.GoldStrike || kind == MapEventKind.Bandits) ev.destinationId = free[rng.Next(free.Count)].Id;
+            if (kind == MapEventKind.GoldStrike || kind == MapEventKind.Bandits || kind == MapEventKind.Windfall) ev.destinationId = free[rng.Next(free.Count)].Id;
             return ev;
         }
 
@@ -367,6 +367,7 @@ namespace Ironhorse.Core
             {
                 case MapEventKind.Traveler: return "A traveler missed the stage and needs a ride into town.";
                 case MapEventKind.Tumbleweed: return "Tumbleweeds are blowing through the yard. Some have coins caught in them!";
+                case MapEventKind.Windfall: return "A windfall of " + GameDatabase.Resource(d.ResourceId).Name + " is waiting at " + d.Name + ". Tap it to haul it in!";
                 case MapEventKind.GoldStrike: return "Rumor of a strike at " + d.Name + ": every load hauled from there is doubled.";
                 default: return "Bandits are watching the " + d.Name + " line. Trains that run it may lose cargo.";
             }
@@ -396,6 +397,16 @@ namespace Ironhorse.Core
                     int nuggets = rng.NextDouble() < 0.15 ? 1 + rng.Next(2) : 0;
                     State.nuggets += nuggets;
                     msg = "+" + coins + " coins" + (nuggets > 0 ? " and " + nuggets + " nugget" + (nuggets > 1 ? "s" : "") : "") + " shaken out of the tumbleweed";
+                    break;
+                case MapEventKind.Windfall:
+                    var wd = GameDatabase.Destination(e.destinationId);
+                    var wres = GameDatabase.Resource(wd.ResourceId);
+                    int amt = Math.Min(Hooks.WindfallAmount(State.level), WarehouseFree);
+                    if (amt <= 0) return ActionResult.Fail("The warehouse is full");
+                    State.inventory.Change(wres.Id, amt);
+                    State.stats.collected.Change(wres.Id, amt);
+                    AddXp(Balance.XpForCargo(wres, amt) / 2);
+                    msg = "+" + amt + " " + wres.Name + " from the windfall at " + wd.Name;
                     break;
                 case MapEventKind.GoldStrike:
                     return ActionResult.Fail("Send a train to " + GameDatabase.Destination(e.destinationId).Name + " for double cargo");

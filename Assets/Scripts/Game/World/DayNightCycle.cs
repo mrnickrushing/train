@@ -122,6 +122,10 @@ namespace Ironhorse.Game
             RenderSettings.ambientEquatorColor = Color.Lerp(new Color(0.15f, 0.16f, 0.27f), Color.Lerp(hor, new Color(0.7f, 0.66f, 0.58f), 0.5f) * 0.6f, day);
             RenderSettings.ambientGroundColor = Color.Lerp(new Color(0.08f, 0.08f, 0.11f), new Color(0.3f, 0.26f, 0.2f), day);
             RenderSettings.fogColor = Color.Lerp(hor, top, 0.15f);
+            // Close up the haze gives depth; zoomed out to the territory map it would wash everything grey, so it
+            // thins with the camera's distance and the whole valley reads crisp and clear.
+            float camDist = CameraRig.Instance != null ? CameraRig.Instance.Distance : 95f;
+            RenderSettings.fogDensity = Mathf.Lerp(0.0012f, 0.00018f, Mathf.InverseLerp(90f, 300f, camDist));
         }
     }
 }

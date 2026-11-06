@@ -144,6 +144,17 @@ namespace Ironhorse.Game
             if (_i._clips.TryGetValue(s, out c)) _i._ui.PlayOneShot(c, vol);
         }
 
+        static readonly Dictionary<string, AudioClip> _named = new Dictionary<string, AudioClip>();
+
+        /// <summary>A one-off recording from Resources/Audio by name (silent when it isn't there).</summary>
+        public static void PlayNamed(string name, float vol = 1)
+        {
+            if (_i == null || !SfxOn) return;
+            AudioClip c;
+            if (!_named.TryGetValue(name, out c)) _named[name] = c = Load(name);
+            if (c != null) _i._ui.PlayOneShot(c, vol);
+        }
+
         public static void Whistle(Vector3 at, float vol = 1)
         {
             if (_i == null || !SfxOn || CameraRig.Instance == null) return;

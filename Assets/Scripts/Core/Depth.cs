@@ -27,6 +27,8 @@ namespace Ironhorse.Core
         public CivicEffect Perk;
         public float PerkValue;
         public string PerkText;
+        /// <summary>A storyline that must be finished first (its region is hidden under cloud until then), or null.</summary>
+        public string Requires;
     }
 
     // ================================================================ Foreman's orders
@@ -67,13 +69,41 @@ namespace Ironhorse.Core
             Project("resupply", "Fort Calder Resupply", "Keep the cavalry fed through the long winter.", 9,
                 new[] { S("provisions", 30), S("flour", 40), S("tools", 10), S("provisions", 60), S("flour", 80), S("tools", 20) },
                 new Grant { Nuggets = 80, BlueprintLoco = "silverarrow", Blueprints = 5, Resources = new[] { new ResourceAmount("rods", 15) } }, CivicEffect.Income, 0.10f, "+10% town income"),
+            Project("lighthouse", "Eagle Point Lighthouse", "Light the way across Eagle Lake. Only boats can reach the island.", 10,
+                new[] { S("planks", 60), S("steel", 30), S("tools", 12), S("copper_wire", 20), S("steel", 60), S("tools", 20) },
+                new Grant { Nuggets = 100, Resources = new[] { new ResourceAmount("gauges", 15) } }, CivicEffect.Xp, 0.05f, "+5% XP forever"),
             Project("dam", "Silver Lake Dam", "Tame the river and light the valley.", 12,
                 new[] { S("steel", 60), S("tools", 20), S("copper_wire", 30), S("steel", 100), S("tools", 40), S("copper_wire", 60), S("timber", 250), S("steel", 150) },
                 new Grant { Nuggets = 120, BlueprintLoco = "thunderhead", Blueprints = 6, Resources = new[] { new ResourceAmount("gauges", 20) } }, CivicEffect.Yield, 0.10f, "+10% cargo from every run"),
+            Project("lodge", "Eagle Lake Lodge", "A grand log lodge on the lakeshore. Folks will ride a long way to stay.", 13,
+                new[] { S("planks", 120), S("provisions", 60), S("steel", 50), S("tools", 25), S("copper_wire", 30), S("provisions", 120), S("flour", 80) },
+                new Grant { Nuggets = 150, BlueprintLoco = "silverarrow", Blueprints = 6 }, CivicEffect.Income, 0.10f, "+10% town income"),
             Project("goldenspike", "The Golden Spike", "Join east and west. The territory becomes a state.", 15,
                 new[] { S("gold_bars", 20), S("steel", 150), S("tools", 50), S("copper_wire", 60), S("fuel", 40), S("gold_bars", 40), S("steel", 250), S("tools", 80), S("gold_bars", 60), S("fuel", 100) },
                 new Grant { Nuggets = 300, BlueprintLoco = "thunderhead", Blueprints = 10 }, CivicEffect.Income, 0.15f, "+15% town income"),
+            // Storylines past the Golden Spike: each leaves another landmark standing in the territory.
+            Project("winery", "Valley Winery", "Vines on the sunny slopes north of town, and a stone winery to press them.", 20,
+                new[] { S("timber", 150), S("planks", 120), S("tools", 30), S("steel", 80), S("provisions", 100), S("planks", 200) },
+                new Grant { Nuggets = 150, Resources = new[] { new ResourceAmount("gauges", 20) } }, CivicEffect.Income, 0.10f, "+10% town income"),
+            Project("mission", "San Ysidro Mission", "Restore the old adobe mission in the southern desert.", 23,
+                new[] { S("timber", 200), S("planks", 150), S("provisions", 120), S("tools", 40), S("flour", 150), S("steel", 100), S("planks", 250) },
+                new Grant { Nuggets = 180, BlueprintLoco = "sundown", Blueprints = 6 }, CivicEffect.Xp, 0.08f, "+8% XP forever"),
+            Project("opera", "Prosperity Opera House", "A grand brick opera house: culture comes to the frontier.", 26,
+                new[] { S("planks", 250), S("steel", 150), S("copper_wire", 80), S("tools", 60), S("gold_bars", 30), S("steel", 200) },
+                new Grant { Nuggets = 220, BlueprintLoco = "silverarrow", Blueprints = 8 }, CivicEffect.Income, 0.12f, "+12% town income"),
+            Project("capitol", "Territorial Capitol", "A domed capitol for the new state, built to last a hundred years.", 30,
+                new[] { S("steel", 300), S("tools", 100), S("copper_wire", 120), S("gold_bars", 60), S("planks", 300), S("fuel", 120), S("steel", 400) },
+                new Grant { Nuggets = 400, BlueprintLoco = "thunderhead", Blueprints = 12 }, CivicEffect.Yield, 0.12f, "+12% cargo from every run"),
         };
+
+        /// <summary>Eagle Lake country, the map's north, stays under cloud until this storyline is finished.</summary>
+        public const string NorthKey = "resupply";
+
+        static DepthContent()
+        {
+            Project("lighthouse").Requires = NorthKey;
+            Project("lodge").Requires = NorthKey;
+        }
 
         static List<TaskSetDef> _handmade;
 

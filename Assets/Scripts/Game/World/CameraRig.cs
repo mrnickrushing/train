@@ -22,7 +22,7 @@ namespace Ironhorse.Game
         public float Yaw = 20f;
         public float Pitch = 54f;
         public float MinDistance = 24f, MaxDistance = 330f;
-        public Rect Bounds = new Rect(-240, -170, 480, 420);
+        public Rect Bounds = new Rect(-275, -280, 550, 980); // every destination, south to the desert and up to Eagle Lake
 
         /// <summary>Raised on a tap that did not hit a selectable (world position on ground).</summary>
         public System.Action<Vector3> GroundTapped;
@@ -105,9 +105,9 @@ namespace Ironhorse.Game
             Focus = Vector3.Lerp(Focus, _focusTarget, k);
             Distance = Mathf.Lerp(Distance, _distTarget, k);
             Yaw = Mathf.LerpAngle(Yaw, _yawTarget, k);
-            // Tilt flatter when zoomed in for a more cinematic view.
-            // A high, map-like angle (like a model railway seen from above), flattening a little when zoomed right in.
-            Pitch = Mathf.Lerp(36f, 58f, Mathf.InverseLerp(MinDistance, MaxDistance * 0.6f, Distance));
+            // Looking across the land rather than straight down, so hills, mesas and towns read in depth even
+            // zoomed all the way out; a little flatter still when zoomed right in.
+            Pitch = Mathf.Lerp(36f, 46f, Mathf.InverseLerp(MinDistance, MaxDistance * 0.6f, Distance));
 
             var rot = Quaternion.Euler(Pitch, Yaw, 0);
             transform.position = Focus + rot * new Vector3(0, 0, -Distance);

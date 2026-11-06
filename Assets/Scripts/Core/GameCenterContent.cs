@@ -10,7 +10,10 @@ namespace Ironhorse.Core
     public sealed class GcLeaderboard
     {
         public readonly string Id, Stat;
-        public GcLeaderboard(string id, string stat) { Id = id; Stat = stat; }
+        /// <summary>A recurring board that starts over every Season Pass season (Game Center resets it on the same
+        /// 28-day schedule: start 2026-01-05 00:00 UTC, duration P28D).</summary>
+        public readonly bool Seasonal;
+        public GcLeaderboard(string id, string stat, bool seasonal = false) { Id = id; Stat = stat; Seasonal = seasonal; }
     }
 
     /// <summary>
@@ -37,8 +40,12 @@ namespace Ironhorse.Core
         public static readonly GcLeaderboard[] Leaderboards =
         {
             new GcLeaderboard("ironhorse.lb.coins", "coins"),
-            new GcLeaderboard("ironhorse.lb.contracts", "contracts")
+            new GcLeaderboard("ironhorse.lb.contracts", "contracts"),
+            new GcLeaderboard(SeasonBoard, "season", true),
         };
+
+        /// <summary>The Season Pass leaderboard: pass XP earned this season.</summary>
+        public const string SeasonBoard = "ironhorse.lb.season";
 
         /// <summary>Current value of a tracked stat.</summary>
         public static long Value(GameState s, string stat)
@@ -49,6 +56,7 @@ namespace Ironhorse.Core
                 case "contracts": return s.stats.contractsCompleted;
                 case "coins": return s.stats.coinsEarned;
                 case "level": return s.level;
+                case "season": return s.seasonScore;
                 case "locos": return s.trains.Count;
                 case "chapters": return s.chaptersClaimed.Count;
                 default: return 0;

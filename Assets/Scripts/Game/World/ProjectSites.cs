@@ -36,6 +36,11 @@ namespace Ironhorse.Game
             public GameObject Built, Extras;
             public int Shown = -1;
             public int Extra = -1; // 0 none, 1 stakes, 2 camp
+            /// <summary>Optional finished-landmark art (Models/Buildings/{DoneModel}) shown instead of the pieces once
+            /// the project is complete, placed at DoneAt turned DoneYaw degrees.</summary>
+            public string DoneModel;
+            public Vector3 DoneAt;
+            public float DoneYaw;
         }
 
         readonly List<Site> _sites = new List<Site>();
@@ -77,13 +82,20 @@ namespace Ironhorse.Game
         }
 
         /// <summary>True where a project site stands (no trees, cacti or rocks there).</summary>
-        public static bool Blocks(float x, float z)
+        public static bool Blocks(float x, float z) { return BlocksCore(x, z) || Countryside.Blocks(x, z); }
+
+        /// <summary>Every reserved ground except the countryside homesteads (which pick their spots from it).</summary>
+        public static bool BlocksCore(float x, float z)
         {
+            if (HaulRoutes.Blocks(x, z)) return true; // haul roads, the freight yard and the landing
+            if (DestinationRoutes.Blocks(x, z)) return true; // destination spurs and sites
             if (Cutoff.SqrDistanceXZ(x, z) < 8 * 8) return true;
             if (Mathf.Abs(z - TrestleZ) < 14 && x > SpanW - 8 && x < SpanE + 8) return true; // the gorge under the span
             if (WireRoute.SqrDistanceXZ(x, z) < 5 * 5) return true;
             if (CampRect.Contains(new Vector2(x, z)) || WireCampRect.Contains(new Vector2(x, z))) return true;
             foreach (var r in MoreSiteRects) if (r.Contains(new Vector2(x, z))) return true;
+            if (LighthouseRect.Contains(new Vector2(x, z)) || LodgeRect.Contains(new Vector2(x, z))) return true;
+            if (LandmarkBlocks(x, z)) return true;
             return false;
         }
 
@@ -106,6 +118,9 @@ namespace Ironhorse.Game
             _sites.Add(Depot());
             _sites.Add(Dam());
             _sites.Add(Spike());
+            _sites.Add(Lighthouse());
+            _sites.Add(Lodge());
+            foreach (var id in Landmarks.Keys) _sites.Add(Landmark(id));
         }
 
         void Start()
@@ -163,15 +178,23 @@ namespace Ironhorse.Game
             if (s != null) CameraRig.Instance.FlyTo(s.FocusFor(Mathf.Max(1, s.Shown)), s.Distance);
         }
 
+        /// <summary>True while a site's new pieces are rising (the camera is busy there).</summary>
+        public bool Animating { get { return _animating; } }
+
         public bool HasSite(string projectId) { return _sites.Exists(x => x.Id == projectId); }
+
+        /// <summary>Where a project's map pin floats (above the site), or null.</summary>
+        public Vector3? PinAt(string projectId)
+        {
+            var s = _sites.Find(x => x.Id == projectId);
+            return s == null ? (Vector3?)null : s.Focus + Vector3.up * 12f;
+        }
 
         void Refresh(Site s, bool keepExtras)
         {
             s.Shown = Target(s);
             if (s.Built != null) Destroy(s.Built);
-            var mb = new MeshBuilder();
-            for (int i = 0; i < s.Shown; i++) s.Pieces[i].Build(mb);
-            s.Built = mb.VertexCount > 0 ? mb.ToObject(s.Id + " (built)", transform) : null;
+            s.Built = BuildShown(s, s.Shown);
             if (!keepExtras) s.Extra = -1;
             SetExtras(s);
         }
@@ -217,9 +240,7 @@ namespace Ironhorse.Game
             yield return new WaitForSecondsRealtime(0.5f);
             s.Shown = want;
             if (s.Built != null) Destroy(s.Built);
-            var all = new MeshBuilder();
-            for (int i = 0; i < want; i++) s.Pieces[i].Build(all);
-            s.Built = all.ToObject(s.Id + " (built)", transform);
+            s.Built = BuildShown(s, want);
             foreach (var t in fresh) Destroy(t.gameObject);
             SetExtras(s);
             var def = DepthContent.Project(s.Id);
@@ -227,6 +248,22 @@ namespace Ironhorse.Game
             if (UIRoot.Instance != null && def != null)
                 UIRoot.Instance.Toast(f >= 1 ? def.Name + " is finished!" : def.Name + ": " + Mathf.RoundToInt(f * 100) + "% built", true);
             _animating = false;
+        }
+
+        /// <summary>The first <paramref name="count"/> pieces as one mesh, or the finished landmark's art when the
+        /// whole site stands and art for it exists.</summary>
+        GameObject BuildShown(Site s, int count)
+        {
+            if (count >= s.Pieces.Count && s.DoneModel != null && ModelRegistry.Has(ModelRegistry.Buildings, s.DoneModel))
+            {
+                var art = ModelRegistry.Spawn(ModelRegistry.Buildings, s.DoneModel, transform);
+                art.transform.position = s.DoneAt;
+                art.transform.rotation = Quaternion.Euler(0, s.DoneYaw, 0) * art.transform.rotation; // keep the import's stand-up turn
+                return art;
+            }
+            var mb = new MeshBuilder();
+            for (int i = 0; i < count; i++) s.Pieces[i].Build(mb);
+            return mb.VertexCount > 0 ? mb.ToObject(s.Id + " (built)", transform) : null;
         }
 
         static IEnumerator Rise(Transform t)

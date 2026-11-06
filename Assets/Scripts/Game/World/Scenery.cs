@@ -33,8 +33,19 @@ namespace Ironhorse.Game
             float mz = WorldLayout.MainZ;
             Mesa(mb, new Vector2(WorldLayout.TunnelX + 52, mz), 52, 38, 180f, 7);
             Mesa(mb, new Vector2(-WorldLayout.TunnelX - 52, mz), 52, 34, 0f, 8);
-            Portal(mb, WorldLayout.TunnelX - 0.2f, mz, -1);
-            Portal(mb, -WorldLayout.TunnelX + 0.2f, mz, 1);
+            foreach (int facing in new[] { -1, 1 })
+            {
+                float px = facing < 0 ? WorldLayout.TunnelX - 0.2f : -WorldLayout.TunnelX + 0.2f;
+                // Stone portal art (its arch faces the valley), else the procedural one.
+                var art = ModelRegistry.Spawn(ModelRegistry.Buildings, "tunnelportal", root);
+                if (art != null)
+                {
+                    art.transform.SetPositionAndRotation(new Vector3(px - facing * PortalInset, 0, mz),
+                        Quaternion.Euler(0, (facing > 0 ? 90 : -90) + PortalYaw, 0) * art.transform.rotation);
+                    art.transform.localScale *= PortalScale;
+                }
+                else Portal(mb, px, mz, facing);
+            }
 
             // Desert buttes and mesas scattered to the south and on the rim.
             int placed = 0, guard = 0;
@@ -43,6 +54,7 @@ namespace Ironhorse.Game
             {
                 var p = new Vector2(R(-320, 320), R(-290, -95));
                 if (Mathf.Abs(p.x) > 170 && Mathf.Abs(p.y - mz) < 70) continue;
+                if (DestinationRoutes.Distance(p.x, p.y) < 48) continue; // keep buttes off the spurs and sites
                 bool near = false;
                 foreach (var s in spots) if (Vector2.Distance(s, p) < 70) near = true;
                 if (near) continue;
@@ -53,12 +65,78 @@ namespace Ironhorse.Game
                 placed++;
             }
             mb.ToObject("Mesas", root);
+            CliffDressing();
+        }
+
+        /// <summary>Foot of every mesa and butte (centre, base outline, height, tunnel face angle or -999).</summary>
+        static readonly List<(Vector2 c, List<Vector2> poly, float h, float face, float y)> _mesaFeet = new List<(Vector2, List<Vector2>, float, float, float)>();
+
+        /// <summary>Crumbling sandstone buttresses (art) set into the foot of the cliffs all round, half buried in the
+        /// walls, so the mesas read as eroded rock instead of smooth stacked slabs. The tunnel mouths and spurs stay clear.</summary>
+        static void CliffDressing()
+        {
+            if (!Vegetation.HasArt(ModelRegistry.Buildings, "cliffrock")) { _mesaFeet.Clear(); return; }
+            var rng = new System.Random(5150);
+            float mz = WorldLayout.MainZ;
+            foreach (var (c, poly, h, face, ledge) in _mesaFeet)
+            {
+                bool upper = ledge > -900;
+                float perim = 0;
+                for (int i = 0; i < poly.Count; i++) perim += Vector2.Distance(poly[i], poly[(i + 1) % poly.Count]);
+                float step = upper ? 17f : h > 30 ? 11f : 13f, next = (float)rng.NextDouble() * step;
+                float walked = 0;
+                for (int i = 0; i < poly.Count; i++)
+                {
+                    Vector2 a = poly[i], b = poly[(i + 1) % poly.Count];
+                    float len = Vector2.Distance(a, b);
+                    while (next <= walked + len)
+                    {
+                        var q = Vector2.Lerp(a, b, (next - walked) / len);
+                        next += step * (0.75f + (float)rng.NextDouble() * 0.5f);
+                        var outward = (q - c).normalized;
+                        if (face > -900 && Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(outward.y, outward.x) * Mathf.Rad2Deg, face)) < 16) continue;
+                        // Half inside the wall so the buttress grows out of it.
+                        var at = q - outward * (2.5f + (float)rng.NextDouble() * 2f);
+                        if (!upper && Mathf.Abs(at.y - mz) < 12 && Mathf.Abs(at.x) > 140) continue;
+                        if (!upper && DestinationRoutes.Distance(at.x, at.y) < 10) continue;
+                        float yaw = Mathf.Atan2(outward.x, outward.y) * Mathf.Rad2Deg + (float)rng.NextDouble() * 70 - 35;
+                        Vegetation.AddModel(ModelRegistry.Buildings, "cliffrock", new Vector3(at.x, upper ? ledge - 0.4f : ValleyTerrain.Height(at.x, at.y) - 0.6f, at.y), Quaternion.Euler(0, yaw, 0));
+                    }
+                    walked += len;
+                }
+            }
+            _mesaFeet.Clear();
+            HillOutcrops(rng);
+        }
+
+        /// <summary>Weathered sandstone outcrops breaking through the steep hillsides (the bare brown slopes otherwise read
+        /// as smooth clay): smaller buttresses half sunk into the slope, leaning with it.</summary>
+        static void HillOutcrops(System.Random rng)
+        {
+            int placed = 0;
+            for (int tries = 0; tries < 20000 && placed < 220; tries++)
+            {
+                float x = ValleyTerrain.MinX + (float)rng.NextDouble() * (ValleyTerrain.MaxX - ValleyTerrain.MinX);
+                float z = ValleyTerrain.MinZ + (float)rng.NextDouble() * (RegionFog.EdgeZ - 20 - ValleyTerrain.MinZ);
+                float h = ValleyTerrain.Height(x, z);
+                if (h < 2.5f) continue;
+                float gx = ValleyTerrain.Height(x + 3, z) - ValleyTerrain.Height(x - 3, z), gz = ValleyTerrain.Height(x, z + 3) - ValleyTerrain.Height(x, z - 3);
+                float slope = Mathf.Sqrt(gx * gx + gz * gz) / 6f;
+                if (slope < 0.28f) continue;
+                if (DestinationRoutes.Distance(x, z) < 14 || ProjectSites.Blocks(x, z) || Countryside.Blocks(x, z)) continue;
+                if (HaulRoutes.Blocks(x, z)) continue;
+                var down = new Vector3(-gx, 0, -gz).normalized;
+                float sc = 0.35f + (float)rng.NextDouble() * 0.35f;
+                var rot = Quaternion.LookRotation(down) * Quaternion.Euler(-Mathf.Min(25, slope * 20), (float)rng.NextDouble() * 60 - 30, 0);
+                Vegetation.AddModel(ModelRegistry.Buildings, "cliffrock", new Vector3(x, h - 1.2f * sc * 3, z), rot, sc);
+                placed++;
+            }
         }
 
         /// <summary>Layered sandstone mesa. faceDeg = angle (degrees) of a flat cliff face for a tunnel, or -999.</summary>
         static void Mesa(MeshBuilder mb, Vector2 c, float radius, float height, float faceDeg, int seed)
         {
-            const int sides = 40;
+            const int sides = 72;
             int layers = Mathf.Clamp(Mathf.RoundToInt(height / 6f), 3, 9);
             float lh = height / layers;
             float baseY = -3;
@@ -74,15 +152,23 @@ namespace Ironhorse.Game
                     // Broad shape shared by every layer, plus a per-layer wobble so strata step in and out as ledges.
                     float n = Mathf.PerlinNoise(seed * 3.1f + Mathf.Cos(a) * 1.4f, seed * 1.7f + Mathf.Sin(a) * 1.4f + l * 0.15f);
                     float w = Mathf.PerlinNoise(seed * 5.3f + Mathf.Cos(a) * 3.2f + l * 1.9f, seed * 0.9f + Mathf.Sin(a) * 3.2f) - 0.5f;
-                    float r = radius * shrink * (0.82f + n * 0.36f + w * 0.07f);
+                    // Crags: a sharper high-frequency in-and-out so walls break into ribs and gullies.
+                    float crag = Mathf.PerlinNoise(seed * 7.7f + Mathf.Cos(a) * 9f + l * 0.6f, seed * 2.3f + Mathf.Sin(a) * 9f) - 0.5f;
+                    float r = radius * shrink * (0.82f + n * 0.36f + w * 0.1f + crag * 0.09f);
                     if (faceDeg > -900)
                     {
+                        // A flat face only right at the tunnel mouth; beyond it the cliff is as ragged as anywhere.
                         float d = Mathf.DeltaAngle(a * Mathf.Rad2Deg, faceDeg);
-                        if (Mathf.Abs(d) < 32) r = radius * shrink / Mathf.Cos(d * Mathf.Deg2Rad);
+                        float flat = radius * shrink / Mathf.Cos(Mathf.Min(Mathf.Abs(d), 60) * Mathf.Deg2Rad);
+                        float k = Mathf.SmoothStep(1, 0, Mathf.InverseLerp(10, 30, Mathf.Abs(d)));
+                        if (Mathf.Abs(d) < 32) r = Mathf.Lerp(flat * (1 + w * 0.1f + crag * 0.09f), flat, k);
                     }
                     poly.Add(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r);
                 }
                 float y0 = baseY + l * lh, y1 = baseY + (l + 1) * lh;
+                if (l == 0) _mesaFeet.Add((c, poly, height, faceDeg, -999f));
+                // A second tier of buttresses on a ledge halfway up the tall ones.
+                if (height > 30 && (l == layers / 2 || l == layers * 3 / 4) && l > 0) _mesaFeet.Add((c, poly, height, faceDeg, y0));
                 bool topLayer = l == layers - 1;
                 Color top = topLayer ? Palette.Hex(0x8C7A4E) : MeshBuilder.Darken(bands[(l + seed) % bands.Length], 0.92f);
                 mb.Matte();
@@ -155,6 +241,8 @@ namespace Ironhorse.Game
             mb.Surf = keep;
         }
 
+        const float PortalYaw = 180f, PortalScale = 1.35f, PortalInset = -1.5f;
+
         static void Portal(MeshBuilder mb, float x, float z, int facing)
         {
             // facing: +1 = opening faces +x (west mesa), -1 = faces -x (east mesa)
@@ -212,7 +300,7 @@ namespace Ironhorse.Game
                 return b;
             }
 
-            for (int i = 0; i < 9000; i++)
+            for (int i = 0; i < 15000; i++) // dense over the whole map, Eagle Lake's basin included
             {
                 float x = R(ValleyTerrain.MinX + 10, ValleyTerrain.MaxX - 10), z = R(ValleyTerrain.MinZ + 10, ValleyTerrain.MaxZ - 10);
                 if (ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue; // the trestle cut-off and the Fort Calder wire
@@ -229,15 +317,15 @@ namespace Ironhorse.Game
                 bool nearRiver = water > 0.02f || Mathf.Sqrt(WorldLayout.River.SqrDistanceXZ(x, z)) < 22;
 
                 // Stands of pines frame the valley floor (just outside the town, rails and loop).
-                if (wild > 0.1f && wild < 0.6f && north > 0.3f && clump > 0.5f && R() < 0.8f)
+                if (wild > 0.1f && wild < 0.6f && north > 0.3f && clump > 0.45f && R() < 0.85f)
                 {
                     Pine(Chunk(p), p, R(0.75f, 1.35f));
                     continue;
                 }
                 if (wild < 0.12f)
                 {
-                    // Valley floor: mostly open; a few shade trees and shrubs well away from tracks and town.
-                    if (wild > 0.012f && clump > 0.5f && R() < 0.55f)
+                    // Valley floor: open meadows with groves here and there, well away from tracks and town.
+                    if (wild > 0.012f && clump > 0.5f && R() < 0.85f)
                     {
                         if (north > 0.45f && R() < 0.7f) Pine(Chunk(p), p, R(0.7f, 1.1f));
                         else Cottonwood(Chunk(p), p, R(0.8f, 1.2f));
@@ -260,6 +348,79 @@ namespace Ironhorse.Game
                 if (q < 0.3f) Sage(Chunk(p), p, R(0.7f, 1.2f));
                 else if (q < 0.4f) Rock(Chunk(p), p, R(0.5f, 1.8f));
                 else if (q < 0.55f && clump > 0.35f) Pine(Chunk(p), p, R(0.8f, 1.3f));
+            }
+
+            // Rocky banks: runs of boulders along both banks of the river, where the water meets the land.
+            var river = WorldLayout.River;
+            for (float sr = 0; sr < river.Length; sr += 1.6f)
+            {
+                Vector3 rp, rf;
+                river.Sample(sr, out rp, out rf);
+                var side = Vector3.Cross(Vector3.up, rf).normalized;
+                foreach (int sgn in new[] { -1, 1 })
+                {
+                    if (Mathf.PerlinNoise(sr * 0.05f + sgn * 7, 3) < 0.4f || R() < 0.35f) continue; // in runs, with sandy gaps
+                    float off = R(10f, 13.5f);
+                    float x = rp.x + side.x * off * sgn, z = rp.z + side.z * off * sgn;
+                    if (ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue;
+                    var p = new Vector3(x, Mathf.Max(ValleyTerrain.Height(x, z), WorldLayout.WaterLevel - 0.5f), z);
+                    Rock(Chunk(p), p, R(0.7f, 1.8f));
+                }
+            }
+
+            // Ground cover over the open country: shrub clumps, sagebrush and the odd rock, so meadows and hillsides
+            // read busy and natural from the top of the zoom (instanced, so thousands cost little).
+            for (int i = 0; i < 5000; i++)
+            {
+                float x = R(ValleyTerrain.MinX + 10, ValleyTerrain.MaxX - 10), z = R(ValleyTerrain.MinZ + 10, ValleyTerrain.MaxZ - 10);
+                float wild = ValleyTerrain.Wildness(x, z);
+                if (wild < 0.03f || ProjectSites.Blocks(x, z) || Museum.Blocks(x, z)) continue;
+                float depth;
+                if (ValleyTerrain.WaterMask(x, z, out depth) > 0.05f) continue;
+                float h = ValleyTerrain.Height(x, z);
+                if (h > 60) continue;
+                float slope = Mathf.Abs(ValleyTerrain.Height(x + 2, z) - h) + Mathf.Abs(ValleyTerrain.Height(x, z + 2) - h);
+                if (slope > 2.8f) continue;
+                float clump = Mathf.PerlinNoise(x * 0.05f + 13, z * 0.05f - 5);
+                if (clump < 0.38f) continue;
+                var p = new Vector3(x, h - 0.05f, z);
+                float north = Mathf.InverseLerp(-230, 60, z);
+                float q = R();
+                if (q < 0.45f) Cottonwood(Chunk(p), p, R(0.55f, 0.9f));      // low leafy shrubs and young trees
+                else if (q < 0.85f) Sage(Chunk(p), p, R(0.8f, 1.4f) * (north > 0.5f ? 1.2f : 1f));
+                else Rock(Chunk(p), p, R(0.4f, 1.1f));
+            }
+
+            // Eagle Lake: dense pine forest around the basin, with meadow clearings and open beaches at the shore,
+            // and stands along the river valley that climbs up to it.
+            for (int i = 0; i < 6500; i++)
+            {
+                float x = R(-260, 230), z = R(250, ValleyTerrain.MaxZ - 8);
+                float nd = ValleyTerrain.NorthShore(x, z);
+                float calm = ValleyTerrain.Calm(x, z);
+                if (calm < 0.25f || nd < 1.06f) continue;
+                if (ProjectSites.Blocks(x, z)) continue;
+                float depth;
+                if (ValleyTerrain.WaterMask(x, z, out depth) > 0.05f) continue;
+                float h = ValleyTerrain.Height(x, z);
+                float slope = Mathf.Abs(ValleyTerrain.Height(x + 2, z) - h) + Mathf.Abs(ValleyTerrain.Height(x, z + 2) - h);
+                if (slope > 3.5f) continue;
+                float clump = Mathf.PerlinNoise(x * 0.028f + 40, z * 0.028f - 7);
+                if (clump < 0.42f && nd < 1.7f) continue;                // meadow clearings near the water
+                if (nd < 1.18f && R() < 0.75f) continue;                 // keep the beach open
+                var p = new Vector3(x, h - 0.1f, z);
+                if (R() < 0.12f) Cottonwood(Chunk(p), p, R(0.9f, 1.3f));
+                else Pine(Chunk(p), p, R(0.85f, 1.6f));
+            }
+            // Pines and rocks on Eagle Point.
+            for (int i = 0; i < 40; i++)
+            {
+                var c = WorldLayout.IslandCenter;
+                float a = R(0, Mathf.PI * 2), d = Mathf.Sqrt(R()) * (WorldLayout.IslandRadius - 4);
+                float x = c.x + Mathf.Cos(a) * d, z = c.z + Mathf.Sin(a) * d;
+                if (ProjectSites.Blocks(x, z)) continue;
+                var p = new Vector3(x, ValleyTerrain.Height(x, z) - 0.1f, z);
+                if (R() < 0.6f) Pine(Chunk(p), p, R(0.7f, 1.2f)); else Rock(Chunk(p), p, R(0.8f, 2.0f));
             }
 
             // Scrub, junipers and the odd saguaro on the mesa tops.
@@ -472,7 +633,7 @@ namespace Ironhorse.Game
 
         static void BuildWindmills(Transform root)
         {
-            var spots = new[] { new Vector3(92, 0, 40), new Vector3(70, 0, 230), new Vector3(-150, 0, -10), new Vector3(150, 0, -110) };
+            var spots = new[] { new Vector3(92, 0, 40), new Vector3(70, 0, 230), new Vector3(150, 0, -110) };
             foreach (var s in spots)
             {
                 var p = new Vector3(s.x, ValleyTerrain.Height(s.x, s.z), s.z);

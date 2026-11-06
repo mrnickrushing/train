@@ -471,6 +471,7 @@ namespace Ironhorse.Core
             State.comboUntil = 0;
             State.hiredCrew = 0;
             State.projects.Clear();
+            ResetHaulers();
             foreach (var p in DepthContent.Projects) State.projects.Add(new ProjectProgress { id = p.Id });
             State.chaptersClaimed.Clear();
             foreach (var t in State.trains)

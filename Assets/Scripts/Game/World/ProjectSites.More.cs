@@ -9,7 +9,7 @@ namespace Ironhorse.Game
         static readonly Rect MineRect = new Rect(-226, 24, 46, 42);
         static readonly Rect DepotRect = new Rect(100, 28, 66, 42);
         static readonly Rect DamRect = new Rect(-140, 52, 66, 40);
-        static readonly Rect SpikeRect = new Rect(-176, -96, 52, 40);
+        static readonly Rect SpikeRect = new Rect(-148, -92, 52, 40);
         static readonly Rect[] MoreSiteRects = { MineRect, DepotRect, DamRect, SpikeRect };
 
         static float GY(float x, float z) { return Mathf.Max(Ground(x, z), 0); }
@@ -41,6 +41,7 @@ namespace Ironhorse.Game
             s.Pieces.Add(new Piece(foot + new Vector3(-9, 0, 11), mb => Spoil(mb, new Vector3(MineX - 9, 0, MineZ + 11), 1f)));
             s.Pieces.Add(new Piece(At(MineX + 4, MineZ - 7), mb => { var p = At(MineX + 4, MineZ - 7); Lantern(mb, p); Lantern(mb, At(MineX - 3, MineZ - 4)); BoardSign(mb, At(MineX + 6, MineZ - 8)); }));
 
+            s.DoneModel = "mineshaft_done"; s.DoneAt = At(MineX + 2, MineZ); s.DoneYaw = 90;
             s.Stakes = mb => { foreach (var o in new[] { new Vector2(-3, -3), new Vector2(3, -3), new Vector2(-3, 3), new Vector2(3, 3), new Vector2(11, -1), new Vector2(-7, -6) }) Stake(mb, At(MineX + o.x, MineZ + o.y)); };
             s.Camp = mb => Camp(mb, new Vector2(MineX + 14, MineZ + 12), CampKind.Timber);
             return s;
@@ -155,6 +156,7 @@ namespace Ironhorse.Game
             var flag = At(DepotX - 20, DepotZ - 10);
             s.Pieces.Add(new Piece(flag, mb => FlagPole(mb, flag, 11f)));
 
+            s.DoneModel = "resupply_done"; s.DoneAt = At(DepotX, DepotZ); s.DoneYaw = 180;
             s.Stakes = mb => { foreach (var o in new[] { new Vector2(-13, -5), new Vector2(13, -5), new Vector2(-13, 5), new Vector2(13, 5), new Vector2(26, 8) }) Stake(mb, At(DepotX + o.x, DepotZ + o.y)); };
             s.Camp = mb => Camp(mb, new Vector2(DepotX - 26, DepotZ + 10), CampKind.Crates);
             return s;
@@ -366,7 +368,8 @@ namespace Ironhorse.Game
 
         // ================================================================ The Golden Spike
 
-        const float SpikeX = -150, SpikeZ = -76;
+        // In the open ground east of the Coppertop spur (the railhead), between the main line and the mission road.
+        const float SpikeX = -122, SpikeZ = -70;
 
         Site Spike()
         {
@@ -400,8 +403,9 @@ namespace Ironhorse.Game
             s.Pieces.Add(new Piece(stand + Vector3.up * 2, mb => Grandstand(mb, stand, true)));
             s.Pieces.Add(new Piece(c, mb => { foreach (var o in new[] { new Vector3(-4.6f, 0, -4.6f), new Vector3(4.6f, 0, -4.6f), new Vector3(-4.6f, 0, 4.6f), new Vector3(4.6f, 0, 4.6f) }) Lantern(mb, c + o); }));
 
+            s.DoneModel = "goldenspike_done"; s.DoneAt = At(SpikeX, SpikeZ); s.DoneYaw = 0;
             s.Stakes = mb => { foreach (var o in new[] { new Vector2(-10, -8), new Vector2(10, -8), new Vector2(-10, 8), new Vector2(10, 8), new Vector2(0, 0) }) Stake(mb, At(SpikeX + o.x, SpikeZ + o.y)); };
-            s.Camp = mb => Camp(mb, new Vector2(SpikeX - 20, SpikeZ - 12), CampKind.Stone);
+            s.Camp = mb => Camp(mb, new Vector2(SpikeX + 17, SpikeZ + 6), CampKind.Stone);
             return s;
         }
 

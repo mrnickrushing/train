@@ -61,6 +61,7 @@ namespace Ironhorse.Core
             {
                 case MapEventKind.Tumbleweed: return 8 * 60;
                 case MapEventKind.Traveler: return 30 * 60;
+                case MapEventKind.Windfall: return 40 * 60;
                 default: return 3600;
             }
         }
@@ -82,6 +83,7 @@ namespace Ironhorse.Core
                 case MapEventKind.Traveler: return "Stranded Traveler";
                 case MapEventKind.GoldStrike: return "Gold Strike!";
                 case MapEventKind.Tumbleweed: return "Tumbleweeds";
+                case MapEventKind.Windfall: return "Windfall";
                 default: return "Bandits!";
             }
         }
@@ -89,6 +91,8 @@ namespace Ironhorse.Core
         public static int TravelerCoins(int level) { return 60 + 40 * level; }
         public static int TravelerXp(int level) { return 10 + 3 * level; }
         public static int TumbleweedCoins(int level) { return 20 + 12 * level; }
+        /// <summary>Goods in a windfall cache at an outpost (logs, coal, ore...).</summary>
+        public static int WindfallAmount(int level) { return 12 + 3 * level; }
         public static int EscortCoins(int level) { return 80 + 50 * level; }
         public static int EscortXp(int level) { return 15 + 4 * level; }
 

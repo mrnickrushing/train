@@ -232,6 +232,11 @@ namespace Ironhorse.Game
 
         static void CoalStage(MeshBuilder mb, Vector3 p)
         {
+            if (Vegetation.HasArt(ModelRegistry.Buildings, "coalstage"))
+            {
+                Vegetation.AddModel(ModelRegistry.Buildings, "coalstage", new Vector3(p.x, ValleyTerrain.Height(p.x, p.z), p.z), Quaternion.Euler(0, 0, 0));
+                return;
+            }
             mb.Push().Translate(p);
             mb.Matte();
             for (int i = 0; i < 4; i++)

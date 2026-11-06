@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Ironhorse.Core;
 using UnityEngine;
@@ -105,6 +106,69 @@ namespace Ironhorse.Game
                 L("silas", "I had my reservations, given the cost. But look at it. The valley's lit like a city."),
                 L("hank", "Blackwell rode by this morning. Didn't say a word. Just stared."),
             }),
+            ["lighthouse"] = (new[]
+            {
+                L("clara", "Up the river there's a lake so big the steamers lose their way in a fog. Eagle Lake."),
+                L("clara", "A lighthouse on Eagle Point would guide every boat home. But there's no road to an island."),
+                L("hank", "Then the boats carry it out, plank by plank. I'll get the landing ready."),
+            }, new[]
+            {
+                L("clara", "The light on Eagle Point is burning! You can see it from the lodge road."),
+                L("hank", "First night it shone, three steamers came home through the fog. Not a scrape on any of 'em."),
+            }),
+            ["lodge"] = (new[]
+            {
+                L("silas", "City folk will pay a fortune for clean air and a view. Eagle Lake has both."),
+                L("silas", "A grand log lodge on the shore, and every one of them rides our trains to reach it."),
+                L("hank", "Logs, provisions, and a lot of fancy fixings. We'll haul it up the valley."),
+            }, new[]
+            {
+                L("silas", "The Eagle Lake Lodge is booked through the summer. Booked!"),
+                L("clara", "And every guest bought a ticket on our line to get here."),
+                L("hank", "Blackwell tried to book a room. Under a false name. They turned him away."),
+            }),
+            ["winery"] = (new[]
+            {
+                L("hank", "My granddad grew grapes back in the old country. Those slopes north of town get sun all day."),
+                L("silas", "A winery? The eastern hotels pay a king's ransom for a good red."),
+                L("hank", "Then let's plant the vines and build her proper. Stone walls, cool cellars."),
+            }, new[]
+            {
+                L("hank", "First barrels are in the cellar. Smells like home."),
+                L("silas", "And the first crates are already sold, to three hotels in the capital."),
+            }),
+            ["mission"] = (new[]
+            {
+                L("clara", "There's an old adobe mission out in the southern desert. The bell tower's still standing."),
+                L("clara", "The desert towns gather there for every fiesta. If we restore it, the whole south will ride our line."),
+                L("hank", "Adobe, timber and a new bell. We'll get it out there."),
+            }, new[]
+            {
+                L("clara", "The bell rang this morning for the first time in thirty years."),
+                L("hank", "Folks rode in from every ranch and camp in the south. Half of them came by train."),
+            }),
+            ["opera"] = (new[]
+            {
+                L("silas", "Prosperity has money now, and money wants culture. An opera house, the grandest in the West."),
+                L("clara", "Brick, steel and copper for the lights. And gold leaf for the boxes, I suppose."),
+                L("silas", "Naturally. Opening night will be the talk of the state."),
+            }, new[]
+            {
+                L("silas", "Opening night! Every seat sold, and a special train from the capital."),
+                L("clara", "The electric lights held all evening. I didn't breathe until the final curtain."),
+                L("hank", "Blackwell sent flowers. No card. We all know they were his."),
+            }),
+            ["capitol"] = (new[]
+            {
+                L("silas", "The legislature has chosen {town} for the capitol. A dome you'll see from the mountains."),
+                L("clara", "It will take more steel than the trestle, the dam and the spike together."),
+                L("hank", "Then we'd best get hauling."),
+            }, new[]
+            {
+                L("silas", "The flag is flying over the dome. {town} is a capital city."),
+                L("clara", "From a dust bowl with a water tower to this. Look at it."),
+                L("hank", "Every brick came in on our trains."),
+            }),
             ["goldenspike"] = (new[]
             {
                 L("silas", "The eastern line is three hundred miles out. Meet it, and the territory becomes a state."),
@@ -147,6 +211,19 @@ namespace Ironhorse.Game
         public void OnContract() { Beat("first_contract"); }
         public void OnProject(ProjectDef p) { Finale(p.Id); }
 
+        /// <summary>True until the player has heard a project's story: its map pin wears a NEW bubble.</summary>
+        public bool IsNew(string projectId) { return Projects.ContainsKey(projectId) && !Seen("pitch_" + projectId); }
+
+        /// <summary>Plays a project's story (when it hasn't been heard), then runs <paramref name="after"/>.</summary>
+        public void Open(string projectId, Action after)
+        {
+            if (!IsNew(projectId) || Celebrations.Instance == null) { after(); return; }
+            Pitch(projectId);
+            Celebrations.Instance.Enqueue(() => Then(after));
+        }
+
+        static System.Collections.IEnumerator Then(Action a) { a(); yield break; }
+
         void Start()
         {
             if (S.State.level <= 1 && S.State.storySeen.Count == 0) Invoke(nameof(Intro), 2.4f);
@@ -162,8 +239,7 @@ namespace Ironhorse.Game
             if (level == 4) Beat("rival_arrives");
             if (level == 10) Beat("rival_offer");
             if (level == Balance.GoldenAgeLevel) Beat("golden_age");
-            foreach (var p in DepthContent.Projects)
-                if (p.UnlockLevel == level) Pitch(p.Id);
+            // New projects aren't told here: their map pin shows a NEW bubble, and the story plays when it's tapped.
         }
 
         bool Seen(string id) { return S.State.storySeen.Contains(id); }
