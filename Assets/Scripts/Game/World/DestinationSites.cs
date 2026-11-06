@@ -76,6 +76,40 @@ namespace Ironhorse.Game
             return p;
         }
 
+        static TrackPath _link;
+        static float _linkJoin = -1;
+
+        /// <summary>The loop link: from the turntable north across the meadow (over the mine road) to merge with the
+        /// west end of the scenic loop, so work trains from the engine terminal can reach the loop and the trestle.</summary>
+        public static TrackPath LoopLink
+        {
+            get
+            {
+                if (_link != null) return _link;
+                var c = WorldLayout.TurntableCenter;
+                System.Func<float, float, Vector3> Rim = (r, deg) => new Vector3(c.x + Mathf.Cos(deg * Mathf.Deg2Rad) * r, 0, c.z + Mathf.Sin(deg * Mathf.Deg2Rad) * r);
+                System.Func<float, Vector3> OnLoop = deg => new Vector3(WorldLayout.LoopCenter.x + Mathf.Cos(deg * Mathf.Deg2Rad) * WorldLayout.LoopRx, 0, WorldLayout.LoopCenter.z + Mathf.Sin(deg * Mathf.Deg2Rad) * WorldLayout.LoopRz);
+                _link = Smooth(new[] { Rim(10.1f, LinkAngle), Rim(37, LinkAngle), V(-146, 60), V(-144, 95), V(-141.6f, 120), OnLoop(200), OnLoop(190) }, false);
+                return _link;
+            }
+        }
+
+        /// <summary>Direction (degrees from +x toward +z) the loop link leaves the turntable.</summary>
+        public const float LinkAngle = 87f;
+
+        /// <summary>Distance along the loop link where its rails join the loop's.</summary>
+        public static float LinkJoin
+        {
+            get
+            {
+                if (_linkJoin >= 0) return _linkJoin;
+                var l = LoopLink;
+                float s = 0;
+                while (s < l.Length && !OnParent(l.PositionAt(s))) s += 0.25f;
+                return _linkJoin = s;
+            }
+        }
+
         static HashSet<Vector3> _shared;
         /// <summary>True for a waypoint used by more than one spur.</summary>
         static bool Shared(Vector3 p)
@@ -166,6 +200,7 @@ namespace Ironhorse.Game
                 Stamp(Site(id), SiteRadius);
             }
             foreach (var kv in ProjectSites.Landmarks) Stamp(kv.Value.at, kv.Value.half + 8); // storyline lots are level too
+            for (float s = 0; s <= LoopLink.Length; s += 2f) Stamp(LoopLink.PositionAt(s), 0);
         }
 
         static void Stamp(Vector3 c, float radius)

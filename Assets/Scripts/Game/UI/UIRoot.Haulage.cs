@@ -560,10 +560,11 @@ namespace Ironhorse.Game
             }
             var route = Haulage.Route(def.Id);
             if (route != null && route.WaterMeters > 0) Pill(info.transform, null, "On the river: boats can reach it", 26, BGood, new Color(0.1f, 0.12f, 0.17f, 0.9f));
+            if (route != null && route.RailMeters > 0) Pill(info.transform, null, "Rails reach it: work trains can deliver", 26, BGood, new Color(0.1f, 0.12f, 0.17f, 0.9f));
 
             // Filter by how they travel, like the depot.
             var tabs = HBox(info.transform, 8, 0, TextAnchor.MiddleRight, -1, 60, 1);
-            foreach (var f in new[] { ("all", "All"), ("road", "Road"), ("water", "River") })
+            foreach (var f in new[] { ("all", "All"), ("road", "Road"), ("water", "River"), ("rail", "Rail") })
             {
                 string key = f.Item1;
                 Big(tabs.transform, f.Item2, _siteFilter == key ? UIKit.Gold : UIKit.WoodLight, () => { _siteFilter = key; BuildSiteView(); }, 150, 56, true, 28);
@@ -575,7 +576,7 @@ namespace Ironhorse.Game
                 .OrderBy(h => h.projectId == def.Id ? 0 : h.IsIdle ? 1 : 2)
                 .ThenBy(h => { int l; double sec; return S.CantHaul(h, def.Id, out l, out sec) == null ? 0 : 1; })
                 .ThenByDescending(h => S.HaulCapacity(h)).ToList();
-            System.Func<HaulerDef, bool> pass = d => _siteFilter == "all" || (_siteFilter == "water") == d.OnWater;
+            System.Func<HaulerDef, bool> pass = d => _siteFilter == "all" || (_siteFilter == "water" ? d.OnWater : _siteFilter == "rail" ? d.OnRail : !d.OnWater && !d.OnRail);
             foreach (var h in owned) if (pass(Haulage.Hauler(h.defId))) HaulerCard(list, h, def);
             foreach (var d in Haulage.Haulers)
             {
@@ -758,7 +759,7 @@ namespace Ironhorse.Game
             Stack(card.gameObject, 10, new RectOffset(16, 16, 14, 16), TextAnchor.UpperLeft);
             bool locked = !S.IsHaulerUnlocked(d);
             T1(card.transform, d.Name, 34, BGold, TextAnchor.MiddleLeft, true);
-            T1(card.transform, (d.OnWater ? "River & lake" : d.Kind == HaulKind.Truck ? "Road · motor" : "Road · horse-drawn") + " · " + d.Rarity, 24, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
+            T1(card.transform, (d.OnWater ? "River & lake" : d.OnRail ? "Rail · to the railhead" : d.Kind == HaulKind.Truck ? "Road · motor" : "Road · horse-drawn") + " · " + d.Rarity, 24, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
             var art = Box(card.transform, RarityTop(d.Rarity), -1, 190, "Art");
             var tex = ModelIcons.Hauler(d);
             if (tex != null) { var img = ModelIcons.Image(art.transform, tex, 330, 188); UIKit.Place(img.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(330, 188)); if (locked) img.color = new Color(0.2f, 0.2f, 0.25f); }
@@ -782,7 +783,7 @@ namespace Ironhorse.Game
             var art = Box(card.transform, RarityTop(d.Rarity), -1, 190, "Art");
             var tex = ModelIcons.Hauler(d);
             if (tex != null) { var img = ModelIcons.Image(art.transform, tex, 330, 188); UIKit.Place(img.gameObject, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(330, 188)); }
-            var status = Pill(art.transform, null, h.IsIdle ? (d.OnWater ? "At the landing" : "In the yard") : "Hauling to " + ShortName(DepthContent.Project(h.projectId)), 24, h.IsIdle ? BGood : Color.white, new Color(0.06f, 0.08f, 0.11f, 0.85f));
+            var status = Pill(art.transform, null, h.IsIdle ? (d.OnWater ? "At the landing" : d.OnRail ? "On the yard siding" : "In the yard") : "Hauling to " + ShortName(DepthContent.Project(h.projectId)), 24, h.IsIdle ? BGood : Color.white, new Color(0.06f, 0.08f, 0.11f, 0.85f));
             Ignore(status);
             UIKit.Place(status, new Vector2(0, 1), new Vector2(0, 1), new Vector2(8, -8), new Vector2(300, 42));
             var stats = HBox(card.transform, 8, 0, TextAnchor.MiddleLeft, -1, 52);

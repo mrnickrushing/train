@@ -30,6 +30,29 @@ namespace Ironhorse.Tests
         }
 
         [Test]
+        public void WorkTrain_RunsOnlyToRailProjects()
+        {
+            Level(4);
+            _s.State.coins = 100000;
+            Assert.IsTrue(_s.BuyHauler("worktrain").Ok);
+            var wt = _s.State.haulers.First(h => h.defId == "worktrain");
+            var d = Haulage.Hauler("worktrain");
+            Assert.IsTrue(d.OnRail);
+            foreach (var r in Haulage.Routes)
+                Assert.AreEqual(r.ProjectId == "trestle", Haulage.Distance(d, r) > 0, r.ProjectId);
+            _s.State.inventory.Change("timber", 100);
+            int load; double secs;
+            StringAssert.Contains("No rails", _s.CantHaul(wt, "telegraph", out load, out secs));
+            var stage = DepthContent.Project("trestle").Stages[_s.Progress("trestle").stage];
+            _s.State.inventory.Change(stage.ResourceId, 500);
+            if (_s.IsProjectUnlocked(DepthContent.Project("trestle")))
+            {
+                Assert.IsNull(_s.CantHaul(wt, "trestle", out load, out secs));
+                Assert.AreEqual(2 * Haulage.Route("trestle").RailMeters / 4.5, secs, 0.01);
+            }
+        }
+
+        [Test]
         public void StarterWagon_ArrivesWithTheFirstProject()
         {
             Assert.AreEqual(0, _s.State.haulers.Count);

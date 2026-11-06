@@ -42,7 +42,7 @@ namespace Ironhorse.Game
             { "capitol", new[] { V(-64, 46), V(-62, 64), V(-56, 100), V(-50, 140), V(-46, 178), V(-52, 206), V(-56, 240), V(-62, 290), V(-66, 340),
                 V(-56, 372), V(-30, 380), V(-8, 382) } },
             { "opera", new[] { V(-64, 46), V(-56, 38), V(-20, 38), V(20, 38), V(56, 38), V(80, 42), V(106, 46), V(150, 70), V(200, 92), V(236, 128), V(252, 152) } },
-            { "mission", new[] { V(-64, 46), V(-56, 34), V(-50, 14), V(-50, -8), V(-55, -20), V(-55, -64), V(-72, -76), V(-110, -80), V(-140, -100), V(-155, -150), V(-160, -200), V(-160, -232) } },
+            { "mission", new[] { V(-64, 46), V(-56, 34), V(-50, 14), V(-50, -8), V(-55, -20), V(-55, -64), V(-72, -76), V(-104, -92), V(-140, -100), V(-155, -150), V(-160, -200), V(-160, -232) } },
             // A short spur up to the dam's east abutment.
             { "dam", new[] { V(-64, 46), V(-72, 58), V(-84, 66) } },
             // West over the river bridge and along the north side of the roundhouse to the mine.
@@ -52,7 +52,7 @@ namespace Ironhorse.Game
             // South down the west street, over the tracks at the station throat, across the badlands to the wire camp.
             { "telegraph", new[] { V(-64, 46), V(-56, 34), V(-50, 14), V(-50, -8), V(-55, -20), V(-55, -64), V(-40, -80), V(0, -88), V(36, -98), V(56, -108) } },
             // The same crossing, then west along the old wagon trail to the spike plaza.
-            { "goldenspike", new[] { V(-64, 46), V(-56, 34), V(-50, 14), V(-50, -8), V(-55, -20), V(-55, -64), V(-72, -76), V(-110, -80), V(-140, -78) } },
+            { "goldenspike", new[] { V(-64, 46), V(-56, 34), V(-50, 14), V(-50, -8), V(-55, -20), V(-55, -64), V(-72, -76), V(-92, -78), V(-106, -74) } },
         };
 
         static Vector3 V(float x, float z) { return new Vector3(x, 0, z); }
@@ -103,7 +103,37 @@ namespace Ironhorse.Game
         }
 
         /// <summary>The route a hauler takes to a project, or null.</summary>
-        public static TrackPath For(HaulerDef d, string projectId) { return d.OnWater ? Water(projectId) : Road(projectId); }
+        public static TrackPath For(HaulerDef d, string projectId) { return d.OnWater ? Water(projectId) : d.OnRail ? Rail(projectId) : Road(projectId); }
+
+        static readonly Dictionary<string, TrackPath> _rails = new Dictionary<string, TrackPath>();
+
+        /// <summary>Where a work train stands on the loop link with nothing to do: its nose this far along it (the
+        /// first train; any more stand behind it).</summary>
+        public const float RailPark = 118f;
+
+        /// <summary>The work train's run to a rail project's railhead, on track that is always there: from its stand on
+        /// the loop link, onto the scenic loop at its west end and east along the north side to the cut-off junction,
+        /// where the trestle line is being laid. Null for projects the rails don't reach.</summary>
+        public static TrackPath Rail(string projectId)
+        {
+            TrackPath p;
+            if (_rails.TryGetValue(projectId, out p)) return p;
+            if (projectId != "trestle") return _rails[projectId] = null;
+            var pts = new List<Vector3>();
+            var link = DestinationRoutes.LoopLink;
+            for (float s = RailPark; s < link.Length; s += 2f) pts.Add(link.PositionAt(s));
+            var loop = WorldLayout.ScenicLoop;
+            float from = loop.Project(link.PositionAt(link.Length)), to = loop.Project(new Vector3(-22, 0, 195.5f));
+            // Clockwise (decreasing s) from the west end along the north side.
+            for (float s = from - 2f; s > to; s -= 2f) pts.Add(loop.PositionAt(s));
+            pts.Add(loop.PositionAt(to));
+            p = new TrackPath();
+            p.Add(pts[0]);
+            for (int i = 1; i < pts.Count; i++) p.Line(pts[i], 1000);
+            p = p.Build();
+            _rails[projectId] = p;
+            return p;
+        }
 
         /// <summary>Catmull-Rom through the waypoints, sampled every <paramref name="step"/> metres; on land the
         /// curve sits on the terrain, on water at the surface.</summary>

@@ -22,6 +22,8 @@ namespace Ironhorse.Game
             public HaulerDef Def;
             public readonly List<Animation> Team = new List<Animation>();
             public Transform Paddle;
+            /// <summary>A work train's cars, engine first (centre-pivoted, length along +Z).</summary>
+            public readonly List<(Transform t, float len)> Cars = new List<(Transform, float)>();
             public float LastS = float.NaN;
             public void OnTapped()
             {
@@ -47,11 +49,11 @@ namespace Ironhorse.Game
                 if (s.Hauler(kv.Key) == null) { Destroy(kv.Value.gameObject); gone.Add(kv.Key); }
             foreach (var id in gone) _views.Remove(id);
 
-            int parked = 0, moored = 0;
+            int parked = 0, moored = 0, sided = 0;
             foreach (var h in s.State.haulers)
             {
                 var v = _views[h.uid];
-                if (h.IsIdle) Park(v, v.Def.OnWater ? moored++ : parked++);
+                if (h.IsIdle) Park(v, v.Def.OnWater ? moored++ : v.Def.OnRail ? sided++ : parked++);
                 else Travel(v, h, s.HaulProgress(h));
             }
         }
@@ -66,6 +68,22 @@ namespace Ironhorse.Game
         void Park(View v, int slot)
         {
             Vector3 pos; Quaternion rot;
+            if (v.Def.OnRail)
+            {
+                // Standing on the loop link north of the engine terminal, engine toward the loop, one behind another.
+                var link = DestinationRoutes.LoopLink;
+                float nose = HaulRoutes.RailPark - slot * 75f;
+                PlaceCars(v, d =>
+                {
+                    Vector3 q, f;
+                    link.Sample(Mathf.Clamp(d, 0, link.Length), out q, out f);
+                    if (d < 0) q += f * d;
+                    return q;
+                }, Vector3.back, nose);
+                SetPace(v, 0);
+                v.LastS = float.NaN;
+                return;
+            }
             if (v.Def.OnWater)
             {
                 // Tied up alongside the pier head, bow upstream, one behind another down the river.
@@ -101,6 +119,21 @@ namespace Ironhorse.Game
             else if (p < half + Unload) { s = path.Length; back = false; }
             else { s = path.Length * (1 - (p - half - Unload) / half); back = true; }
             Vector3 pos, fwd;
+            if (v.Def.OnRail)
+            {
+                // The engine leads out and backs the train home (no run-round at a railhead).
+                float sp = float.IsNaN(v.LastS) ? 0 : Mathf.Abs(s - v.LastS) / Mathf.Max(Time.deltaTime, 1e-4f);
+                v.LastS = s;
+                PlaceCars(v, d =>
+                {
+                    Vector3 q, f;
+                    path.Sample(Mathf.Clamp(d, 0, path.Length), out q, out f);
+                    if (d < 0) { path.Sample(0, out q, out f); q += f * d; }
+                    return q;
+                }, Vector3.zero, s);
+                SetPace(v, sp);
+                return;
+            }
             path.Sample(Mathf.Clamp(s, 0, path.Length), out pos, out fwd);
             if (back) fwd = -fwd;
             fwd.y = 0;
@@ -111,6 +144,25 @@ namespace Ironhorse.Game
             if (fwd.sqrMagnitude > 0.001f)
                 v.transform.rotation = Quaternion.Slerp(v.transform.rotation, Quaternion.LookRotation(fwd.normalized), Time.deltaTime * 5f);
             SetPace(v, speed);
+        }
+
+        /// <summary>Lines a work train's cars up behind the engine: <paramref name="at"/> maps distance along the
+        /// track (the engine's nose at <paramref name="head"/>, the cars at smaller distances) to a point on it. A car
+        /// faces from its rear wheels to its front ones, so curves bend the train.</summary>
+        static void PlaceCars(View v, System.Func<float, Vector3> at, Vector3 dirHint, float head)
+        {
+            float d = head;
+            for (int i = 0; i < v.Cars.Count; i++)
+            {
+                var (t, len) = v.Cars[i];
+                Vector3 front = at(d), rear = at(d - len);
+                var mid = (front + rear) / 2;
+                var f = front - rear; f.y = 0;
+                if (f.sqrMagnitude < 1e-4f) f = dirHint.sqrMagnitude > 0 ? -dirHint : Vector3.forward;
+                if (i == 0) v.transform.position = mid;
+                t.SetPositionAndRotation(mid, Quaternion.LookRotation(f.normalized));
+                d -= len + 0.6f;
+            }
         }
 
         static void SetPace(View v, float speed)
@@ -130,7 +182,7 @@ namespace Ironhorse.Game
             var v = go.AddComponent<View>();
             v.Uid = h.uid;
             v.Def = d;
-            v.Paddle = BuildModel(d, go.transform, v.Team);
+            v.Paddle = BuildModel(d, go.transform, v.Team, v.Cars);
             var b = ModelRegistry.RendererBounds(go);
             var col = go.AddComponent<BoxCollider>();
             col.center = go.transform.InverseTransformPoint(b.center);
@@ -140,8 +192,9 @@ namespace Ironhorse.Game
 
         /// <summary>Builds a hauler's model under <paramref name="root"/> (also used for the Depot's card art). Horse
         /// animations go into <paramref name="team"/> when given; returns the paddle wheel of a steamer, if any.</summary>
-        public static Transform BuildModel(HaulerDef d, Transform root, List<Animation> team = null)
+        public static Transform BuildModel(HaulerDef d, Transform root, List<Animation> team = null, List<(Transform t, float len)> cars = null)
         {
+            if (d.OnRail) { WorkTrain(root, d.Id == "ballasttrain" ? "redmesa" : "dusty", d.Id == "ballasttrain" ? 4 : 2, cars); return null; }
             // AI-made models (Resources/Models/Haulers) when imported; boats sit down into the water to their waterline.
             if (ModelRegistry.Has("Haulers", d.Id))
             {
@@ -158,6 +211,53 @@ namespace Ironhorse.Game
                 case "steamer": return Sternwheeler(root, 1.45f, Palette.PaintBlue);
                 default: Truck(root, d.Id == "expressvan"); return null;
             }
+        }
+
+        /// <summary>An engine and a string of flatcars loaded with ties, rails and stone, in a row along -Z.</summary>
+        static void WorkTrain(Transform root, string loco, int flats, List<(Transform t, float len)> cars)
+        {
+            float z = 0;
+            for (int i = 0; i <= flats; i++)
+            {
+                var art = i == 0 ? ModelRegistry.Spawn(ModelRegistry.Locomotives, loco, root) : ModelRegistry.Spawn(ModelRegistry.Wagons, "flatcar", root);
+                if (art == null) continue;
+                var holder = new GameObject(i == 0 ? "Engine" : "Flatcar").transform;
+                holder.SetParent(root, false);
+                var b = ModelRegistry.RendererBounds(art);
+                art.transform.SetParent(holder, true);
+                art.transform.localPosition -= new Vector3(b.center.x, 0, b.center.z);
+                float len = Mathf.Max(4, b.size.z);
+                if (i > 0) Load(holder, b.size.y, len, i);
+                if (i == 0)
+                {
+                    var stacks = ModelRegistry.Anchors(art, "Smoke");
+                    if (stacks.Count > 0) Fx.Create(FxKind.Steam, stacks[0], Vector3.zero);
+                }
+                holder.localPosition = new Vector3(0, 0, z - len / 2);
+                z -= len + 0.6f;
+                if (cars != null) cars.Add((holder, len));
+            }
+        }
+
+        /// <summary>A flatcar's load: stacked ties, a bundle of rails, or a heap of ballast stone.</summary>
+        static void Load(Transform car, float deck, float len, int kind)
+        {
+            var mb = new MeshBuilder();
+            mb.Matte();
+            float y = deck * 0.55f;
+            if (kind % 3 == 1)
+                for (int row = 0; row < 3; row++)
+                    for (float z = -len / 2 + 1.2f; z < len / 2 - 1; z += 2.6f)
+                        mb.Box(new Vector3(0, y + 0.12f + row * 0.24f, z), new Vector3(2.4f, 0.22f, 2.3f), MeshBuilder.Darken(Palette.Hex(0x5A4430), 0.9f + 0.1f * (row % 2)));
+            else if (kind % 3 == 2)
+            {
+                mb.Mat(0.5f, 0.7f);
+                for (int r = 0; r < 6; r++) mb.Box(new Vector3(-0.75f + (r % 3) * 0.75f, y + 0.12f + (r / 3) * 0.2f, 0), new Vector3(0.14f, 0.18f, len - 1.4f), Palette.Steel);
+                mb.Matte();
+                foreach (float z in new[] { -len / 3, 0, len / 3 }) mb.Box(new Vector3(0, y + 0.05f, z), new Vector3(2.4f, 0.12f, 0.3f), Palette.WoodDark);
+            }
+            else mb.Sphere(new Vector3(0, y, 0), new Vector3(1.2f, 0.7f, len / 2 - 0.8f), 10, Palette.Hex(0x7A746A), false);
+            mb.ToObject("Load", car);
         }
 
         static void Horse(Transform root, List<Animation> team, Vector3 at, float scale) { Animal(root, team, "horse", at, scale); }

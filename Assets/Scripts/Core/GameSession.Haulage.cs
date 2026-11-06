@@ -64,7 +64,7 @@ namespace Ironhorse.Core
             if (!h.IsIdle) return hd.Name + " is out on a delivery";
             var route = Haulage.Route(projectId);
             seconds = Haulage.TripSeconds(hd, route);
-            if (seconds <= 0) return hd.OnWater ? def.Name + " isn't on the water: send a wagon" : "No road reaches " + def.Name;
+            if (seconds <= 0) return hd.OnWater ? def.Name + " isn't on the water: send a wagon" : hd.OnRail ? "No rails reach " + def.Name + ": send a wagon" : "No road reaches " + def.Name;
             int need = StillToSend(projectId);
             if (need <= 0) return "The last batch is on its way";
             var stage = def.Stages[pr.stage];

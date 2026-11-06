@@ -39,6 +39,7 @@ namespace Ironhorse.Game
             foreach (var t in OpenTracks) yield return t.ang;
             yield return LeadAng;
             yield return ShopAng;
+            yield return DestinationRoutes.LinkAngle;
         }
 
         /// <summary>True on the terminal's ground: the pit apron (the terrain shows worn cinders there).</summary>
@@ -84,6 +85,8 @@ namespace Ironhorse.Game
             float mz = WorldLayout.MainZ;
             Lead = LeadPath(out LeadStop);
             TrackBuilder.Build(mb, Lead, 0, LeadStop);
+            // The loop link north to the scenic loop (work trains stand on it).
+            TrackBuilder.Build(mb, DestinationRoutes.LoopLink, 0, DestinationRoutes.LinkJoin);
             SwitchStand(mb, new Vector3(LeadMergeX + 6, ValleyTerrain.Height(LeadMergeX + 6, mz + 3.4f), mz + 3.4f));
             Pit(mb);
             RoundhouseBuilding(mb);
@@ -344,7 +347,7 @@ namespace Ironhorse.Game
             var rng = new System.Random(77);
             System.Func<float> R = () => (float)rng.NextDouble();
             // Cable drums, crates and barrels by the stall doors and the shop.
-            foreach (var (r, a) in new[] { (Inner - 2.5f, 100f), (Inner - 2.2f, 152f), (Inner - 2.6f, 204f), (21f, 52f), (22f, 84f), (16f, -120f) })
+            foreach (var (r, a) in new[] { (Inner - 2.5f, 106f), (Inner - 2.2f, 152f), (Inner - 2.6f, 204f), (21f, 52f), (22f, 84f), (16f, -120f) })
             {
                 var c = Pt(r, a);
                 for (int k = 0; k < 4; k++)

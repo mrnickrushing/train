@@ -9,7 +9,7 @@ namespace Ironhorse.Game
         static readonly Rect MineRect = new Rect(-226, 24, 46, 42);
         static readonly Rect DepotRect = new Rect(100, 28, 66, 42);
         static readonly Rect DamRect = new Rect(-140, 52, 66, 40);
-        static readonly Rect SpikeRect = new Rect(-176, -96, 52, 40);
+        static readonly Rect SpikeRect = new Rect(-148, -92, 52, 40);
         static readonly Rect[] MoreSiteRects = { MineRect, DepotRect, DamRect, SpikeRect };
 
         static float GY(float x, float z) { return Mathf.Max(Ground(x, z), 0); }
@@ -368,7 +368,8 @@ namespace Ironhorse.Game
 
         // ================================================================ The Golden Spike
 
-        const float SpikeX = -150, SpikeZ = -76;
+        // In the open ground east of the Coppertop spur (the railhead), between the main line and the mission road.
+        const float SpikeX = -122, SpikeZ = -70;
 
         Site Spike()
         {
@@ -404,7 +405,7 @@ namespace Ironhorse.Game
 
             s.DoneModel = "goldenspike_done"; s.DoneAt = At(SpikeX, SpikeZ); s.DoneYaw = 0;
             s.Stakes = mb => { foreach (var o in new[] { new Vector2(-10, -8), new Vector2(10, -8), new Vector2(-10, 8), new Vector2(10, 8), new Vector2(0, 0) }) Stake(mb, At(SpikeX + o.x, SpikeZ + o.y)); };
-            s.Camp = mb => Camp(mb, new Vector2(SpikeX - 20, SpikeZ - 12), CampKind.Stone);
+            s.Camp = mb => Camp(mb, new Vector2(SpikeX + 17, SpikeZ + 6), CampKind.Stone);
             return s;
         }
 

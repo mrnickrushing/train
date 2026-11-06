@@ -3,8 +3,9 @@ using System.Linq;
 
 namespace Ironhorse.Core
 {
-    /// <summary>How a hauler travels: wagons and trucks take the roads, boats the lake and the river.</summary>
-    public enum HaulKind { Wagon, Boat, Truck }
+    /// <summary>How a hauler travels: wagons and trucks take the roads, boats the lake and the river, work trains the rails.
+    /// New kinds go at the end (saved in no state, but keep the order stable anyway).</summary>
+    public enum HaulKind { Wagon, Boat, Truck, Rail }
 
     /// <summary>A road or river vehicle that carries goods from the freight yard out to territory projects.</summary>
     public sealed class HaulerDef
@@ -23,6 +24,7 @@ namespace Ironhorse.Core
         public int PriceNuggets;
         public string Blurb;
         public bool OnWater { get { return Kind == HaulKind.Boat; } }
+        public bool OnRail { get { return Kind == HaulKind.Rail; } }
     }
 
     /// <summary>How the haulers reach one project: road length and, for sites on the lake or river, the water route.</summary>
@@ -33,6 +35,9 @@ namespace Ironhorse.Core
         public float RoadMeters;
         /// <summary>One-way water distance from the town landing, metres (0 = boats can't get there).</summary>
         public float WaterMeters;
+        /// <summary>One-way rail distance from the work trains' stand to the railhead of a rail project (the trestle), metres
+        /// (0 = no rails go there).</summary>
+        public float RailMeters;
         /// <summary>Character who asks for the goods (portrait UI/Story/char_{id}).</summary>
         public string Character;
         public string CharacterName;
@@ -53,24 +58,26 @@ namespace Ironhorse.Core
             H("sternwheeler", "River Belle Sternwheeler", HaulKind.Boat, Era.Frontier, Rarity.Uncommon, 60, 2.2f, 5,  7500,  0,  "Paddles thrashing, she hauls a barge-load up the river."),
             H("conestoga",    "Conestoga Freighter",   HaulKind.Wagon, Era.Frontier,  Rarity.Uncommon, 45,  1.3f, 8,  9000,  0,  "A six-horse giant. Slow, steady, and carries a mountain."),
             H("steamer",      "Silver Lake Steamer",   HaulKind.Boat,  Era.Frontier,  Rarity.Rare,     120, 3.0f, 11, 20000, 0,  "Twin stacks and a full hold, the pride of the lake."),
+            H("worktrain",    "Work Train",            HaulKind.Rail,  Era.Frontier,  Rarity.Uncommon, 70,  4.5f, 4,  4000,  0,  "A yard engine and a string of flatcars: rails, ties and stone straight to the railhead."),
             H("motortruck",   "Motor Truck",           HaulKind.Truck, Era.GoldenAge, Rarity.Rare,     60,  5.0f, 15, 30000, 0,  "Rubber tyres and a gasoline roar. The future arrives."),
+            H("ballasttrain", "Ballast Express",       HaulKind.Rail,  Era.GoldenAge, Rarity.Epic,     150, 7.0f, 16, 0,     180, "A big Mogul and a dozen loaded flats: the railhead never waits."),
             H("expressvan",   "Express Delivery Van",  HaulKind.Truck, Era.GoldenAge, Rarity.Epic,     90,  6.0f, 18, 0,     220, "Polished brass, painted gold: the fastest freight in the territory."),
         };
 
         public static readonly List<SiteRoute> Routes = new List<SiteRoute>
         {
             new SiteRoute { ProjectId = "telegraph",   RoadMeters = 240, WaterMeters = 0,   Character = "engineer", CharacterName = "Clara Whitlock" },
-            new SiteRoute { ProjectId = "trestle",     RoadMeters = 180, WaterMeters = 14, Character = "foreman",  CharacterName = "Hank" },
+            new SiteRoute { ProjectId = "trestle",     RoadMeters = 180, WaterMeters = 14, RailMeters = 175, Character = "foreman",  CharacterName = "Hank" },
             new SiteRoute { ProjectId = "mineshaft",   RoadMeters = 140, WaterMeters = 0,   Character = "rival",    CharacterName = "Cyrus Blackwell" },
             new SiteRoute { ProjectId = "resupply",    RoadMeters = 190, WaterMeters = 0,   Character = "foreman",  CharacterName = "Hank" },
             new SiteRoute { ProjectId = "lighthouse",  RoadMeters = 0,   WaterMeters = 350, Character = "engineer", CharacterName = "Clara Whitlock" },
             new SiteRoute { ProjectId = "lodge",       RoadMeters = 515, WaterMeters = 375, Character = "investor", CharacterName = "Mr. Pemberton" },
             new SiteRoute { ProjectId = "dam",         RoadMeters = 30, WaterMeters = 0,  Character = "engineer", CharacterName = "Clara Whitlock" },
             new SiteRoute { ProjectId = "winery",      RoadMeters = 520, WaterMeters = 0,   Character = "foreman",  CharacterName = "Hank" },
-            new SiteRoute { ProjectId = "mission",     RoadMeters = 370, WaterMeters = 0,   Character = "engineer", CharacterName = "Clara Whitlock" },
+            new SiteRoute { ProjectId = "mission",     RoadMeters = 369, WaterMeters = 0,   Character = "engineer", CharacterName = "Clara Whitlock" },
             new SiteRoute { ProjectId = "opera",       RoadMeters = 365, WaterMeters = 0,   Character = "investor", CharacterName = "Mr. Pemberton" },
             new SiteRoute { ProjectId = "capitol",     RoadMeters = 385, WaterMeters = 0,   Character = "investor", CharacterName = "Mr. Pemberton" },
-            new SiteRoute { ProjectId = "goldenspike", RoadMeters = 205, WaterMeters = 0,   Character = "investor", CharacterName = "Mr. Pemberton" },
+            new SiteRoute { ProjectId = "goldenspike", RoadMeters = 172, WaterMeters = 0,   Character = "investor", CharacterName = "Mr. Pemberton" },
         };
 
         static HaulerDef H(string id, string name, HaulKind kind, Era era, Rarity r, int cap, float speed, int lvl, int coins, int nuggets, string blurb)
@@ -86,7 +93,7 @@ namespace Ironhorse.Core
         public static float Distance(HaulerDef d, SiteRoute r)
         {
             if (r == null) return 0;
-            return d.OnWater ? r.WaterMeters : r.RoadMeters;
+            return d.OnWater ? r.WaterMeters : d.OnRail ? r.RailMeters : r.RoadMeters;
         }
 
         /// <summary>Round trip, seconds: out with the goods and back to the yard.</summary>
