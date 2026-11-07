@@ -64,7 +64,7 @@ namespace Ironhorse.EditorTools
 
         /// <summary>The marketing version (CFBundleShortVersionString). It must match the App Store version in App Store
         /// Connect, or the build can't be submitted; bump both together.</summary>
-        public const string AppVersion = "1.0";
+        public const string AppVersion = "1.1";
 
         public static void ApplyPlayerSettings()
         {
