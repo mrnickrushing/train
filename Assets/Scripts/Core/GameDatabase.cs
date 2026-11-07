@@ -115,6 +115,7 @@ namespace Ironhorse.Core
             V("telegraph",   "Telegraph Office",  BuildingStyle.TelegraphOffice, 5,  2400,  C(("planks", 20), ("steel", 5)),  CivicEffect.ContractSlot, 1f,    "Word travels fast: +1 contract slot."),
             V("schoolhouse", "Schoolhouse",       BuildingStyle.Schoolhouse,     6,  3000,  C(("planks", 30)),                CivicEffect.Xp,           0.08f, "An educated town learns faster: +8% XP."),
             V("bank",        "Territorial Bank",  BuildingStyle.Bank,            9,  8000,  C(("steel", 25), ("tools", 5)),   CivicEffect.CoinCap,      1f,    "Vaults keep rent safe: +2h income storage."),
+            V("garage",      "Motor Garage",      BuildingStyle.Garage,          Motor.UnlockLevel, 9000, C(("steel", 30), ("tools", 8)), CivicEffect.None, 0f, "Home to your motor trucks and the local delivery board: 2 bays, one more a level.", Era.GoldenAge),
             V("clocktower",  "Clock Tower",       BuildingStyle.ClockTower,      14, 15000, C(("steel", 35), ("copper_wire", 10)), CivicEffect.Yield,   0.10f, "Railway time: +10% cargo from every run.", Era.GoldenAge),
             // Decoration
             V("lamppost",    "Gas Lamp",          BuildingStyle.LampPost,        2,  150,   C(("steel", 0)),                  CivicEffect.Income,       0.01f, "Lights up the night: +1% income.", Era.Frontier, BuildingCategory.Decoration, 12),

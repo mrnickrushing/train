@@ -77,6 +77,7 @@ namespace Ironhorse.Core
             if (State.stats.dispatches > Hooks.CrateMinDispatches) pool.Add(DailyKind.Crates);
             if (State.level >= Hooks.EventLevel) pool.Add(DailyKind.Events);
             if (DepthContent.Projects.Any(p => IsProjectUnlocked(p) && !Progress(p.Id).done)) pool.Add(DailyKind.ProjectDeliveries);
+            if (HasGarage && State.trucks.Count > 0) pool.Add(DailyKind.TruckDeliveries);
             var kinds = new List<DailyKind> { DailyKind.Dispatch }; // every day starts with sending trains out
             while (kinds.Count < Frontier.DailyTaskCount && pool.Count > 0)
             {
@@ -102,6 +103,7 @@ namespace Ironhorse.Core
                 case DailyKind.Events: return st.eventsDone;
                 case DailyKind.Rent: return st.rentCollections;
                 case DailyKind.EarnCoins: return st.coinsEarned;
+                case DailyKind.TruckDeliveries: return st.truckDeliveries;
                 default: return st.projectDeliveries;
             }
         }
@@ -439,7 +441,7 @@ namespace Ironhorse.Core
 
         /// <summary>
         /// Starts over in a new town with a permanent bonus. The town, level, coins, goods, orders and projects
-        /// reset; locomotives, wagons, purchases, nuggets, blueprints, engineers, the album and curios stay.
+        /// reset; locomotives, wagons, trucks, purchases, nuggets, blueprints, engineers, the album and curios stay.
         /// </summary>
         public ActionResult CharterNewTerritory()
         {
@@ -485,9 +487,14 @@ namespace Ironhorse.Core
                 t.combo = 0;
                 t.curio = "";
             }
+            // Trucks stay with the company and wait for the new town's garage; their loads and the board are gone.
+            foreach (var t in State.trucks) { t.job = new DeliveryState(); t.departedAt = t.returnsAt = 0; }
+            State.deliveries.Clear();
+            State.nextDeliveryAt = 0;
             State.fuel = MaxFuel;
             State.fuelAt = now;
             _arrivalSeen.Clear();
+            _truckSeen.Clear();
             _constructionSeen.Clear();
             _productionSeen.Clear();
             foreach (var b in State.buildings) _constructionSeen.Add(b.uid);

@@ -128,6 +128,11 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   storyline landmarks (winery, mission, opera, capitol) use `ProjectSites.Landmarks` and finished art `<id>_done`.
   `GroundTint` paints hillside colour patches and forest-floor shade under the instanced trees. Target look/feel: the user's
   Transport Tycoon Empire 2 recordings (own art and names only).
+- **Motor Age (Act II, 1.1)**: `docs/CHAPTER_2.md` is the plan. `Core/GameSession.Trucks.cs` (content and tuning in `Core/Motor.cs`):
+  the Motor Garage (level 12, `garage`, bays = 1 + level) gives a free Dart Runabout when it finishes; the local delivery board
+  (4 orders, one good each for a valley customer) is filled by truck: goods leave at once, pay comes when the truck is back.
+  Trucks burn no fuel. World: `Game/Motor/TruckView.cs` (bays on the garage apron and inside the doors, out of town to the north),
+  `TruckFactory.cs` (procedural until `Models/Trucks/<id>` exists). Board: `UI/UIRoot.Garage.cs`.
 - **Balance simulator**: `Tools/BalanceSim` runs a bot that plays the game logic for a month of five short daily sessions
   and prints level, coins, nuggets and blueprints (and where each came from). `dotnet run --project Tools/BalanceSim/current
   -c Release -- 30 3` (days, seeds); `baseline` runs the same bot on the logic from before the daily hooks (extract it first,

@@ -112,12 +112,18 @@ namespace Ironhorse.Core
         public List<string> shelvesClaimed = new List<string>();
         // New territory charters: 1 for the first town, +1 for each charter
         public int territory = 1;
+        // Motor Age (see GameSession.Trucks.cs)
+        public List<TruckState> trucks = new List<TruckState>();
+        public List<DeliveryState> deliveries = new List<DeliveryState>();
+        public double nextDeliveryAt;
+        /// <summary>The free Dart Runabout that comes with the first Motor Garage has been given.</summary>
+        public bool starterTruck;
 
         public Stats stats = new Stats();
         public Settings settings = new Settings();
     }
 
-    public enum DailyKind { Dispatch, Contracts, Produce, Collect, Passengers, Crates, Events, Rent, EarnCoins, ProjectDeliveries }
+    public enum DailyKind { Dispatch, Contracts, Produce, Collect, Passengers, Crates, Events, Rent, EarnCoins, ProjectDeliveries, TruckDeliveries }
 
     [Serializable]
     public class DailyTask
@@ -200,6 +206,36 @@ namespace Ironhorse.Core
         public int xpCargo = -1;
 
         public bool IsIdle { get { return string.IsNullOrEmpty(destinationId); } }
+    }
+
+    /// <summary>A motor truck in the garage or out on a delivery.</summary>
+    [Serializable]
+    public class TruckState
+    {
+        public int uid;
+        public string defId;
+        public int level = 1;
+        /// <summary>Garage bay it parks in (0..bays-1).</summary>
+        public int bay;
+        /// <summary>The delivery it's out on; uid 0 when it's in the garage (JsonUtility never leaves it null).</summary>
+        public DeliveryState job = new DeliveryState();
+        public double departedAt;
+        public double returnsAt;
+
+        public bool OnJob { get { return job != null && job.uid != 0; } }
+    }
+
+    /// <summary>An order on the local delivery board: one good for one customer, carried by truck.</summary>
+    [Serializable]
+    public class DeliveryState
+    {
+        public int uid;
+        public string customerId = "";
+        public string resourceId = "";
+        public int amount;
+        public int rewardCoins;
+        public int rewardXp;
+        public List<ResourceAmount> rewardParts = new List<ResourceAmount>();
     }
 
     [Serializable]
@@ -308,6 +344,7 @@ namespace Ironhorse.Core
         public int projectDeliveries;
         public int eventsDone;
         public int rentCollections;
+        public int truckDeliveries;
         public List<ResourceAmount> collected = new List<ResourceAmount>();
         public List<ResourceAmount> produced = new List<ResourceAmount>();
     }

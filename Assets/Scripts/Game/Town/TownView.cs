@@ -95,7 +95,10 @@ namespace Ironhorse.Game
         public void OnTapped()
         {
             AudioManager.Play(Sfx.Click);
-            UIRoot.Instance.OpenBuilding(Uid);
+            // The finished garage opens on its trucks and orders; the building board is one tap away from there.
+            var b = G.Session.Building(Uid);
+            if (b != null && b.defId == Motor.GarageId && G.Session.IsReady(b)) UIRoot.Instance.OpenGarage();
+            else UIRoot.Instance.OpenBuilding(Uid);
         }
 
         void Update()

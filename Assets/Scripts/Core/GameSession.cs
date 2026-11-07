@@ -157,6 +157,7 @@ namespace Ironhorse.Core
             RepairFrontier();
             RepairPlatforms();
             RepairHaulage();
+            RepairTrucks();
         }
 
         // ---------------------------------------------------------------- Tick
@@ -198,6 +199,7 @@ namespace Ironhorse.Core
             if (TickFrontier()) changed = true;
             if (TickPlatforms()) changed = true;
             if (TickHaulage()) changed = true;
+            if (TickTrucks()) changed = true;
             int season = State.passSeason;
             RollSeason();
             if (season != State.passSeason) changed = true;

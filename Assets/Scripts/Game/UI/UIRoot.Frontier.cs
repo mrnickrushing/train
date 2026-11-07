@@ -58,6 +58,7 @@ namespace Ironhorse.Game
                 case DailyKind.Events: return "tumbleweed";
                 case DailyKind.Rent: return "coin";
                 case DailyKind.EarnCoins: return "shop_coins";
+                case DailyKind.TruckDeliveries: return "nav_trains";
                 default: return "nav_territory";
             }
         }

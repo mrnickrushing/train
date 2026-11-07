@@ -71,6 +71,7 @@ namespace Ironhorse.Game
                 case BuildingStyle.LampPost: LampPost(m); break;
                 case BuildingStyle.Garden: Garden(m); break;
                 case BuildingStyle.Fountain: Fountain(m); break;
+                case BuildingStyle.Garage: Garage(m); break;
             }
             if (level >= 3 && style != BuildingStyle.LampPost && style != BuildingStyle.Garden && style != BuildingStyle.Fountain)
                 Flag(mb, new Vector3(5.2f, 0, 4.8f), m.Height * 0.6f + 3, level >= 5 ? Palette.Brass : Palette.PaintRed);
@@ -755,6 +756,51 @@ namespace Ironhorse.Game
             }
             m.Smoke.Add(new Vector3(0, 3.9f, 0)); // used as a spray emitter
             m.Height = 4;
+        }
+
+        /// <summary>Brick motor garage with three open bays at the back of the lot; trucks park on the apron in front.</summary>
+        static void Garage(BuildingModel m)
+        {
+            var mb = m.Body;
+            mb.Matte();
+            // Concrete apron where the trucks stand.
+            mb.Surf = SurfaceKind.Stone;
+            mb.Box(new Vector3(0, 0.05f, -3.2f), new Vector3(11.6f, 0.1f, 5.4f), Palette.Hex(0x9A948A));
+            mb.Surf = SurfaceKind.Auto;
+            Foundation(mb, 11.6f, 6.4f, 0.3f);
+            const float z0 = -0.4f, depth = 6f, h = 5.2f;
+            float zc = z0 + depth / 2;
+            mb.Box(new Vector3(0, 0.3f + h / 2, zc), new Vector3(11.4f, h, depth), Palette.Brick);
+            // Three bay openings, dark inside, with timber lintels and a roll-up door half open.
+            for (int i = -1; i <= 1; i++)
+            {
+                float x = i * 3.7f;
+                mb.Box(new Vector3(x, 0.3f + 1.6f, z0 - 0.02f), new Vector3(2.9f, 3.2f, 0.06f), Palette.Hex(0x1E1A17));
+                mb.Box(new Vector3(x, 0.3f + 3.45f, z0 - 0.08f), new Vector3(3.3f, 0.4f, 0.16f), Palette.Stone);
+                mb.Box(new Vector3(x, 0.3f + 2.95f, z0 - 0.06f), new Vector3(2.9f, 0.6f, 0.08f), Palette.Hex(0x6E7B6A));
+            }
+            for (int i = 0; i < 4; i++) mb.Box(new Vector3(-5.55f + i * 3.7f, 0.3f + h / 2, z0 - 0.1f), new Vector3(0.5f, h, 0.2f), Palette.BrickDark);
+            // Stepped false front with the sign.
+            mb.Box(new Vector3(0, 0.3f + h + 0.6f, z0 + 0.1f), new Vector3(11.4f, 1.2f, 0.3f), Palette.Brick);
+            mb.Box(new Vector3(0, 0.3f + h + 1.5f, z0 + 0.1f), new Vector3(6, 0.8f, 0.3f), Palette.Brick);
+            mb.Box(new Vector3(0, 0.3f + h + 1.95f, z0 + 0.1f), new Vector3(6.3f, 0.15f, 0.4f), Palette.Stone);
+            mb.Box(new Vector3(0, 0.3f + h + 1.25f, z0 + 0.1f), new Vector3(11.7f, 0.15f, 0.4f), Palette.Stone);
+            Sign(mb, new Vector3(0, 0.3f + h + 0.75f, z0 - 0.1f), 7.4f, 0.9f, Palette.Cream, Palette.PaintRed);
+            mb.Box(new Vector3(0, 0.3f + h + 0.05f, zc + 0.1f), new Vector3(11.2f, 0.16f, depth - 0.2f), Palette.RoofTin);
+            // Clerestory windows down the side.
+            for (int i = 0; i < 3; i++) mb.Box(new Vector3(5.72f, 3.6f, z0 + 1.2f + i * 1.8f), new Vector3(0.06f, 1.0f, 1.2f), Palette.Window);
+            // A gas pump with a glass globe, oil drums and a tyre stack.
+            mb.Paint();
+            mb.Box(new Vector3(5.3f, 0.1f + 1.1f, -4.9f), new Vector3(0.7f, 2.2f, 0.55f), Palette.PaintRed);
+            mb.Mat(0.85f, 0, true);
+            mb.Sphere(new Vector3(5.3f, 2.6f, -4.9f), new Vector3(0.36f, 0.42f, 0.36f), 10, Palette.Hex(0xF4EEDC));
+            mb.Matte();
+            mb.Cylinder(new Vector3(5.0f, 1.6f, -5.2f), new Vector3(4.8f, 0.9f, -5.4f), 0.05f, 4, Palette.Black, false);
+            Station.Barrel(mb, new Vector3(-5.4f, 0.1f, -1.4f));
+            Station.Barrel(mb, new Vector3(-5.3f, 0.1f, -2.4f));
+            for (int i = 0; i < 3; i++)
+                mb.Cylinder(new Vector3(-5.2f, 0.1f + i * 0.32f, -5.0f), new Vector3(-5.2f, 0.4f + i * 0.32f, -5.0f), 0.55f, 12, Palette.Hex(0x232323));
+            m.Height = 8;
         }
 
         // ================================================================ construction site
