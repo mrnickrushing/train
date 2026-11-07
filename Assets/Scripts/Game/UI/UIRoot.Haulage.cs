@@ -559,15 +559,15 @@ namespace Ironhorse.Game
                 Big(info.transform, "Get " + res.Name, BBlue, () => GetMore(rid), 300, 60, true, 30);
             }
             var route = Haulage.Route(def.Id);
-            if (route != null && route.WaterMeters > 0) Pill(info.transform, null, "On the river: boats can reach it", 26, BGood, new Color(0.1f, 0.12f, 0.17f, 0.9f));
-            if (route != null && route.RailMeters > 0) Pill(info.transform, null, "Rails reach it: work trains can deliver", 26, BGood, new Color(0.1f, 0.12f, 0.17f, 0.9f));
+            if (route != null && route.WaterMeters > 0) Pill(info.transform, null, "Boats can reach it", 26, BGood, new Color(0.1f, 0.12f, 0.17f, 0.9f));
+            if (route != null && route.RailMeters > 0) Pill(info.transform, null, "Work trains too", 26, BGood, new Color(0.1f, 0.12f, 0.17f, 0.9f));
 
             // Filter by how they travel, like the depot.
             var tabs = HBox(info.transform, 8, 0, TextAnchor.MiddleRight, -1, 60, 1);
             foreach (var f in new[] { ("all", "All"), ("road", "Road"), ("water", "River"), ("rail", "Rail") })
             {
                 string key = f.Item1;
-                Big(tabs.transform, f.Item2, _siteFilter == key ? UIKit.Gold : UIKit.WoodLight, () => { _siteFilter = key; BuildSiteView(); }, 150, 56, true, 28);
+                Big(tabs.transform, f.Item2, _siteFilter == key ? UIKit.Gold : UIKit.WoodLight, () => { _siteFilter = key; BuildSiteView(); }, 128, 56, true, 26);
             }
             var holder = HBox(area.transform, 0, 0, TextAnchor.UpperLeft, -1, 310);
             var list = Scroller(holder.transform, "sitehaulers", true, 18);
