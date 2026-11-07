@@ -46,7 +46,7 @@ namespace Ironhorse.Game
             _color = profile.Add<ColorAdjustments>(true);
             _color.postExposure.Override(0f);
             _color.contrast.Override(22f);
-            _color.saturation.Override(18f);
+            _color.saturation.Override(26f);
 
             var wb = profile.Add<WhiteBalance>(true);
             wb.temperature.Override(7f);

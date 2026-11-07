@@ -48,6 +48,8 @@ namespace Ironhorse.Core
         public List<string> offerPurchases = new List<string>();
         public int passSeason = -1;
         public int passXp;
+        /// <summary>Season Pass XP earned this season without the tier cap: the season leaderboard's score.</summary>
+        public int seasonScore;
         public bool passPremium;
         public List<int> passClaimedFree = new List<int>();
         public List<int> passClaimedPremium = new List<int>();
@@ -59,6 +61,10 @@ namespace Ironhorse.Core
         public int hiredCrew;
         public List<ResourceAmount> blueprints = new List<ResourceAmount>();
         public List<ProjectProgress> projects = new List<ProjectProgress>();
+        /// <summary>Road and river vehicles that carry goods out to territory projects (see GameSession.Haulage.cs).</summary>
+        public List<HaulerState> haulers = new List<HaulerState>();
+        /// <summary>The free starter freight wagon has been handed out.</summary>
+        public bool haulerGranted;
         public int taskSet;
         public List<int> taskBaselines = new List<int>();
         /// <summary>Per task in the current set: true when it was swapped for a repeatable fallback at set start.</summary>
@@ -154,7 +160,7 @@ namespace Ironhorse.Core
         public bool sold;
     }
 
-    public enum MapEventKind { Traveler, GoldStrike, Tumbleweed, Bandits }
+    public enum MapEventKind { Traveler, GoldStrike, Tumbleweed, Bandits, Windfall }
 
     /// <summary>Something happening on the map for a while: a traveler, a gold strike, tumbleweeds, bandits.</summary>
     [Serializable]
@@ -273,6 +279,24 @@ namespace Ironhorse.Core
     }
 
     [Serializable]
+    public class HaulerState
+    {
+        public int uid;
+        public string defId;
+        public int level = 1;
+        /// <summary>Project the current load is bound for (empty when the vehicle is in the yard).</summary>
+        public string projectId = "";
+        public string resourceId = "";
+        public int amount;
+        /// <summary>Which stage the load is for: it only counts toward that stage.</summary>
+        public int stage;
+        public double departedAt;
+        public double arrivesAt;
+
+        public bool IsIdle { get { return string.IsNullOrEmpty(projectId); } }
+    }
+
+    [Serializable]
     public class ProjectProgress
     {
         public string id;
@@ -333,6 +357,10 @@ namespace Ironhorse.Core
         public bool haptics = true;
         public bool notifications = true; // local reminders (train arrivals, fuel, production)
         public bool tutorialDone;
+        /// <summary>One-time feature tips already shown (after the first-launch guide).</summary>
+        public List<string> tipsSeen = new List<string>();
+        /// <summary>Graphics: 0 = automatic (battery saver on phones with little memory), 1 = full detail, 2 = battery saver.</summary>
+        public int graphics;
     }
 
     public static class ResourceListExt

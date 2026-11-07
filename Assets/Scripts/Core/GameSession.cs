@@ -156,6 +156,7 @@ namespace Ironhorse.Core
             RepairHooks();
             RepairFrontier();
             RepairPlatforms();
+            RepairHaulage();
             RepairTrucks();
         }
 
@@ -197,6 +198,7 @@ namespace Ironhorse.Core
             if (TickHooks()) changed = true;
             if (TickFrontier()) changed = true;
             if (TickPlatforms()) changed = true;
+            if (TickHaulage()) changed = true;
             if (TickTrucks()) changed = true;
             int season = State.passSeason;
             RollSeason();

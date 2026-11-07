@@ -26,13 +26,17 @@ Shader "Ironhorse/Terrain"
         // Town ground mask (global, from TownStreets): R dirt road, G gravel street, B worn lot, A wheel ruts.
         TEXTURE2D(_TownMask); SAMPLER(sampler_TownMask);
         float4 _TownMaskRect; // xMin, zMin, 1/width, 1/height (0 = no mask)
+        TEXTURE2D(_RoadMask); SAMPLER(sampler_RoadMask);
+        float4 _RoadMaskRect; // haul roads across the whole valley: r = dirt, g = wheel ruts
+        TEXTURE2D(_GroundTint); SAMPLER(sampler_GroundTint);
+        float4 _GroundTintRect; // world colour map (GroundTint.cs): rgb * 2 multiplies the grass
         CBUFFER_START(UnityPerMaterial)
             float4 _MacroTex_ST;
         CBUFFER_END
         // Meters per texture tile for grass, dry grass, dirt, sand, rock, gravel.
         static const float kTile[6] = { 7.0, 8.0, 4.0, 5.0, 9.0, 2.6 };
         // Per layer color correction so the photo textures sit in the game's warm palette.
-        static const float3 kTint[6] = { float3(0.86, 1.04, 0.66), float3(1.08, 1.04, 0.66), float3(1.0, 0.95, 0.9), float3(1.05, 1.0, 0.95), float3(1.05, 0.95, 0.9), float3(1.0, 1.0, 1.0) };
+        static const float3 kTint[6] = { float3(0.74, 0.98, 0.5), float3(1.08, 1.04, 0.66), float3(1.0, 0.95, 0.9), float3(1.05, 1.0, 0.95), float3(1.05, 0.95, 0.9), float3(1.0, 1.0, 1.0) };
         ENDHLSL
 
         Pass
@@ -86,7 +90,7 @@ Shader "Ironhorse/Terrain"
             }
 
             // Flat layers sample the XZ plane; rock is triplanar so cliffs don't stretch.
-            void SampleLayer(int i, float3 pos, float3 blend, float3 dx, float3 dy, out float4 alb, out float4 nrm)
+            void SampleLayer(int i, float3 pos, float3 blend, float3 dx, float3 dy, float anti, out float4 alb, out float4 nrm)
             {
                 float t = 1.0 / kTile[i];
                 UNITY_BRANCH if (i == 4)
@@ -100,8 +104,30 @@ Shader "Ironhorse/Terrain"
                 }
                 else
                 {
-                    alb = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainAlbedo, sampler_TerrainAlbedo, pos.xz * t, i, dx.xz * t, dy.xz * t);
-                    nrm = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainNormal, sampler_TerrainNormal, pos.xz * t, i, dx.xz * t, dy.xz * t);
+                    // Anti-tiling: a second copy, turned 37 degrees and 2.3x larger, faded in and out by world noise
+                    // (anti), so the photo tile never lines up into a visible grid.
+                    const float2x2 R = float2x2(0.7986, -0.6018, 0.6018, 0.7986);
+                    float t2 = t * 0.435;
+                    float2 uv2 = mul(R, pos.xz) * t2 + float2(0.37, 0.71);
+                    float2 dx2 = mul(R, dx.xz) * t2, dy2 = mul(R, dy.xz) * t2;
+                    float4 a1 = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainAlbedo, sampler_TerrainAlbedo, pos.xz * t, i, dx.xz * t, dy.xz * t);
+                    float4 n1 = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainNormal, sampler_TerrainNormal, pos.xz * t, i, dx.xz * t, dy.xz * t);
+                    float4 a2 = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainAlbedo, sampler_TerrainAlbedo, uv2, i, dx2, dy2);
+                    float4 n2 = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainNormal, sampler_TerrainNormal, uv2, i, dx2, dy2);
+                    // Height-aware crossfade: the taller detail of either copy wins in the blend zone, so there's no smear.
+                    float k = saturate((anti - 0.5) * 3 + (a2.a - a1.a) * 1.5 + 0.5);
+                    alb = lerp(a1, a2, k);
+                    // Grass: soften the photo's hard bright speckles toward a blurred copy (a low mip of the same tile),
+                    // so blades read as a soft carpet with clumps rather than glitter.
+                    UNITY_BRANCH if (i <= 1)
+                    {
+                        float3 soft = SAMPLE_TEXTURE2D_ARRAY_GRAD(_TerrainAlbedo, sampler_TerrainAlbedo, pos.xz * t, i, dx.xz * t * 14, dy.xz * t * 14).rgb;
+                        alb.rgb = lerp(soft, alb.rgb, 0.5);
+                    }
+                    nrm = lerp(n1, n2, k);
+                    // Rotate the second copy's tangent-plane normal back into world XZ.
+                    float2 nx2 = n2.ag * 2 - 1; nx2 = mul(transpose(R), nx2);
+                    nrm.ag = lerp(n1.ag, nx2 * 0.5 + 0.5, k);
                 }
                 alb.rgb *= kTint[i];
             }
@@ -117,6 +143,10 @@ Shader "Ironhorse/Terrain"
                 // Streets and lots painted into the ground: soft-edged dirt tracks, gravel, worn earth.
                 float2 muv = (pos.xz - _TownMaskRect.xy) * _TownMaskRect.zw;
                 float4 town = _TownMaskRect.z > 0 && all(muv > 0) && all(muv < 1) ? SAMPLE_TEXTURE2D(_TownMask, sampler_TownMask, muv) : 0;
+                float2 ruv = (pos.xz - _RoadMaskRect.xy) * _RoadMaskRect.zw;
+                float2 haul = _RoadMaskRect.z > 0 && all(ruv > 0) && all(ruv < 1) ? SAMPLE_TEXTURE2D(_RoadMask, sampler_RoadMask, ruv).rg : 0;
+                town.r = max(town.r, haul.r * (1 - town.g)); // country roads fade into the town's gravel where they meet
+                town.a = max(town.a, haul.g);
                 float cover = saturate(town.r + town.g + town.b);
                 [unroll] for (int k0 = 0; k0 < 6; k0++) w[k0] *= 1 - cover;
                 w[2] += town.r + town.b; // dirt (roads and worn lots)
@@ -127,19 +157,20 @@ Shader "Ironhorse/Terrain"
                 // Height blend: layers with taller texture detail (pebbles, tufts) win at transitions.
                 float4 alb[6]; float4 nrm[6];
                 float hmax = -1;
+                float anti = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.043 + float2(0.29, 0.53)).r;
                 [unroll] for (int k2 = 0; k2 < 6; k2++)
                 {
                     alb[k2] = 0; nrm[k2] = float4(1, 0.5, 0.8, 0.5);
                     UNITY_BRANCH if (w[k2] > 0.003)
                     {
-                        SampleLayer(k2, pos, blend, dx, dy, alb[k2], nrm[k2]);
+                        SampleLayer(k2, pos, blend, dx, dy, anti, alb[k2], nrm[k2]);
                         hmax = max(hmax, alb[k2].a + w[k2]);
                     }
                 }
                 float3 albedo = 0; float4 n = 0; float total = 0;
                 [unroll] for (int k3 = 0; k3 < 6; k3++)
                 {
-                    float hw = w[k3] > 0.003 ? max(alb[k3].a + w[k3] - (hmax - 0.25), 0) : 0;
+                    float hw = w[k3] > 0.003 ? max(alb[k3].a + w[k3] - (hmax - (k3 <= 1 ? 0.6 : 0.25)), 0) : 0; // the two grasses mix softly (no speckle)
                     albedo += alb[k3].rgb * hw; n += nrm[k3] * hw; total += hw;
                 }
                 albedo /= max(total, 1e-4); n /= max(total, 1e-4);
@@ -147,6 +178,28 @@ Shader "Ironhorse/Terrain"
                 // Trodden town earth is dustier and greyer than the raw dirt layer.
                 albedo = lerp(albedo, dot(albedo, float3(0.3, 0.59, 0.11)) * float3(1.06, 1.0, 0.9), 0.4 * saturate(town.r + town.b));
 
+                // Rock: red sandstone in the southern desert, weathered grey granite in the green country to the north.
+                float rockW = saturate(w[4] / max(wsum, 1e-3));
+                float northRock = saturate((pos.z + 40) / 160);
+                float lumR = dot(albedo, float3(0.3, 0.59, 0.11));
+                albedo = lerp(albedo, lumR * float3(0.98, 0.98, 0.96) * 1.15, rockW * northRock * 0.85);
+                // Desert rock faces: horizontal sandstone strata (wavy, alternating rust, buff and dark bands) and
+                // vertical weathering streaks running down the cliff, so steep slopes read as layered rock, not clay.
+                float bare = saturate(1 - (w[0] + w[1]) / max(wsum, 1e-3) * 1.5); // rock and dirt, not grass
+                float steep = saturate((0.85 - nGeo.y) * 4) * bare * (1 - northRock);
+                UNITY_BRANCH if (steep > 0.01)
+                {
+                    float wob = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.012).r * 6;
+                    float layer = pos.y * 0.42 + wob;
+                    float band = frac(layer);
+                    float idx = floor(layer);
+                    float pick = frac(sin(idx * 12.9898) * 43758.5453);
+                    float3 tint = pick < 0.33 ? float3(1.2, 0.9, 0.72) : pick < 0.66 ? float3(0.86, 0.68, 0.56) : float3(1.3, 1.12, 0.88);
+                    float seam = smoothstep(0.0, 0.07, band) * smoothstep(1.0, 0.9, band);
+                    float streak = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, float2((pos.x + pos.z) * 0.09, pos.y * 0.008)).r;
+                    float3 rock = albedo * tint * lerp(0.45, 1.0, seam) * lerp(0.72, 1.12, streak);
+                    albedo = lerp(albedo, rock, steep);
+                }
                 // Large-scale brightness/hue variation hides tiling from the high camera.
                 float m1 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.006).r;
                 float m2 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.021 + 0.37).r;
@@ -158,10 +211,29 @@ Shader "Ironhorse/Terrain"
                 float green = saturate((albedo.g - max(albedo.r, albedo.b)) * 10);
                 float m3 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.011 + float2(0.61, 0.13)).r - 0.5;
                 float m4 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.085 + float2(0.21, 0.77)).r - 0.5;
-                float3 cured = albedo * float3(1.2, 1.04, 0.66);
-                float3 lush = albedo * float3(0.8, 0.97, 0.82);
-                albedo = lerp(albedo, m3 > 0 ? cured : lush, saturate(abs(m3) * 2.4) * green * 0.8);
+                float3 cured = albedo * float3(1.25, 1.08, 0.6);
+                float3 lush = albedo * float3(0.62, 0.86, 0.6);
+                albedo = lerp(albedo, m3 > 0 ? cured : lush, saturate(abs(m3) * 2.8) * green * 0.9);
                 albedo *= 1 + m4 * 0.22 * green;
+                // Tufts and clumps: metre-scale light and dark mottling on the grass, readable from mid zoom, and a
+                // slightly darker, cooler shade in the hollows between them.
+                float c1 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.045 + float2(0.11, 0.47)).r - 0.5;
+                float c2 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.13 + float2(0.83, 0.19)).r - 0.5;
+                float clump = c1 * 0.7 + c2 * 0.3;
+                albedo *= lerp(float3(1, 1, 1), clump > 0 ? float3(1.2, 1.14, 0.86) : float3(0.7, 0.82, 0.76), smoothstep(0.02, 0.3, abs(clump)) * green);
+                // Big patches you can read from the top of the zoom: whole hillsides of yellow-green, deep green and olive.
+                float m5 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.0032 + float2(0.43, 0.29)).r - 0.5;
+                float m6 = SAMPLE_TEXTURE2D(_MacroTex, sampler_MacroTex, pos.xz * 0.0071 + float2(0.17, 0.83)).r - 0.5;
+                float3 sunlit = albedo * float3(1.22, 1.12, 0.62);
+                float3 deep = albedo * float3(0.55, 0.78, 0.55);
+                albedo = lerp(albedo, m5 > 0 ? sunlit : deep, saturate(abs(m5) * 7) * green * 0.9);
+                albedo = lerp(albedo, albedo * float3(0.92, 0.86, 0.62), saturate(m6 * 6) * green * 0.65); // olive scrub
+                float2 tuv = (pos.xz - _GroundTintRect.xy) * _GroundTintRect.zw;
+                float grassW = saturate((w[0] + w[1]) / max(wsum, 1e-3));
+                if (_GroundTintRect.z > 0) albedo *= lerp(float3(1, 1, 1), SAMPLE_TEXTURE2D(_GroundTint, sampler_GroundTint, tuv).rgb * 2, grassW);
+                // Slopes and hollows read darker (grass thins to earth on the steep bits), crests catch the light.
+                float slope = 1 - saturate(nGeo.y);
+                albedo *= lerp(1.04, 0.8, saturate(slope * 3.2));
 
                 float3 vcol = i.color.rgb;
                 #if !defined(UNITY_COLORSPACE_GAMMA)
@@ -171,7 +243,7 @@ Shader "Ironhorse/Terrain"
                 albedo = lerp(albedo, vcol, remainder);
 
                 float2 nxy = float2(n.a, n.g) * 2 - 1;
-                float3 normalWS = normalize(nGeo + float3(nxy.x, 0, nxy.y) * (1 - remainder) * 0.8);
+                float3 normalWS = normalize(nGeo + float3(nxy.x, 0, nxy.y) * (1 - remainder) * 1.15);
 
                 InputData inputData = (InputData)0;
                 inputData.positionWS = pos;

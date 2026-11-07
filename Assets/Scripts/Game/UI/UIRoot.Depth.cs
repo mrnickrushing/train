@@ -82,7 +82,7 @@ namespace Ironhorse.Game
             Overlay(photo.transform, Fade(true), new Color(0.06f, 0.08f, 0.12f, 0.9f));
             var name = T(photo.transform, def.Name, 40, Color.white, TextAnchor.LowerLeft, true);
             UIKit.Anchor(name.gameObject, Vector2.zero, Vector2.one, new Vector2(16, 10), new Vector2(-16, -10));
-            var tag = Pill(photo.transform, null, locked ? "Level " + def.UnlockLevel : pr.done ? "Complete" : "Stage " + Mathf.Min(pr.stage + 1, def.Stages.Length) + " / " + def.Stages.Length, 28, pr.done ? BGood : Color.white);
+            var tag = Pill(photo.transform, null, locked ? (def.Requires != null && S.Level >= def.UnlockLevel ? "Locked" : "Level " + def.UnlockLevel) : pr.done ? "Complete" : "Stage " + Mathf.Min(pr.stage + 1, def.Stages.Length) + " / " + def.Stages.Length, 28, pr.done ? BGood : Color.white);
             var tle = tag.GetComponent<LayoutElement>();
             if (tle == null) tle = tag.AddComponent<LayoutElement>();
             tle.ignoreLayout = true;
@@ -105,7 +105,7 @@ namespace Ironhorse.Game
             if (ProjectSites.Instance != null && ProjectSites.Instance.HasSite(def.Id))
             {
                 string sid = def.Id;
-                var view = Big(photo.transform, "View site", BBlue, () => { CloseWindow(); ProjectSites.Instance.Show(sid); }, 200, 62, true, 28);
+                var view = Big(photo.transform, "View site", BBlue, () => OpenProjectSite(sid), 200, 62, true, 28);
                 var vle = view.GetComponent<LayoutElement>();
                 if (vle == null) vle = view.gameObject.AddComponent<LayoutElement>();
                 vle.ignoreLayout = true;
@@ -140,13 +140,14 @@ namespace Ironhorse.Game
             GrantPills(fin.transform, def.Reward, 0);
             Flex(card.transform);
 
-            if (locked) { Big(card.transform, "Unlocks at level " + def.UnlockLevel, UIKit.Disabled, null, -1, 88, false, 34); return; }
+            if (locked) { Big(card.transform, S.ProjectLockText(def), UIKit.Disabled, null, -1, 88, false, 34); return; }
             if (pr.done) { Big(card.transform, "Bonus active", UIKit.Disabled, null, -1, 88, false, 34); return; }
             var st = def.Stages[pr.stage];
             string id = def.Id, rid = st.ResourceId;
             var btns = HBox(card.transform, 12, 0, TextAnchor.MiddleCenter, -1, 92);
             bool any = S.Amount(rid) > 0;
-            Big(btns.transform, "Deliver", any ? UIKit.Green : UIKit.Disabled, () => Result(S.DeliverToProject(id), Sfx.Deliver), any ? 528 : 380, 88, any, 40);
+            // Goods travel by road or river now: the button takes the player to the site to pick a hauler.
+            Big(btns.transform, "Send haulers", any ? UIKit.Green : UIKit.WoodLight, () => OpenProjectSite(id), any ? 528 : 380, 88, true, 38);
             if (!any) Big(btns.transform, "Go", BBlue, () => GoGet(rid), 136, 88, true, 40);
         }
 

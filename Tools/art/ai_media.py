@@ -73,6 +73,12 @@ SCENES = {
     "scene_mineshaft": "a big new timbered mine headframe over a deep shaft on a rocky hillside, ore carts and a rail spur, lamps glowing",
     "scene_resupply": "a wooden cavalry fort in the snow at dusk receiving a supply train, warm lit windows, flags flying",
     "scene_dam": "a massive new curved stone dam holding back a blue lake in a red rock canyon, a railroad bridge across the canyon below, the valley town lights coming on",
+    "scene_lighthouse": "a tall white and red striped brick lighthouse with a keeper's cottage on a pine-covered rocky island in a big blue mountain lake, a paddle steamer passing, evergreen forest shores and snowy peaks behind",
+    "scene_lodge": "a grand two-storey log lodge with a green roof, stone chimneys and a long veranda on the shore of a blue mountain lake, a boathouse and dock, pine forest and peaks behind",
+    "scene_winery": "a stone winery with a red tile roof and a round tower among green vineyard rows on sunny golden hills, wooden barrels, a steam train in the valley below",
+    "scene_mission": "a restored white adobe frontier mission with a bell tower and red tile roof in a desert of cactus and red rock, festive lanterns, wagons arriving, a steam train in the distance",
+    "scene_opera": "a grand red brick opera house with a copper-green mansard roof and gas lamps on a busy frontier city street at dusk, elegant carriages, warm lit windows",
+    "scene_capitol": "a grand domed stone territorial capitol building on a hill above a frontier city, flags flying, a steam train crossing a bridge below, golden sunset",
     "scene_goldenspike": "two steam locomotives meeting nose to nose on a desert plain where the rails join, flags and bunting, a crowd's tents and wagons in the distance",
 }
 

@@ -29,9 +29,15 @@ namespace Ironhorse.Core
             C(2, "wires", "Wires Across the Badlands", "Fort Calder is two days' ride away. String a telegraph line and the territory starts to talk.", 3, 5, "telegraph", "scene_telegraph", 1500, 8),
             C(3, "crookedriver", "Crooked River", "Shave forty miles off the western run with a timber trestle over the gorge.", 5, 7, "trestle", "scene_trestle", 3000, 10),
             C(4, "deephollow", "The Deep Hollow", "Sink a new shaft at Black Hollow before Blackwell's syndicate claims the seam.", 7, 9, "mineshaft", "scene_mineshaft", 5000, 12),
-            C(5, "fortcalder", "Winter at Fort Calder", "Keep the cavalry supplied before the passes close, and win the army's freight.", 9, 12, "resupply", "scene_resupply", 8000, 15),
-            C(6, "silverlake", "Silver Lake", "Tame the river with a great dam and light the whole valley.", 12, 15, "dam", "scene_dam", 12000, 20),
-            C(7, "goldenspike", "The Golden Spike", "Streamliners, steel and silver. Meet the eastern line and make the territory a state.", 15, 20, "goldenspike", "scene_goldenspike", 25000, 40),
+            C(5, "fortcalder", "Winter at Fort Calder", "Keep the cavalry supplied before the passes close, and win the army's freight.", 9, 10, "resupply", "scene_resupply", 6000, 12),
+            C(6, "eaglepoint", "The Light on Eagle Point", "Up the river lies Eagle Lake. Raise a lighthouse on its island, by boat.", 10, 12, "lighthouse", "scene_dam", 8000, 15),
+            C(7, "silverlake", "Silver Lake", "Tame the river with a great dam and light the whole valley.", 12, 13, "dam", "scene_dam", 10000, 16),
+            C(8, "eaglelake", "The Eagle Lake Lodge", "Build a grand lodge on the lakeshore and bring the city folk up the valley.", 13, 15, "lodge", "scene_trestle", 12000, 20),
+            C(9, "goldenspike", "The Golden Spike", "Streamliners, steel and silver. Meet the eastern line and make the territory a state.", 15, 20, "goldenspike", "scene_goldenspike", 25000, 40),
+            C(10, "vineyards", "Sunny Slopes", "Plant vines north of town and build a winery the whole state will toast.", 20, 23, "winery", "scene_winery", 30000, 45),
+            C(11, "mission", "The Old Mission", "Bring the adobe mission back to life and the desert towns with it.", 23, 26, "mission", "scene_mission", 36000, 50),
+            C(12, "opera", "Curtain Up", "An opera house for Prosperity: the frontier grows up.", 26, 30, "opera", "scene_opera", 45000, 60),
+            C(13, "capitol", "A Capitol for the State", "Raise the domed capitol and write the town into the history books.", 30, 35, "capitol", "scene_capitol", 60000, 80),
         };
 
         static ChapterDef C(int n, string id, string title, string blurb, int from, int to, string project, string art, int coins, int nuggets)

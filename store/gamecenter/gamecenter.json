@@ -1,19 +1,142 @@
 {
   "achievements": [
-    {"key": "first_dispatch", "id": "ironhorse.ach.first_dispatch", "points": 5,  "stat": "dispatches", "goal": 1,      "name": "All Aboard!",            "before": "Dispatch your first train.",            "after": "Sent your first train down the line."},
-    {"key": "dispatch_100",   "id": "ironhorse.ach.dispatch_100",   "points": 20, "stat": "dispatches", "goal": 100,    "name": "Timetable Master",       "before": "Dispatch 100 trains.",                  "after": "Dispatched 100 trains."},
-    {"key": "contracts_10",   "id": "ironhorse.ach.contracts_10",   "points": 10, "stat": "contracts",  "goal": 10,     "name": "Good for Business",      "before": "Complete 10 contracts.",                "after": "Completed 10 contracts."},
-    {"key": "contracts_100",  "id": "ironhorse.ach.contracts_100",  "points": 30, "stat": "contracts",  "goal": 100,    "name": "Pillar of the Territory","before": "Complete 100 contracts.",               "after": "Completed 100 contracts."},
-    {"key": "level_5",        "id": "ironhorse.ach.level_5",        "points": 10, "stat": "level",      "goal": 5,      "name": "Railhead",               "before": "Reach level 5.",                        "after": "Reached level 5."},
-    {"key": "level_10",       "id": "ironhorse.ach.level_10",       "points": 20, "stat": "level",      "goal": 10,     "name": "Boomtown",               "before": "Reach level 10.",                       "after": "Reached level 10."},
-    {"key": "level_15",       "id": "ironhorse.ach.level_15",       "points": 40, "stat": "level",      "goal": 15,     "name": "The Golden Age",         "before": "Reach level 15.",                       "after": "Ushered in the Golden Age of rail."},
-    {"key": "locos_4",        "id": "ironhorse.ach.locos_4",        "points": 15, "stat": "locos",      "goal": 4,      "name": "Roundhouse",             "before": "Own 4 locomotives.",                    "after": "Owned 4 locomotives."},
-    {"key": "chapter_first",  "id": "ironhorse.ach.chapter_first",  "points": 10, "stat": "chapters",   "goal": 1,      "name": "A Line on the Map",      "before": "Complete your first chapter.",          "after": "Completed the first chapter of the railroad's story."},
-    {"key": "golden_spike",   "id": "ironhorse.ach.golden_spike",   "points": 50, "stat": "chapters",   "goal": 7,      "name": "The Golden Spike",       "before": "Complete all seven chapters.",          "after": "Drove the golden spike."},
-    {"key": "coins_100k",     "id": "ironhorse.ach.coins_100k",     "points": 20, "stat": "coins",      "goal": 100000, "name": "Iron Fortune",           "before": "Earn 100,000 coins.",                   "after": "Earned 100,000 coins."}
+    {
+      "key": "first_dispatch",
+      "id": "ironhorse.ach.first_dispatch",
+      "points": 5,
+      "stat": "dispatches",
+      "goal": 1,
+      "name": "All Aboard!",
+      "before": "Dispatch your first train.",
+      "after": "Sent your first train down the line."
+    },
+    {
+      "key": "dispatch_100",
+      "id": "ironhorse.ach.dispatch_100",
+      "points": 20,
+      "stat": "dispatches",
+      "goal": 100,
+      "name": "Timetable Master",
+      "before": "Dispatch 100 trains.",
+      "after": "Dispatched 100 trains."
+    },
+    {
+      "key": "contracts_10",
+      "id": "ironhorse.ach.contracts_10",
+      "points": 10,
+      "stat": "contracts",
+      "goal": 10,
+      "name": "Good for Business",
+      "before": "Complete 10 contracts.",
+      "after": "Completed 10 contracts."
+    },
+    {
+      "key": "contracts_100",
+      "id": "ironhorse.ach.contracts_100",
+      "points": 30,
+      "stat": "contracts",
+      "goal": 100,
+      "name": "Pillar of the Territory",
+      "before": "Complete 100 contracts.",
+      "after": "Completed 100 contracts."
+    },
+    {
+      "key": "level_5",
+      "id": "ironhorse.ach.level_5",
+      "points": 10,
+      "stat": "level",
+      "goal": 5,
+      "name": "Railhead",
+      "before": "Reach level 5.",
+      "after": "Reached level 5."
+    },
+    {
+      "key": "level_10",
+      "id": "ironhorse.ach.level_10",
+      "points": 20,
+      "stat": "level",
+      "goal": 10,
+      "name": "Boomtown",
+      "before": "Reach level 10.",
+      "after": "Reached level 10."
+    },
+    {
+      "key": "level_15",
+      "id": "ironhorse.ach.level_15",
+      "points": 40,
+      "stat": "level",
+      "goal": 15,
+      "name": "The Golden Age",
+      "before": "Reach level 15.",
+      "after": "Ushered in the Golden Age of rail."
+    },
+    {
+      "key": "locos_4",
+      "id": "ironhorse.ach.locos_4",
+      "points": 15,
+      "stat": "locos",
+      "goal": 4,
+      "name": "Roundhouse",
+      "before": "Own 4 locomotives.",
+      "after": "Owned 4 locomotives."
+    },
+    {
+      "key": "chapter_first",
+      "id": "ironhorse.ach.chapter_first",
+      "points": 10,
+      "stat": "chapters",
+      "goal": 1,
+      "name": "A Line on the Map",
+      "before": "Complete your first chapter.",
+      "after": "Completed the first chapter of the railroad's story."
+    },
+    {
+      "key": "golden_spike",
+      "id": "ironhorse.ach.golden_spike",
+      "points": 50,
+      "stat": "chapters",
+      "goal": 7,
+      "name": "The Golden Spike",
+      "before": "Complete all seven chapters.",
+      "after": "Drove the golden spike."
+    },
+    {
+      "key": "coins_100k",
+      "id": "ironhorse.ach.coins_100k",
+      "points": 20,
+      "stat": "coins",
+      "goal": 100000,
+      "name": "Iron Fortune",
+      "before": "Earn 100,000 coins.",
+      "after": "Earned 100,000 coins."
+    }
   ],
   "leaderboards": [
-    {"id": "ironhorse.lb.coins",     "stat": "coins",     "name": "Railroad Fortune",    "suffix": " coins",     "singular": " coin"},
-    {"id": "ironhorse.lb.contracts", "stat": "contracts", "name": "Contracts Fulfilled", "suffix": " contracts", "singular": " contract"}
+    {
+      "id": "ironhorse.lb.coins",
+      "stat": "coins",
+      "name": "Railroad Fortune",
+      "suffix": " coins",
+      "singular": " coin"
+    },
+    {
+      "id": "ironhorse.lb.contracts",
+      "stat": "contracts",
+      "name": "Contracts Fulfilled",
+      "suffix": " contracts",
+      "singular": " contract"
+    },
+    {
+      "id": "ironhorse.lb.season",
+      "stat": "season",
+      "name": "Season Pass Standings",
+      "suffix": " season XP",
+      "singular": " season XP",
+      "recurrence": {
+        "start": "2026-11-09T00:00:00Z",
+        "duration": "PT672H",
+        "note": "Apple rejects past start dates; 2026-11-09 is a 28-day boundary of the game's 2026-01-05 season calendar"
+      }
+    }
   ]
 }

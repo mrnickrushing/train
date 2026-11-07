@@ -51,7 +51,9 @@ namespace Ironhorse.Tests
             Assert.AreEqual(s.trains.Count, GameCenterContent.Value(s, "locos"));
             var stats = new[] { "dispatches", "contracts", "coins", "level", "locos", "chapters" };
             Assert.IsTrue(GameCenterContent.Achievements.All(a => stats.Contains(a.Stat)));
-            Assert.IsTrue(GameCenterContent.Leaderboards.All(l => stats.Contains(l.Stat)));
+            s.seasonScore = 7;
+            Assert.AreEqual(7, GameCenterContent.Value(s, "season"));
+            Assert.IsTrue(GameCenterContent.Leaderboards.All(l => stats.Contains(l.Stat) || l.Stat == "season"));
         }
     }
 }

@@ -5,7 +5,7 @@ with knee lift, head nod and a little body bob.
   blender -b -P Tools/blender/horse.py -- <Props/horse.fbx> <out_dir>
 
 Reads the imported, rebaked game mesh (faces -Y here, which Unity shows as +Z) and writes
-<out_dir>/horse.fbx with one Legacy clip "Walk" (24 frames = one stride of about 1.4 m).
+<out_dir>/<name>.fbx (same name as the input) with one Legacy clip "Walk" (24 frames = one stride of about 1.4 m).
 """
 import math
 import os
@@ -173,7 +173,7 @@ for pb in pbs:
 bpy.ops.object.select_all(action="DESELECT")
 arm.select_set(True)
 mesh.select_set(True)
-out = os.path.join(out_dir, "horse.fbx")
+out = os.path.join(out_dir, os.path.splitext(os.path.basename(src))[0] + ".fbx")  # horse.fbx, mule.fbx, ...
 bpy.ops.export_scene.fbx(filepath=out, use_selection=True, apply_unit_scale=True, apply_scale_options="FBX_SCALE_UNITS",
                          axis_forward="Y", axis_up="Z", object_types={"MESH", "ARMATURE"}, add_leaf_bones=False,
                          bake_anim=True, bake_anim_use_all_actions=False, bake_anim_use_nla_strips=True,

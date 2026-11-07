@@ -20,6 +20,7 @@ glb, fbx, prefix = a[0], a[1], a[2]
 size = int(a[a.index("--size") + 1]) if "--size" in a else 1024
 want_normal = "--normal" in a
 twin = "--twin" in a
+force_deg = int(a[a.index("--deg") + 1]) if "--deg" in a else None  # override the orientation search
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
@@ -75,8 +76,10 @@ if twin:
     lmn = Vector((min(w.x for w in front), min(w.y for w in front), min(w.z for w in front)))
     lmx = Vector((max(w.x for w in front), max(w.y for w in front), max(w.z for w in front)))
     low_pts = [q for q in low_pts if q.y > cy]
-for deg in (0, 90, 180, 270):
-    R = Matrix.Rotation(math.radians(deg), 4, "Z")
+# Rotations, then the same four mirrored (a source that import_ai mirrored can't be matched by turning it).
+for deg in ((force_deg,) if force_deg is not None else (0, 90, 180, 270, 1000, 1090, 1180, 1270)):
+    R = Matrix.Rotation(math.radians(deg % 1000), 4, "Z")
+    if deg >= 1000: R = R @ Matrix.Scale(-1, 4, Vector((1, 0, 0)))
     pts = [R @ p for p in hv]
     mn = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
     mx = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
@@ -148,7 +151,7 @@ def bake(kind, colorspace, setup):
     high.select_set(True)
     low.select_set(True)
     bpy.context.view_layer.objects.active = low
-    ext = max(size_of(low)) * 0.02
+    ext = max(size_of(low)) * 0.02 * float(os.environ.get("REBAKE_REACH", "1"))  # >1 for meshes that fit their source loosely
     t = "EMIT" if kind == "albedo" else "NORMAL"
     bpy.ops.object.bake(type=t, use_selected_to_active=True, cage_extrusion=ext, max_ray_distance=ext * 4, margin=6, use_clear=True)
     img.filepath_raw = prefix + "_" + kind + ".png"

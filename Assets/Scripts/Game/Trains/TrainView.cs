@@ -342,36 +342,85 @@ namespace Ironhorse.Game
     }
 
     /// <summary>
-    /// Ambient passenger excursion circling the scenic loop, pulled by the best locomotive you own —
-    /// a constant showcase of how far your railroad has come.
+    /// The Scenic Excursion route: every train sent to "excursion" leaves its platform like any other, and while it is
+    /// away it runs laps of the scenic loop north of town with its own locomotive and wagons, spaced apart when several
+    /// are out. The loop is empty when nobody is on an excursion.
     /// </summary>
-    public sealed class ExcursionTrain : ConsistView
+    public sealed class ExcursionTrain : MonoBehaviour
     {
-        string _locoId;
-        float _s;
-        TrackPath _path;
-
-        void Start()
-        {
-            _path = WorldLayout.ScenicLoop;
-            _s = Random.Range(0, _path.Length);
-        }
+        public const string RouteId = "excursion";
+        const float Speed = 9.5f;
+        readonly Dictionary<int, ExcursionView> _views = new Dictionary<int, ExcursionView>();
 
         void Update()
         {
-            var best = G.Session.State.trains.Select(t => GameDatabase.Locomotive(t.defId))
-                .OrderByDescending(d => (int)d.Rarity * 100 + d.Speed).FirstOrDefault();
-            if (best == null) return;
-            if (best.Id != _locoId)
+            var s = G.Session;
+            if (s == null) return;
+            var loop = WorldLayout.ScenicLoop;
+            var want = new HashSet<int>();
+            int n = 0;
+            foreach (var t in s.State.trains)
             {
-                _locoId = best.Id;
-                var coach = G.Session.IsGoldenAge ? GameDatabase.Wagon("pullman") : GameDatabase.Wagon("mailcoach");
-                BuildConsist(best, 1, new[] { coach, coach, coach });
-                foreach (var c in GetComponentsInChildren<Collider>()) Destroy(c);
-                ResetMotion();
+                if (t.IsIdle || s.HasArrived(t)) continue;
+                bool excursion = t.destinationId == RouteId;
+                if (!excursion && !DestinationRoutes.Has(t.destinationId)) continue;
+                var tv = TrainManager.Instance.View(t.uid);
+                if (tv == null || tv.Current != TrainView.Phase.Away) continue;
+                ExcursionView v;
+                if (!_views.TryGetValue(t.uid, out v) || v == null)
+                {
+                    v = new GameObject("Out " + t.uid).AddComponent<ExcursionView>();
+                    v.transform.SetParent(transform, false);
+                    _views[t.uid] = v;
+                }
+                if (excursion)
+                {
+                    // Laps from the moment it left, each excursion train a third of the loop behind the one before.
+                    float sAt = (float)(s.Now - t.departedAt) * Speed + n * loop.Length / 3f;
+                    v.gameObject.SetActive(true);
+                    v.Show(t, s);
+                    v.Run(loop, Mathf.Repeat(sAt, loop.Length));
+                    n++;
+                    want.Add(t.uid);
+                    continue;
+                }
+                // A spur trip: run out to the depot, stand at the platform loading, run back to the junction.
+                double total = t.arrivesAt - t.departedAt;
+                double awayFrom = t.departedAt + System.Math.Min(24, total * 0.45), awayTo = t.arrivesAt - System.Math.Min(28, total * 0.45);
+                double span = awayTo - awayFrom, at = s.Now - awayFrom;
+                var route = DestinationRoutes.Route(t.destinationId);
+                double run = System.Math.Min(route.Length / 11.0, span * 0.42);
+                want.Add(t.uid);
+                v.gameObject.SetActive(true);
+                v.Show(t, s);
+                if (at < run) v.Run(route, (float)(route.Length * Ease(at / run)));
+                else if (at > span - run) { var back = DestinationRoutes.Back(t.destinationId); v.Run(back, (float)(back.Length * Ease((at - (span - run)) / run))); }
+                else v.Run(route, route.Length - 6f);
             }
-            _s += 9.5f * Time.deltaTime;
-            Place(_path, _s, Time.deltaTime);
+            foreach (var uid in _views.Keys.ToList())
+                if (!want.Contains(uid)) { if (_views[uid] != null) Destroy(_views[uid].gameObject); _views.Remove(uid); }
         }
+
+        /// <summary>Smooth start and stop for a run along a spur.</summary>
+        static double Ease(double u) { u = System.Math.Max(0, System.Math.Min(1, u)); return u * u * (3 - 2 * u); }
+    }
+
+    /// <summary>One train on the scenic loop: the real consist of the train on the excursion.</summary>
+    public sealed class ExcursionView : ConsistView
+    {
+        string _sig;
+
+        public void Show(TrainState t, GameSession s)
+        {
+            var wagons = s.WagonsOf(t).Select(w => GameDatabase.Wagon(w.defId)).ToList();
+            string sig = t.defId + ":" + t.level + ":" + string.Join(",", wagons.Select(w => w.Id));
+            if (sig == _sig) return;
+            _sig = sig;
+            BuildConsist(GameDatabase.Locomotive(t.defId), t.level, wagons);
+            foreach (var c in GetComponentsInChildren<Collider>()) Destroy(c);
+            ResetMotion();
+        }
+
+        public void Run(TrackPath path, float s) { Place(path, s, Time.deltaTime); }
     }
 }

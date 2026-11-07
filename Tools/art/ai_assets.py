@@ -109,6 +109,71 @@ A["boulders"] = dict(cat="Props", length=6.0, faces=4000, front="none", prompt=(
     "and buff sandstone with cracks, layered strata, wind-worn hollows and a few small loose stones, slightly elevated three-quarter "
     "view, isolated on a plain flat white background, the whole cluster visible and nothing cropped, no ground plane. Semi-realistic, "
     "richly detailed like a premium mobile tycoon game, clean studio lighting with soft shadows. No text, no plants, no people."))
+# ----------------------------------------------------------------------------------- haulers (road and river freight)
+def hauler(i, length, what, faces=15000):
+    A[i] = dict(cat="Haulers", length=length, faces=faces, front="auto", prompt=VEHICLE.format(what=what).replace("no rails, no ground", "no rails, no water, no ground"))
+
+
+hauler("sternwheeler", 14.0, "an original 1880s American river sternwheeler paddle steamer: a shallow white wooden hull, two decks of white cabins with fine gingerbread railings and rows of small windows, a small pilot house on the top deck, two tall black smokestacks with crown tops side by side near the front, a big red paddle wheel at the stern, wooden crates and barrels stacked on the low fore deck")
+hauler("steamer", 20.0, "an original 1890s lake cargo-passenger steamer: a long white hull with a dark red waterline band, a long white deck house with portholes and windows, a single tall buff funnel with a black top amidships, a pilot house with big windows forward, two thin masts, small lifeboats on davits, a cargo hatch with crates on the fore deck")
+hauler("motortruck", 5.4, "an original 1920s American motor freight truck: a dark green cab with black fenders and running boards, a long bonnet with an upright radiator grille, an open wooden stake bed loaded with wooden crates and sacks, wooden spoked wheels with solid rubber tyres, brass headlamps", faces=12000)
+hauler("expressvan", 5.8, "an original 1930s express delivery van: a deep maroon (#7A1F1F) enclosed box body with polished brass trim and fine gold pinstriping but NO lettering, a rounded bonnet with a chrome grille, black fenders, white-wall tyres, round headlamps", faces=12000)
+
+A["mule"] = dict(cat="Props", length=2.4, faces=6000, front="auto", animal=True, prompt=VEHICLE.format(what="a single sturdy grey-brown pack mule with long ears, carrying a wooden pack saddle loaded with two lashed wooden crates and a rolled canvas bundle, standing square and calm with all four legs straight and clearly separated, head forward, tail hanging down").replace("vehicle", "animal").replace("no rails, no ground", "no rider, no ground").replace("No text, no numbers, no logos, no people.", "No text, no people."))
+# Haulage yard, wharf and the finished Eagle Lake projects.
+bldg("freightbarn", "an original 1880s teamsters' freight barn and stable: a long weathered red board-and-batten barn with a gambrel roof, big sliding wagon doors, a hay loft door with a hoist beam, a lean-to shed with feed sacks, a hitching rail and a water trough", footprint=16.0)
+bldg("wharf", "an original 1880s river wharf warehouse: a weathered grey timber freight shed on heavy pilings with a wide loading platform, a timber cargo crane with a hook, stacked crates and barrels, a lantern on a post", base="timber planks", footprint=14.0)
+bldg("lighthouse_done", "an original 1880s lake lighthouse station on a rocky knoll: a tall white conical brick tower with broad red bands, a black iron lantern room with glass and a gallery railing, a small white keeper's cottage with a red roof attached by a covered walkway, an oil store shed", base="rocky grass", footprint=18.0, height=24.0)
+bldg("lodge_done", "an original 1890s grand log lakeshore lodge: two storeys of dark honey-brown logs, a steep green metal roof with three dormers, two massive fieldstone chimneys, a long covered veranda with log posts and rocking chairs across the front, a stone foundation", base="grass and gravel", footprint=22.0)
+
+# Engine terminal: the locomotive works beside the roundhouse and turntable.
+bldg("machineshop", "an original 1880s railroad locomotive machine shop: a long red brick engine repair shop with cream stone trim on the corners and around tall arched windows, a grey slate gabled roof with a row of glazed skylight panels along both slopes and small roof vents, two tall arched doorways in the gable end facing the viewer with rails running into them, a tall square brick chimney stack at the back corner, a small brick boiler house lean-to on one side, cable spools and crates by the doors", base="gravel and cinders", footprint=24.0)
+
+# Outpost and yard dressing (replacing primitive boxes and blobs).
+bldg("outpostdepot", "an original 1880s small frontier railroad depot: a single-storey board-and-batten station building painted mustard yellow with dark brown trim, a red shingle gable roof with wide bracketed eaves, a bay window for the station agent, a long weathered plank platform along the front with a baggage cart loaded with trunks, milk cans, a wooden bench and an oil lamp on a post", base="dry packed earth", footprint=14.0)
+bldg("coalheap", "a large irregular heap of glossy black coal lumps of many sizes with a few loose lumps scattered around its foot and a wooden-handled shovel stuck into it, no building", base="dark cinder ground", footprint=10.0)
+bldg("oreheap", "a large irregular heap of broken copper ore rocks, rust-red, ochre and blue-green stained grey stone chunks of many sizes, a wheelbarrow beside it, no building", base="dusty earth", footprint=9.0)
+bldg("gantrycrane", "an original 1880s railroad freight yard gantry crane: a long riveted iron box girder painted oxide red spanning between two tall iron A-frame legs on rail wheels, a small trolley with a hanging chain and hook carrying a wooden crate, a little wooden operator cab under one end, simple and solid", base="gravel with rails under the legs", footprint=24.0)
+bldg("tunnelportal", "an original 1880s railroad tunnel portal: a tall semicircular arched opening faced with dressed sandstone blocks, a projecting keystone and a cornice band across the top, sloping stone wing walls on both sides, the dark tunnel mouth with a single rail track running in, set against a rough rocky red sandstone cliff face", base="gravel ballast", footprint=16.0)
+A["longhorn"] = dict(cat="Props", length=2.7, faces=5000, front="auto", prompt=VEHICLE.format(what="a single Texas longhorn steer with a mottled tan, cream and russet-brown hide and very long curving horns, standing square and calm with all four legs straight and clearly separated, head forward, tail hanging down").replace("vehicle", "animal").replace("no rails, no ground", "no rider, no ground").replace("No text, no numbers, no logos, no people.", "No text, no people."))
+
+# Cliff dressing for the mesas and buttes: buttresses of layered sandstone set along the foot of every cliff.
+bldg("cliffrock", "a tall weathered red sandstone cliff buttress outcrop, a natural rock formation with horizontal strata in rust red, ochre and buff, deep vertical cracks and fissures, crumbling ledges, a talus slope of fallen boulders at its foot, a few small desert shrubs in the crevices, no buildings, no tracks", base="dusty red earth", footprint=14.0, height=16.0)
+
+# Outpost and yard props (replacing the last primitive shapes on the map).
+bldg("tent", "a single original 1880s frontier canvas wall tent: weathered off-white canvas ridge tent on wooden poles with guy ropes and stakes, the front flaps tied open showing a cot inside, a small stovepipe through the roof, a crate and a lantern by the door", base="trampled dirt", footprint=4.5, height=3.0)
+bldg("derrick", "an original 1890s wooden oil derrick: a tall narrow four-legged timber lattice tower with cross bracing and a crown block at the top, a small engine house shed with a belt wheel at its foot, a black oil-stained wooden platform, a pipe running off to the side", base="oil-stained dirt", footprint=7.0, height=14.0)
+bldg("oiltank", "an original 1890s riveted iron oil storage tank: a squat round dark grey tank with a shallow conical roof, rows of rivets, an iron ladder up the side, a valve and pipe at the base, black oil stains running down", base="dirt", footprint=6.0, height=5.0)
+bldg("sluice", "an original 1850s gold rush placer mining sluice: a long wooden sluice box with riffles raised on timber trestles stepping downhill, a water flume feeding the top end, a rocker cradle, picks, shovels and a gold pan beside it", base="wet gravel and mud", footprint=11.0, height=4.0)
+bldg("coalstage", "an original 1880s railroad coaling stage: a raised heavy timber platform on posts as tall as a locomotive, piled with black coal, wooden chutes hanging over the side to drop coal into tenders, a ramp for wheelbarrows, a small tool shed on top", base="black cinders", footprint=10.0, height=7.0)
+bldg("goodsshed", "an original 1880s long railroad freight goods shed: a very long red brick warehouse with a green standing-seam tin roof, a row of big sliding wooden freight doors along the side, a raised loading dock with a wide awning, crates and barrels on the dock", base="cinders and gravel", footprint=40.0, height=8.0)
+bldg("logstack", "a neat stack of freshly cut pine logs piled in a pyramid, pale sawn ends, bark on, held by upright stakes at the ends, a few loose logs and wood chips around", base="sawdust and dirt", footprint=7.0, height=2.6)
+bldg("haystack", "a single large solid round farm haystack of golden dry hay shaped like a rounded loaf, completely solid with NO opening, NO door, NO hollow, a domed top, loose straw scattered at its foot", base="stubble field", footprint=4.0, height=3.2)
+
+# Storyline landmarks (finished art for later territory projects).
+bldg("winery_done", "an original 1890s valley winery estate: a two-storey stone winery hall with arched doors and a red tile roof, a round stone fermenting tower, wooden barrels stacked outside, a small vineyard of green vine rows beside it", base="grass and gravel", footprint=22.0)
+bldg("mission_done", "an original 1880s adobe frontier mission church: white-washed adobe walls, a tall bell tower with a bronze bell, an arched wooden doorway, a red clay tile roof, a walled garden courtyard with a well and a cactus", base="dry earth", footprint=20.0)
+bldg("opera_done", "an original 1890s frontier opera house: a grand three-storey red brick theatre with tall arched windows, white stone trim, a columned entrance portico, a copper-green mansard roof with a small cupola, gas lamps by the steps", base="cobblestones", footprint=20.0)
+bldg("capitol_done", "an original 1890s territorial capitol building: a symmetrical grey stone government hall with two wings, a columned portico with a pediment, a tall copper-green dome topped with a lantern, broad front steps, flag poles", base="cobblestones and lawn", footprint=26.0)
+
+# Destination landmarks: the signature building at each outpost and town on the map.
+bldg("dest_pinecrest", "an original 1880s mountain logging camp sawmill: a big weathered timber mill shed with a tall smokestack and a waterwheel, a wooden log flume on trestles, huge stacks of cut pine logs, a steam donkey engine", base="packed earth and sawdust", footprint=22.0)
+bldg("dest_blackhollow", "an original 1880s coal mine tipple: a tall dark timber headframe with a big iron sheave wheel, a sloping coal chute and loading bin over a short track, black coal heaps, a brick boiler house with a chimney", base="black coal-dusted earth", footprint=22.0)
+bldg("dest_willowflats", "an original 1880s prairie farmstead: a big red barn with a white-trimmed gambrel roof, a tall wooden grain silo, a wooden water-pumping windmill, a white farmhouse with a porch, golden wheat sheaves", base="grass and dirt", footprint=22.0)
+bldg("dest_rattlesnake", "an original 1880s cattle ranch headquarters: a long low log ranch house with a deep porch, a big wooden cattle barn, a windmill and water tank, wooden corrals with loading chutes", base="dusty earth", footprint=22.0)
+bldg("dest_ironback", "an original 1880s iron mine works: a tall timber headframe over the shaft, a big ore crusher building on the hillside with conveyor chutes, red iron ore heaps, an iron boiler stack", base="red rocky earth", footprint=22.0)
+bldg("dest_fortcalder", "an original 1870s frontier cavalry fort: a square palisade of pointed logs with two corner blockhouses, a log headquarters building and barracks inside, a tall flag pole, a gate with a watch tower", base="dirt and grass", footprint=26.0)
+bldg("dest_coppertop", "an original 1880s copper boomtown smelter: a big corrugated-iron smelter shed with three tall brick smokestacks, green copper ore heaps, a false-front assay office, canvas tents", base="dusty orange earth", footprint=22.0)
+bldg("dest_eldorado", "an original 1880s gold mining stamp mill: a tall stepped timber mill building climbing a rocky hillside, an ore tramway, a water flume, a small cabin, gold-bearing quartz heaps", base="rocky earth", footprint=22.0)
+bldg("dest_blackgold", "an original 1890s oil field: three tall wooden oil derricks with pump jacks, big round iron storage tanks, a small boiler shed with a smokestack, wooden pipelines, black oil puddles", base="oily dark earth", footprint=24.0)
+bldg("dest_silversprings", "an original 1880s spa town bathhouse hotel: a three-storey white wooden hotel with long verandas on every floor, a red roof with cupolas, a steaming natural hot spring pool with a stone rim beside it", base="grass and stone paving", footprint=22.0)
+bldg("dest_prosperity", "an original 1890s grand frontier city train station: a long two-storey red brick depot with a tall clock tower, arched windows, a slate roof and a covered platform canopy along one side", base="cobblestones", footprint=26.0)
+bldg("dest_capitaljct", "an original 1890s grand union station: a monumental stone railway terminal with a huge arched glass train shed, twin towers with copper roofs, a columned entrance and a big clock", base="cobblestones", footprint=28.0)
+
+bldg("mineshaft_done", "an original 1880s deep coal mine works: a tall heavy timber headframe with two big iron sheave wheels, a large brick engine house with a tall chimney, an ore bin and loading chute over a short rail spur, coal cars, timber stacks", base="dark coal-dusted earth", footprint=24.0)
+bldg("resupply_done", "an original 1880s army supply depot: a long two-storey timber quartermaster warehouse with a loading dock and big doors, stacked crates and flour sacks, wagons, a flag pole with a striped flag, a small log office", base="packed earth", footprint=24.0)
+bldg("goldenspike_done", "an original 1880s railroad celebration plaza: a raised wooden platform with red white and blue bunting, a ceremonial arch decorated with flags over two meeting rail tracks, a gleaming golden spike on a pedestal, benches and lamp posts", base="gravel", footprint=24.0)
+
 A["horse"] = dict(cat="Props", length=2.8, faces=6000, front="auto", animal=True, prompt=VEHICLE.format(what="a single sturdy chestnut-brown draft horse in a dark leather work harness with a collar and blinkers, standing square and calm with all four legs straight and clearly separated, head forward, tail hanging down").replace("vehicle", "animal").replace("no rails, no ground", "no cart, no rider, no ground").replace("No text, no numbers, no logos, no people.", "No text, no people."))
 A["covered_wagon"] = dict(cat="Props", length=6.2, faces=6000, front="auto", prompt=VEHICLE.format(what="an original 1870s prairie covered wagon with NO horses: a white weathered canvas bonnet stretched over wooden hoops, a blue-grey painted wooden box body, red spoked wooden wheels with iron tyres (larger at the back), a wooden tongue pole sticking out at the front, a water barrel and a toolbox strapped to the side"))
 
@@ -162,8 +227,12 @@ def model(i):
         return print("have", g)
     if not os.path.exists(p):
         raise SystemExit("no concept for " + i)
-    url = hf("generate", "create", "tripo_h3_1_image_to_3d", "--image", p, "--texture_quality", "detailed",
-             "--geometry_quality", "standard", "--pbr", "true", "--wait", "--wait-timeout", "25m")
+    if os.environ.get("MODEL3D") == "hunyuan":  # fallback when Tripo is failing
+        url = hf("generate", "create", "hunyuan3d_v3_image_to_3d", "--image", p, "--face_count", "300000",
+                 "--wait", "--wait-timeout", "30m")
+    else:
+        url = hf("generate", "create", "tripo_h3_1_image_to_3d", "--image", p, "--texture_quality", "detailed",
+                 "--geometry_quality", "standard", "--pbr", "true", "--wait", "--wait-timeout", "25m")
     fetch(url, g)
     print("model", i, url)
 

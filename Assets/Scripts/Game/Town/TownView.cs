@@ -185,36 +185,92 @@ namespace Ironhorse.Game
             _highlight = hl.ToObject("Highlight", transform, false);
             _hlRenderer = _highlight.GetComponent<Renderer>();
 
-            // Land not yet bought is still wild: a few trees and shrubs to clear.
+            // Lumber stacked ready on bought land.
+            Prop(_owned.transform, ModelRegistry.Buildings, "logstack", new Vector3(h - 2.6f, 0, h - 2.2f), 90, 0.55f);
+
+            // Land not yet bought is somebody's homestead lot: hay, a kitchen garden, a few head of cattle or a woodlot,
+            // with trees and scrub, so the edge of town reads as lived-in rather than an empty grid.
             var w = new MeshBuilder();
             var rng = new System.Random(Index * 7919 + 13);
             System.Func<float, float, float> rr = (a, b) => a + (float)rng.NextDouble() * (b - a);
             var art = new List<(string kind, Vector3 pos, float scale)>();
-            int trees = 1 + rng.Next(3);
-            for (int i = 0; i < trees; i++)
+            _wild = new GameObject("Wild");
+            _wild.transform.SetParent(transform, false);
+            int look = rng.Next(5);
+            if (look == 0)
             {
-                var p = new Vector3(rr(-h + 1.5f, h - 1.5f), 0, rr(-h + 1.5f, h - 1.5f));
-                if (rng.NextDouble() < 0.6)
+                // Hay meadow: two or three stacks and a parked wagon.
+                for (int i = 0; i < 2 + rng.Next(2); i++) Prop(_wild.transform, ModelRegistry.Buildings, "haystack", new Vector3(rr(-h + 2, h - 2), 0, rr(-h + 2, h - 2)), rr(0, 360), rr(0.7f, 0.95f));
+                Prop(_wild.transform, "Props", "covered_wagon", new Vector3(rr(-2, 2), 0, -h + 2.5f), rr(60, 120), 0.9f);
+            }
+            else if (look == 1)
+            {
+                // Kitchen garden: tilled rows inside a picket fence, a tree in the corner.
+                w.Matte();
+                w.Surf = SurfaceKind.Dirt;
+                w.Box(new Vector3(0, 0.06f, 0), new Vector3(h * 1.6f, 0.12f, h * 1.6f), Palette.Hex(0x6E5034));
+                w.Surf = SurfaceKind.Auto;
+                Color[] crop = { Palette.Hex(0x6E9440), Palette.Hex(0x84A444), Palette.Hex(0x9C8A3A) };
+                var c = crop[rng.Next(crop.Length)];
+                for (float x = -h * 0.7f; x <= h * 0.7f; x += 1.3f) w.Box(new Vector3(x, 0.25f, 0), new Vector3(0.55f, 0.4f, h * 1.45f), MeshBuilder.Darken(c, 0.85f + 0.15f * Mathf.Repeat(x, 2)));
+                for (float t = -h * 0.85f; t <= h * 0.85f; t += 0.8f)
+                    foreach (var q in new[] { new Vector3(t, 0, -h * 0.85f), new Vector3(t, 0, h * 0.85f), new Vector3(-h * 0.85f, 0, t), new Vector3(h * 0.85f, 0, t) })
+                        w.Box(q + Vector3.up * 0.45f, new Vector3(0.08f, 0.9f, 0.08f), Palette.White);
+                art.Add(("cottonwood", new Vector3(h - 1, 0, h - 1), rr(0.45f, 0.6f)));
+            }
+            else if (look == 2)
+            {
+                // A small pen with a few longhorns.
+                w.Matte();
+                for (float t = -h + 1; t <= h - 1; t += 2.2f)
+                    foreach (var q in new[] { new Vector3(t, 0, -h + 1), new Vector3(t, 0, h - 1), new Vector3(-h + 1, 0, t), new Vector3(h - 1, 0, t) })
+                        w.Box(q + Vector3.up * 0.6f, new Vector3(0.14f, 1.2f, 0.14f), Palette.WoodDark);
+                foreach (float y in new[] { 0.55f, 1.0f })
                 {
-                    if (Vegetation.HasArt("pine")) art.Add((rng.NextDouble() < 0.5 ? "pine" : "pine2", p, rr(0.5f, 0.8f)));
-                    else Scenery.Pine(w, p, rr(0.55f, 0.85f));
+                    w.Box(new Vector3(0, y, -h + 1), new Vector3(h * 2 - 2, 0.1f, 0.07f), Palette.Wood);
+                    w.Box(new Vector3(0, y, h - 1), new Vector3(h * 2 - 2, 0.1f, 0.07f), Palette.Wood);
+                    w.Box(new Vector3(-h + 1, y, 0), new Vector3(0.07f, 0.1f, h * 2 - 2), Palette.Wood);
+                    w.Box(new Vector3(h - 1, y, 0), new Vector3(0.07f, 0.1f, h * 2 - 2), Palette.Wood);
                 }
-                else if (Vegetation.HasArt("cottonwood")) art.Add(("cottonwood", p, rr(0.45f, 0.65f)));
-                else Scenery.Cottonwood(w, p, rr(0.6f, 0.85f));
+                for (int i = 0; i < 2 + rng.Next(3); i++) Prop(_wild.transform, "Props", "longhorn", new Vector3(rr(-h + 3, h - 3), 0, rr(-h + 3, h - 3)), rr(0, 360), 1f);
+                Prop(_wild.transform, ModelRegistry.Buildings, "haystack", new Vector3(-h + 2.6f, 0, h - 2.6f), rr(0, 360), 0.6f);
             }
-            for (int i = 0; i < 3 + rng.Next(3); i++)
+            else if (look == 3)
             {
-                var p = new Vector3(rr(-h, h), 0, rr(-h, h));
-                if (Vegetation.HasArt("sage")) art.Add(("sage", p, rr(0.4f, 0.7f)));
-                else Scenery.Sage(w, p, rr(0.5f, 0.9f));
+                // Woodlot: pines being felled and a stack of logs.
+                for (int i = 0; i < 2 + rng.Next(2); i++) art.Add((rng.NextDouble() < 0.5 ? "pine" : "pine2", new Vector3(rr(-h + 1.5f, 0), 0, rr(-h + 1.5f, h - 1.5f)), rr(0.55f, 0.85f)));
+                Prop(_wild.transform, ModelRegistry.Buildings, "logstack", new Vector3(h - 3.5f, 0, rr(-2, 2)), rr(80, 100), 0.8f);
             }
-            if (rng.NextDouble() < 0.5) Scenery.Rock(w, new Vector3(rr(-h, h), 0, rr(-h, h)), rr(0.4f, 0.8f));
-            _wild = w.ToObject("Wild", transform);
-            foreach (var plant in art) Vegetation.Spawn(plant.kind, _wild.transform, plant.pos, plant.scale);
+            else
+            {
+                // Open meadow with a big shade tree.
+                art.Add(("cottonwood", new Vector3(rr(-2, 2), 0, rr(-2, 2)), rr(0.6f, 0.8f)));
+                if (rng.NextDouble() < 0.5) Prop(_wild.transform, ModelRegistry.Buildings, "haystack", new Vector3(rr(-h + 2, h - 2), 0, -h + 2.5f), rr(0, 360), 0.75f);
+            }
+            for (int i = 0; i < 2 + rng.Next(3); i++)
+                art.Add(("sage", new Vector3(rr(-h, h), 0, rr(-h, h)), rr(0.4f, 0.7f)));
+            if (w.VertexCount > 0) w.ToObject("Lot", _wild.transform);
+            foreach (var plant in art)
+            {
+                if (Vegetation.HasArt(plant.kind)) Vegetation.Spawn(plant.kind, _wild.transform, plant.pos, plant.scale);
+                else if (plant.kind == "sage") { var sb = new MeshBuilder(); Scenery.Sage(sb, plant.pos, plant.scale); sb.ToObject("Sage", _wild.transform); }
+            }
 
             var col = gameObject.AddComponent<BoxCollider>();
             col.center = new Vector3(0, 0.5f, 0);
             col.size = new Vector3(WorldLayout.PlotSize, 1, WorldLayout.PlotSize);
+        }
+
+        /// <summary>A piece of art on the lot (local position on the plot's ground), or nothing when it isn't imported.</summary>
+        static void Prop(Transform parent, string category, string id, Vector3 local, float yaw, float scale)
+        {
+            var go = ModelRegistry.Spawn(category, id, parent);
+            if (go == null) return;
+            var world = parent.TransformPoint(local);
+            world.y = ValleyTerrain.Height(world.x, world.z);
+            go.transform.position = world;
+            go.transform.rotation = Quaternion.Euler(0, yaw, 0) * go.transform.rotation;
+            go.transform.localScale *= scale;
         }
 
         public void Refresh(bool owned, bool forSale, bool occupied, bool placing)

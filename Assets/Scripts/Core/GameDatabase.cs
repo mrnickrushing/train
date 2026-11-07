@@ -85,6 +85,8 @@ namespace Ironhorse.Core
             D("eldorado",    "Eldorado Gulch",         "gold_ore",   12, 1200, 0.9f, "Where fortunes are made... and lost.",                0.12f, 0.20f),
             D("blackgold",   "Black Gold Fields",      "oil",        15, 1500, 1.0f, "Derricks rising where the buffalo roamed.",           0.90f, 0.82f),
             // Passenger towns
+            // The scenic loop north of town: sightseers ride a few laps and pay their fares back at the station.
+            D("excursion",     "Scenic Excursion",     "passengers", 6,  210,  1.25f, "Sightseers ride the loop past the meadows, the river and the mesas.", 0.47f, 0.58f),
             D("silversprings", "Silver Springs",       "passengers", 6,  360,  1.0f, "A spa town where folks take the waters.",            0.30f, 0.90f),
             D("prosperity",    "Prosperity City",      "passengers", 11, 720,  1.3f, "Brick, bustle and a brass band at every arrival.",   0.75f, 0.92f),
             D("capitaljct",    "Capital Junction",     "passengers", 16, 1080, 1.7f, "The territorial capital. Everyone wants a ticket.",  0.95f, 0.50f),

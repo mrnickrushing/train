@@ -118,6 +118,16 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
   each; platforms 4-6 cost coins plus factory goods and a track-crew timer (rushable). Old saves keep a platform for every
   engine. A bought locomotive that finds the station full gets a platform laid for it. `SellLocomotive` frees a platform
   (half price + a quarter of overhauls; wagons to the depot). The tracks and the work site are `World/Platforms.cs`.
+- **Haulage and the map** (`Core/Haulage.cs`, `Core/GameSession.Haulage.cs`, `Game/Haulage/`): territory projects are supplied by
+  haulers (wagons, mule train, trucks, river boats) that travel real roads (`HaulRoutes`, painted into the terrain by `HaulWorld`
+  through the `_RoadMask`) or the river; `SiteRoute.RoadMeters/WaterMeters` must match the drawn route lengths. Each project has
+  a map pin (character face, NEW until its story is heard; `UIRoot.Haulage.cs`), a site view (stage card, character, hauler strip,
+  Get More Resources). Destinations are real places too (`World/DestinationSites.cs`): rail spurs off the main line and the scenic
+  loop, a depot and a building cluster each (centrepiece art `Models/Buildings/dest_<id>` when present), cloud over locked ones;
+  away trains run the spurs (`ExcursionTrain` in `TrainView.cs`). Eagle Lake (north) holds the lighthouse and lodge; later
+  storyline landmarks (winery, mission, opera, capitol) use `ProjectSites.Landmarks` and finished art `<id>_done`.
+  `GroundTint` paints hillside colour patches and forest-floor shade under the instanced trees. Target look/feel: the user's
+  Transport Tycoon Empire 2 recordings (own art and names only).
 - **Motor Age (Act II, 1.1)**: `docs/CHAPTER_2.md` is the plan. `Core/GameSession.Trucks.cs` (content and tuning in `Core/Motor.cs`):
   the Motor Garage (level 12, `garage`, bays = 1 + level) gives a free Dart Runabout when it finishes; the local delivery board
   (4 orders, one good each for a valley customer) is filled by truck: goods leave at once, pay comes when the truck is back.

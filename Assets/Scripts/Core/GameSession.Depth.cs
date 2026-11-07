@@ -27,7 +27,19 @@ namespace Ironhorse.Core
 
         public ProjectProgress Progress(string projectId) { return State.projects.First(p => p.id == projectId); }
 
-        public bool IsProjectUnlocked(ProjectDef p) { return State.level >= p.UnlockLevel; }
+        public bool IsProjectUnlocked(ProjectDef p) { return State.level >= p.UnlockLevel && RequirementMet(p); }
+
+        bool RequirementMet(ProjectDef p) { return p.Requires == null || State.projects.Any(x => x.id == p.Requires && x.done); }
+
+        /// <summary>The north (Eagle Lake country) is revealed once its key storyline is finished.</summary>
+        public bool NorthOpen { get { return State.projects.Any(x => x.id == DepthContent.NorthKey && x.done); } }
+
+        /// <summary>Why a project isn't open yet, for pins and buttons.</summary>
+        public string ProjectLockText(ProjectDef p)
+        {
+            if (!RequirementMet(p)) return "Finish " + DepthContent.Project(p.Requires).Name + " first";
+            return "Opens at level " + p.UnlockLevel;
+        }
 
         public ProjectStage CurrentStage(ProjectDef def)
         {
@@ -68,7 +80,7 @@ namespace Ironhorse.Core
         {
             var def = DepthContent.Project(projectId);
             if (def == null) return ActionResult.Fail("Unknown project");
-            if (!IsProjectUnlocked(def)) return ActionResult.Fail("Unlocks at level " + def.UnlockLevel);
+            if (!IsProjectUnlocked(def)) return ActionResult.Fail(ProjectLockText(def));
             var pr = Progress(projectId);
             if (pr.done) return ActionResult.Fail("Already complete");
             var stage = def.Stages[pr.stage];
@@ -76,9 +88,21 @@ namespace Ironhorse.Core
             var res = GameDatabase.Resource(stage.ResourceId);
             if (give <= 0) return ActionResult.Fail("No " + res.Name + " in the warehouse");
             State.inventory.Change(stage.ResourceId, -give);
+            string msg = CreditProject(def, pr, give);
+            RaiseChanged();
+            return ActionResult.Success(msg);
+        }
+
+        /// <summary>Counts goods that reached a project (already out of the warehouse): fills the stage, pays it out
+        /// and finishes the project. Returns what happened, for a toast.</summary>
+        string CreditProject(ProjectDef def, ProjectProgress pr, int give)
+        {
+            var stage = def.Stages[pr.stage];
+            var res = GameDatabase.Resource(stage.ResourceId);
+            give = Math.Min(give, stage.Amount - pr.delivered);
             pr.delivered += give;
             State.stats.projectDeliveries += give;
-            string msg = "Delivered " + give + " " + res.Name;
+            string msg = "Delivered " + give + " " + res.Name + " to " + def.Name;
             if (pr.delivered >= stage.Amount)
             {
                 EarnCoins(stage.Coins);
@@ -95,8 +119,7 @@ namespace Ironhorse.Core
                     ProjectCompleted?.Invoke(def);
                 }
             }
-            RaiseChanged();
-            return ActionResult.Success(msg);
+            return msg;
         }
 
         // ================================================================ Foreman's orders

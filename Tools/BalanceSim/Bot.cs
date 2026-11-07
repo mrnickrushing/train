@@ -185,7 +185,13 @@ static class Program
         foreach (var p in DepthContent.Projects)
         {
             var stage = S.IsProjectUnlocked(p) ? S.CurrentStage(p) : null;
+#if HAULAGE
+            // Projects are supplied by haulers: send every idle one that can reach the site with a load.
+            if (stage != null && !Saved(stage.ResourceId))
+                foreach (var h in st.haulers.Where(x => x.IsIdle).ToList()) { int l; double sec; if (S.CantHaul(h, p.Id, out l, out sec) == null && l >= Math.Min(4, S.StillToSend(p.Id))) Src("project", () => S.SendHauler(h.uid, p.Id)); }
+#else
             if (stage != null && !Saved(stage.ResourceId) && S.Amount(stage.ResourceId) >= Math.Min(20, stage.Amount)) Src("project", () => S.DeliverToProject(p.Id));
+#endif
         }
         Src("goals", () => { while (S.CurrentGoal != null && S.IsGoalComplete(S.CurrentGoal)) S.ClaimGoal(); });
         if (S.CanClaimTaskSet) Src("foreman", () => S.ClaimTaskSet());
@@ -273,6 +279,11 @@ static class Program
     {
         var st = S.State;
         var loco = NextLoco();
+#if HAULAGE
+        // A second and third wagon once the projects open, then boats and trucks as they unlock.
+        foreach (var hd in Haulage.Haulers)
+            if (S.IsHaulerUnlocked(hd) && hd.PriceNuggets == 0 && S.HaulersOwned(hd.Id) == 0 && st.coins > hd.PriceCoins * 2.5) { S.BuyHauler(hd.Id); break; }
+#endif
 #if PLATFORMS
         // A full station with an engine waiting to be bought: lay the next platform.
         if (loco != null && st.trains.Count >= S.FleetCapacity && S.CanLayPlatform().Ok && st.coins > S.NextPlatformCoins * 1.5) S.LayPlatform();

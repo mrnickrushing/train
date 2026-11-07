@@ -34,6 +34,21 @@ namespace Ironhorse.Game
 
         static Kind Get(string kind) { return Get("Trees", kind); }
 
+        /// <summary>Where every instanced tree and shrub stands, with its scale (for the ground tint under groves).</summary>
+        public static IEnumerable<Vector4> Plants()
+        {
+            foreach (var kv in _kinds)
+            {
+                if (kv.Value == null || !kv.Key.StartsWith("Trees/")) continue;
+                foreach (var cell in kv.Value.Cells.Values)
+                    foreach (var m in cell)
+                    {
+                        var p = m.GetColumn(3);
+                        yield return new Vector4(p.x, p.y, p.z, m.GetColumn(0).magnitude);
+                    }
+            }
+        }
+
         static Kind Get(string category, string kind)
         {
             Kind k;
@@ -47,7 +62,7 @@ namespace Ironhorse.Game
                 k = new Kind { Mesh = mf.sharedMesh, Material = mat, Local = mf.transform.localToWorldMatrix }; // keeps the FBX root's axis-conversion rotation
                 k.FarMesh = k.Mesh; k.FarMaterial = mat; k.FarLocal = k.Local;
                 k.SmallPlant = kind == "sage";
-                k.FarShadows = category != "Trees";
+                k.FarShadows = category != "Trees" && kind != "boulders"; // distant rocks skip the shadow pass
                 k.LocalBounds = Transform(k.Local, k.Mesh.bounds);
                 var far = ModelRegistry.Prefab(category, kind + "_far");
                 var fmf = far != null ? far.GetComponentInChildren<MeshFilter>() : null;
@@ -85,12 +100,14 @@ namespace Ironhorse.Game
         /// Registers one static model instance (e.g. a parked wagon) centred on <paramref name="center"/> at ground
         /// height <paramref name="center"/>.y. Returns the model's length along its local Z (0 when there is no art).
         /// </summary>
-        public static float AddModel(string category, string id, Vector3 center, Quaternion rot)
+        public static float AddModel(string category, string id, Vector3 center, Quaternion rot) { return AddModel(category, id, center, rot, 1f); }
+
+        public static float AddModel(string category, string id, Vector3 center, Quaternion rot, float scale)
         {
             var k = Get(category, id);
             if (k == null) return 0;
             var lb = k.LocalBounds;
-            var place = Matrix4x4.TRS(center, rot, Vector3.one) * Matrix4x4.Translate(new Vector3(-lb.center.x, 0, -lb.center.z));
+            var place = Matrix4x4.TRS(center, rot, Vector3.one * scale) * Matrix4x4.Translate(new Vector3(-lb.center.x, 0, -lb.center.z));
             var cell = new Vector2Int(Mathf.FloorToInt(center.x / CellSize), Mathf.FloorToInt(center.z / CellSize));
             List<Matrix4x4> list;
             if (!k.Cells.TryGetValue(cell, out list)) k.Cells[cell] = list = new List<Matrix4x4>();
@@ -136,11 +153,15 @@ namespace Ironhorse.Game
             var cam = CameraRig.Instance != null ? CameraRig.Instance.Cam : Camera.main;
             if (cam == null) return;
             GeometryUtility.CalculateFrustumPlanes(cam, _planes);
+            float zoom = CameraRig.Instance != null ? CameraRig.Instance.Distance : 95f;
+            float thin = Mathf.Lerp(1f, 0.7f, Mathf.InverseLerp(180f, 300f, zoom));
+            bool lite = QualitySetup.Lite;
+            if (lite) thin = Mathf.Min(thin, Mathf.Lerp(0.8f, 0.5f, Mathf.InverseLerp(120f, 300f, zoom))); // battery saver
             foreach (var k in _kinds.Values)
             {
                 if (k == null) continue;
                 var near = new RenderParams(k.Material) { shadowCastingMode = ShadowCastingMode.On, receiveShadows = true, layer = 0 };
-                var far = new RenderParams(k.FarMaterial) { shadowCastingMode = k.FarShadows ? ShadowCastingMode.On : ShadowCastingMode.Off, receiveShadows = true, layer = 0 };
+                var far = new RenderParams(k.FarMaterial) { shadowCastingMode = k.FarShadows && !lite ? ShadowCastingMode.On : ShadowCastingMode.Off, receiveShadows = true, layer = 0 };
                 var camPos = cam.transform.position;
                 foreach (var kv in k.Cells)
                 {
@@ -148,15 +169,32 @@ namespace Ironhorse.Game
                     if (!GeometryUtility.TestPlanesAABB(_planes, b)) continue;
                     // Cells close to the camera draw the detailed mesh with shadows; distant ones the light mesh.
                     float d2 = b.SqrDistance(camPos);
-                    bool close = d2 < NearDistance * NearDistance;
+                    float nearD = lite ? NearDistance * 0.7f : NearDistance;
+                    bool close = d2 < nearD * nearD;
                     if (k.SmallPlant && d2 > 200f * 200f) continue; // shrubs vanish into the terrain texture
                     var list = kv.Value;
                     List<Matrix4x4> farList;
                     if (!close && k.FarCells.TryGetValue(kv.Key, out farList)) list = farList;
-                    for (int start = 0; start < list.Count; start += 1023)
-                        Graphics.RenderMeshInstanced(close ? near : far, close ? k.Mesh : k.FarMesh, 0, list, Mathf.Min(1023, list.Count - start), start);
+                    // Zoomed far out, distant cells draw a random share of their instances (the lists are shuffled
+                    // once), so the whole map stays light on phones while forests still read as forests.
+                    int count = list.Count;
+                    if (!close && thin < 1)
+                    {
+                        if (!_shuffled.Contains(list)) { Shuffle(list); _shuffled.Add(list); }
+                        count = Mathf.CeilToInt(count * thin);
+                    }
+                    for (int start = 0; start < count; start += 1023)
+                        Graphics.RenderMeshInstanced(close ? near : far, close ? k.Mesh : k.FarMesh, 0, list, Mathf.Min(1023, count - start), start);
                 }
             }
+        }
+
+        readonly HashSet<List<Matrix4x4>> _shuffled = new HashSet<List<Matrix4x4>>();
+
+        static void Shuffle(List<Matrix4x4> list)
+        {
+            var rng = new System.Random(list.Count * 7919);
+            for (int i = list.Count - 1; i > 0; i--) { int j = rng.Next(i + 1); var t = list[i]; list[i] = list[j]; list[j] = t; }
         }
 
         void OnDestroy()
