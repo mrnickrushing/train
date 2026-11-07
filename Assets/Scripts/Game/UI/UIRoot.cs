@@ -887,6 +887,14 @@ namespace Ironhorse.Game
                     var at = CratePosition(view);
                     ShowMarker(at, "crate", h => UIKit.Icon(h, "crate_mystery", 64), "?", -1, () => OpenCrateOn(uid, at), true);
                 }
+                foreach (var t in S.State.trucks)
+                {
+                    if (!S.TruckBack(t)) continue;
+                    var view = TruckManager.Instance != null ? TruckManager.Instance.View(t.uid) : null;
+                    if (view == null || !view.Visible) continue;
+                    int uid = t.uid;
+                    ShowMarker(view.Top, "coin", h => UIKit.CoinIcon(h, 56), "+" + Fmt.Num(t.job.rewardCoins), -1, () => CollectTruck(uid), true);
+                }
                 UpdateEventMarkers();
                 UpdatePeddlerMarker();
                 foreach (var b in S.State.buildings)

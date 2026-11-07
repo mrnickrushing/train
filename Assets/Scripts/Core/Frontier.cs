@@ -92,6 +92,7 @@ namespace Ironhorse.Core
                 case DailyKind.Events: return 2;
                 case DailyKind.Rent: return 6;
                 case DailyKind.EarnCoins: return (1000 + level * 400) / 100 * 100;
+                case DailyKind.TruckDeliveries: return 3 + level / 6;
                 default: return 20 + level * 5;
             }
         }
@@ -109,6 +110,7 @@ namespace Ironhorse.Core
                 case DailyKind.Events: return "Help with " + t.count + " map events";
                 case DailyKind.Rent: return "Collect rent " + t.count + " times";
                 case DailyKind.EarnCoins: return "Earn " + t.count.ToString("#,0") + " coins";
+                case DailyKind.TruckDeliveries: return "Make " + t.count + " truck deliveries";
                 default: return "Deliver " + t.count + " goods to projects";
             }
         }

@@ -40,6 +40,15 @@ namespace Ironhorse.Game
             });
         }
 
+        public static Texture Truck(TruckDef d)
+        {
+            return Get("truck:" + d.Id, root =>
+            {
+                var art = ModelRegistry.Spawn("Trucks", d.Id, root);
+                if (art == null) Build(TruckFactory.Truck(d), root);
+            });
+        }
+
         public static Texture Building(BuildingDef d)
         {
             if (!ModelRegistry.Has(ModelRegistry.Buildings, d.Id)) return null;

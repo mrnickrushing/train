@@ -93,6 +93,7 @@ namespace Ironhorse.Game
             switch (a.Kind)
             {
                 case AdviceKind.Payday:
+                case AdviceKind.CollectTruck:
                 case AdviceKind.Rent: UIKit.CoinIcon(t, size); break;
                 case AdviceKind.WarehouseFull: UIKit.Icon(t, "crate", size); break;
                 case AdviceKind.DailyTask: UIKit.Icon(t, "nav_contracts", size); break;
@@ -203,6 +204,8 @@ namespace Ironhorse.Game
                 case AdviceKind.DailyTask: OpenDaily("tasks"); break;
                 case AdviceKind.LayPlatform: OpenFleet(); break;
                 case AdviceKind.Dispatch: OpenTrain(a.Uid); break;
+                case AdviceKind.CollectTruck: CollectTruck(a.Uid); break;
+                case AdviceKind.SendTruck: OpenGarage("orders"); break;
             }
         }
     }
