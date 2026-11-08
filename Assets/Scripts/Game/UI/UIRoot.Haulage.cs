@@ -453,7 +453,7 @@ namespace Ironhorse.Game
                 Row(tag.gameObject, 0, new RectOffset(18, 18, 0, 0), TextAnchor.MiddleCenter);
                 tag.gameObject.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
                 T(tag.transform, route.CharacterName, 30, BGold, TextAnchor.MiddleCenter, true).horizontalOverflow = HorizontalWrapMode.Overflow;
-                UIKit.Place(tag.gameObject, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-120, 350), new Vector2(300, 50));
+                UIKit.Place(tag.gameObject, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-120, StripTop + 40), new Vector2(300, 50)); // just above the hauler strip and its filter tabs
             }
 
             StageCard(safe.transform, def, pr);
@@ -531,10 +531,16 @@ namespace Ironhorse.Game
             if (pr.stage == def.Stages.Length - 1) Pill(rw.transform, null, def.PerkText, 26, BGood, BTile);
         }
 
+        /// <summary>4:3 screens (iPad): the site's info row splits into two rows, so the hauler strip is taller.</summary>
+        bool NarrowSite { get { return ((RectTransform)_canvas.transform).rect.width < 1900; } }
+        float StripTop { get { return NarrowSite ? 476 : 400; } }
+
         void HaulerStrip(Transform p, ProjectDef def, ProjectProgress pr, float scroll)
         {
             var area = UIKit.Node("Haulers", p);
-            UIKit.Anchor(area, new Vector2(0, 0), new Vector2(1, 0), new Vector2(30, 20), new Vector2(-30, 400));
+            // On narrow (4:3, iPad) screens the info row splits in two: message and Get button, then notes and filters.
+            bool narrow = NarrowSite;
+            UIKit.Anchor(area, new Vector2(0, 0), new Vector2(1, 0), new Vector2(30, 20), new Vector2(-30, StripTop));
             Stack(area, 12, new RectOffset(0, 0, 0, 0), TextAnchor.UpperLeft);
 
             // Info strip: what to do next.
@@ -558,6 +564,7 @@ namespace Ironhorse.Game
                 string rid = stage.ResourceId;
                 Big(info.transform, "Get " + res.Name, BBlue, () => GetMore(rid), 300, 60, true, 30);
             }
+            if (narrow) info = HBox(area.transform, 12, 0, TextAnchor.MiddleLeft, -1, 64);
             var route = Haulage.Route(def.Id);
             if (route != null && route.WaterMeters > 0) Pill(info.transform, null, "Boats can reach it", 26, BGood, new Color(0.1f, 0.12f, 0.17f, 0.9f));
             if (route != null && route.RailMeters > 0) Pill(info.transform, null, "Work trains too", 26, BGood, new Color(0.1f, 0.12f, 0.17f, 0.9f));
