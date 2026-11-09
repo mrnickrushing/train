@@ -291,3 +291,43 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
+
+  lasttide-expire:
+    name: Last Tide - expire TestFlight builds
+    max_build_duration: 10
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_credentials
+      vars:
+        APP_ID: "6832382482"
+        EXPIRE_BUILDS: ""   # build numbers to expire, comma separated; set when starting the build
+    scripts:
+      - name: Expire builds
+        script: |
+          set -euo pipefail
+          [ -n "$EXPIRE_BUILDS" ] || { echo "Set EXPIRE_BUILDS (e.g. 1,2)"; exit 1; }
+          python3 -m venv /tmp/asc && /tmp/asc/bin/pip install -q pyjwt cryptography
+          /tmp/asc/bin/python - <<'PY'
+          import json, os, time, urllib.request
+          import jwt
+          key = os.environ["APP_STORE_CONNECT_PRIVATE_KEY"].replace("\\n", "\n")
+          tok = jwt.encode({"iss": os.environ["APP_STORE_CONNECT_ISSUER_ID"], "iat": int(time.time()),
+                            "exp": int(time.time()) + 600, "aud": "appstoreconnect-v1"}, key, algorithm="ES256",
+                           headers={"kid": os.environ["APP_STORE_CONNECT_KEY_IDENTIFIER"]})
+          def call(method, path, body=None):
+              req = urllib.request.Request("https://api.appstoreconnect.apple.com" + path, method=method,
+                                           data=json.dumps(body).encode() if body else None,
+                                           headers={"Authorization": "Bearer " + tok, "Content-Type": "application/json"})
+              return json.load(urllib.request.urlopen(req))
+          want = [b.strip() for b in os.environ["EXPIRE_BUILDS"].split(",") if b.strip()]
+          builds = call("GET", "/v1/builds?filter[app]=%s&limit=200" % os.environ["APP_ID"])["data"]
+          for b in builds:
+              a = b["attributes"]
+              if a["version"] in want and not a.get("expired"):
+                  call("PATCH", "/v1/builds/" + b["id"], {"data": {"type": "builds", "id": b["id"], "attributes": {"expired": True}}})
+                  print("expired build", a["version"], b["id"])
+          for b in call("GET", "/v1/builds?filter[app]=%s&limit=200" % os.environ["APP_ID"])["data"]:
+              a = b["attributes"]
+              print("BUILD", a["version"], a.get("processingState"), "expired" if a.get("expired") else "active")
+          PY
