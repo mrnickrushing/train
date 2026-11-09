@@ -301,12 +301,11 @@ workflows:
         - ios_credentials
       vars:
         APP_ID: "6832382482"
-        EXPIRE_BUILDS: ""   # build numbers to expire, comma separated; set when starting the build
     scripts:
       - name: Expire builds
         script: |
           set -euo pipefail
-          [ -n "$EXPIRE_BUILDS" ] || { echo "Set EXPIRE_BUILDS (e.g. 1,2)"; exit 1; }
+          [ -n "${EXPIRE_BUILDS:-}" ] || { echo "Set EXPIRE_BUILDS (e.g. 1,2)"; exit 1; }
           python3 -m venv /tmp/asc && /tmp/asc/bin/pip install -q pyjwt cryptography
           /tmp/asc/bin/python - <<'PY'
           import json, os, time, urllib.request
