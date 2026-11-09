@@ -223,6 +223,27 @@ workflows:
           curl -fsSL -o /tmp/iap.py "https://raw.githubusercontent.com/mrnickrushing/castaway/$REF/Tools/appstore/iap.py"
           /tmp/asc/bin/python /tmp/iap.py
 
+  lasttide-listing:
+    name: Last Tide - App Store listing
+    max_build_duration: 20
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_credentials
+    scripts:
+      - name: Listing, age rating, price and screenshots (castaway Tools/appstore/listing.py)
+        script: |
+          set -euo pipefail
+          python3 -m venv /tmp/asc && /tmp/asc/bin/pip install -q pyjwt cryptography
+          # LASTTIDE_REF (a castaway branch, default main) can be set when starting the build to try a change first.
+          REF="${LASTTIDE_REF:-main}"
+          export LISTING_BASE="https://raw.githubusercontent.com/mrnickrushing/castaway/$REF/"
+          mkdir -p /tmp/lt
+          for f in iap.py listing.py; do
+            curl -fsSL -o /tmp/lt/$f "${LISTING_BASE}Tools/appstore/$f"
+          done
+          /tmp/asc/bin/python /tmp/lt/listing.py
+
   lasttide-testflight:
     name: Last Tide - iOS → TestFlight
     max_build_duration: 60
