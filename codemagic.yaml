@@ -202,3 +202,89 @@ workflows:
             "$UNITY_BIN" -batchmode -quit -nographics -returnlicense \
               -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" -logFile - || true
       app_store_connect: *publish
+
+  # Last Tide (github.com/mrnickrushing/castaway) runs here too: this app holds the App Store Connect key
+  # (ios_credentials, Admin role, same Apple team). Its scripts and Xcode export come from that public repo.
+  lasttide-iap:
+    name: Last Tide - create the in-app purchases
+    max_build_duration: 15
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_credentials
+    scripts:
+      - name: In-app purchases (castaway Tools/appstore/iap.py)
+        script: |
+          set -euo pipefail
+          python3 -m venv /tmp/asc && /tmp/asc/bin/pip install -q pyjwt cryptography
+          curl -fsSL -o /tmp/iap.py https://raw.githubusercontent.com/mrnickrushing/castaway/feat/codemagic/Tools/appstore/iap.py
+          /tmp/asc/bin/python /tmp/iap.py
+
+  lasttide-testflight:
+    name: Last Tide - iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_credentials
+      vars:
+        BUNDLE_ID: com.rushingtech.lasttide
+        APPLE_TEAM_ID: PH4AKDQ4Q7
+        XCODE_PROJECT: ios/Unity-iPhone.xcodeproj
+        XCODE_SCHEME: Unity-iPhone
+      xcode: latest
+    scripts:
+      - name: Download the exported Xcode project
+        script: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/ios-xcode.zip "https://github.com/mrnickrushing/castaway/releases/download/ios-latest/ios-xcode.zip"
+          rm -rf ios && unzip -q /tmp/ios-xcode.zip -d .
+      - name: Build number after the latest one on App Store Connect
+        script: |
+          set -euo pipefail
+          APP_ID=$(app-store-connect apps list --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier --json | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_ID" --all-versions 2>/dev/null || echo 0)
+          echo "Apple ID $APP_ID, latest TestFlight build $LATEST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $((LATEST + 1))" ios/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/Info.plist 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/Info.plist
+      - name: Archive and export a signed .ipa
+        script: |
+          set -euo pipefail
+          KEY="/tmp/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
+          printf "%b" "$APP_STORE_CONNECT_PRIVATE_KEY" > "$KEY"
+          chmod 600 "$KEY"
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY"
+                -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID")
+          xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Release \
+            -destination "generic/platform=iOS" -archivePath /tmp/LastTide.xcarchive \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            "${AUTH[@]}" archive > /tmp/xcodebuild_archive.log 2>&1 \
+            || { grep -E "error:|error -|Error Domain|No profiles|No signing|failed" /tmp/xcodebuild_archive.log | sort -u | tail -40; exit 1; }
+          cat > /tmp/export_options.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>method</key><string>app-store-connect</string>
+              <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+              <key>signingStyle</key><string>automatic</string>
+              <key>destination</key><string>export</string>
+            </dict>
+          </plist>
+          PLIST
+          mkdir -p build/ios/ipa
+          xcodebuild -exportArchive -archivePath /tmp/LastTide.xcarchive -exportPath build/ios/ipa \
+            -exportOptionsPlist /tmp/export_options.plist "${AUTH[@]}" > /tmp/xcodebuild_export.log 2>&1 \
+            || { grep -E "error|Error" /tmp/xcodebuild_export.log | tail -30; exit 1; }
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/LastTide.xcarchive/dSYMs/*.dSYM
+      - /tmp/xcodebuild_*.log
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
