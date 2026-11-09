@@ -217,7 +217,7 @@ workflows:
         script: |
           set -euo pipefail
           python3 -m venv /tmp/asc && /tmp/asc/bin/pip install -q pyjwt cryptography
-          curl -fsSL -o /tmp/iap.py https://raw.githubusercontent.com/mrnickrushing/castaway/feat/codemagic/Tools/appstore/iap.py
+          curl -fsSL -o /tmp/iap.py https://raw.githubusercontent.com/mrnickrushing/castaway/main/Tools/appstore/iap.py
           /tmp/asc/bin/python /tmp/iap.py
 
   lasttide-testflight:
