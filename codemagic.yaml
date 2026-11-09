@@ -217,7 +217,10 @@ workflows:
         script: |
           set -euo pipefail
           python3 -m venv /tmp/asc && /tmp/asc/bin/pip install -q pyjwt cryptography
-          curl -fsSL -o /tmp/iap.py https://raw.githubusercontent.com/mrnickrushing/castaway/main/Tools/appstore/iap.py
+          # LASTTIDE_REF (a castaway branch, default main) can be set when starting the build to try a change first.
+          REF="${LASTTIDE_REF:-main}"
+          export IAP_SCREENSHOT="https://raw.githubusercontent.com/mrnickrushing/castaway/$REF/docs/appstore/iap_review.png"
+          curl -fsSL -o /tmp/iap.py "https://raw.githubusercontent.com/mrnickrushing/castaway/$REF/Tools/appstore/iap.py"
           /tmp/asc/bin/python /tmp/iap.py
 
   lasttide-testflight:
