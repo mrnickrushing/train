@@ -244,6 +244,25 @@ workflows:
           done
           /tmp/asc/bin/python /tmp/lt/listing.py
 
+  lasttide-capabilities:
+    name: Last Tide - App ID capabilities
+    max_build_duration: 10
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_credentials
+    scripts:
+      - name: iCloud and Sign in with Apple on the bundle id (castaway Tools/appstore/capabilities.py)
+        script: |
+          set -euo pipefail
+          python3 -m venv /tmp/asc && /tmp/asc/bin/pip install -q pyjwt cryptography
+          REF="${LASTTIDE_REF:-main}"
+          mkdir -p /tmp/lt
+          for f in iap.py capabilities.py; do
+            curl -fsSL -o /tmp/lt/$f "https://raw.githubusercontent.com/mrnickrushing/castaway/$REF/Tools/appstore/$f"
+          done
+          /tmp/asc/bin/python /tmp/lt/capabilities.py
+
   lasttide-testflight:
     name: Last Tide - iOS → TestFlight
     max_build_duration: 60
@@ -286,6 +305,16 @@ workflows:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             "${AUTH[@]}" archive > /tmp/xcodebuild_archive.log 2>&1 \
             || { grep -E "error:|error -|Error Domain|No profiles|No signing|failed" /tmp/xcodebuild_archive.log | sort -u | tail -40; exit 1; }
+          # The archive is unsigned, so it carries no entitlements and the export would drop them (Sign in
+          # with Apple, iCloud key-value storage). An ad-hoc signature stamps them on; export re-signs for the
+          # App Store and keeps what the App Store profile allows. (castaway Editor/IosCapabilities.cs writes the
+          # file with the team and bundle spelled out: an ad-hoc signature doesn't expand $(TeamIdentifierPrefix).)
+          if [ -f ios/LastTide.entitlements ]; then
+            APP=$(ls -d /tmp/LastTide.xcarchive/Products/Applications/*.app)
+            for f in "$APP"/Frameworks/*.framework "$APP"/Frameworks/*.dylib; do [ -e "$f" ] && codesign --force --sign - "$f"; done
+            plutil -convert xml1 -o /tmp/app.entitlements ios/LastTide.entitlements
+            codesign --force --sign - --entitlements /tmp/app.entitlements "$APP"
+          fi
           cat > /tmp/export_options.plist <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -302,6 +331,8 @@ workflows:
           xcodebuild -exportArchive -archivePath /tmp/LastTide.xcarchive -exportPath build/ios/ipa \
             -exportOptionsPlist /tmp/export_options.plist "${AUTH[@]}" > /tmp/xcodebuild_export.log 2>&1 \
             || { grep -E "error|Error" /tmp/xcodebuild_export.log | tail -30; exit 1; }
+          rm -rf /tmp/ipa && unzip -q -o build/ios/ipa/*.ipa -d /tmp/ipa
+          echo "Signed entitlements:"; codesign -d --entitlements - --xml /tmp/ipa/Payload/*.app 2>/dev/null | plutil -p - || true
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/LastTide.xcarchive/dSYMs/*.dSYM
