@@ -342,7 +342,9 @@ workflows:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true
+        # Upload only: the build is there for internal testers as soon as Apple has processed it. Submitting it to
+        # TestFlight beta review (external testers) waits until the owner asks for it.
+        submit_to_testflight: false
 
   lasttide-expire:
     name: Last Tide - expire TestFlight builds
