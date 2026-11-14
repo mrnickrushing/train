@@ -12,9 +12,10 @@ namespace Ironhorse.Game
     /// </summary>
     public sealed class AdMobAds : IAds
     {
-        // The rewarded unit from the AdMob account. Until it exists this is Google's public test unit, which only
-        // ever serves test adverts.
-        const string RewardedUnit = "ca-app-pub-3940256099942544/1712485313";
+        // The rewarded unit from the AdMob account; development builds use Google's public test unit, which only ever
+        // serves test adverts.
+        const string LiveUnit = "ca-app-pub-2509790196257770/8616657817", TestUnit = "ca-app-pub-3940256099942544/1712485313";
+        static string RewardedUnit { get { return Debug.isDebugBuild ? TestUnit : LiveUnit; } }
 
         RewardedAd _ad;
         bool _loading;
