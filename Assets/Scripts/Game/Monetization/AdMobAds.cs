@@ -12,10 +12,13 @@ namespace Ironhorse.Game
     /// </summary>
     public sealed class AdMobAds : IAds
     {
-        // The rewarded unit from the AdMob account; development builds use Google's public test unit, which only ever
-        // serves test adverts.
+        // The rewarded unit from the AdMob account. Development and TestFlight builds use Google's public test unit,
+        // which only ever serves test adverts and always has one: nobody testing taps a real advert (Google closes
+        // accounts for that), and a new ad unit that isn't serving yet doesn't hide the feature from testers.
         const string LiveUnit = "ca-app-pub-2509790196257770/8616657817", TestUnit = "ca-app-pub-3940256099942544/1712485313";
-        static string RewardedUnit { get { return Debug.isDebugBuild ? TestUnit : LiveUnit; } }
+        [System.Runtime.InteropServices.DllImport("__Internal")] static extern bool IHIsTestFlight();
+        static bool TestBuild { get { try { return Debug.isDebugBuild || IHIsTestFlight(); } catch (Exception) { return Debug.isDebugBuild; } } }
+        static string RewardedUnit { get { return TestBuild ? TestUnit : LiveUnit; } }
 
         RewardedAd _ad;
         bool _loading;
@@ -29,7 +32,10 @@ namespace Ironhorse.Game
             MobileAds.Initialize(_ => Load());
         }
 
-        public bool Available
+        // The Watch buttons are always there: a button that comes and goes with the advert network reads as broken.
+        public bool Available { get { return true; } }
+
+        public bool Loaded
         {
             get
             {

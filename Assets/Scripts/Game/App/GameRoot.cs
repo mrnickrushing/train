@@ -207,7 +207,7 @@ namespace Ironhorse.Game
         void Update()
         {
             _tickTimer -= Time.unscaledDeltaTime;
-            if (_tickTimer <= 0) { _tickTimer = 0.25f; G.Session.Tick(); }
+            if (_tickTimer <= 0) { _tickTimer = 0.25f; G.Session.Tick(); if (G.Session.State.level >= 2) Ads.Warm(); }      // not in the very first minutes
             _saveTimer -= Time.unscaledDeltaTime;
             if (_saveTimer <= 0) { _saveTimer = 20f; Save(); }
         }

@@ -155,8 +155,9 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
 `com.google.ads.mobile`, added to the Xcode project as a Swift package by the dependency manager) and the simulated
 advert in the Editor. Rewarded only, never shown unasked; requests are non-personalised (`npa`). The rules and daily
 limits are `GameSession.RewardAd` / `Balance.AdDailyLimit`. The App ID is in
-`Assets/GoogleMobileAds/Resources/GoogleMobileAdsSettings.asset`; development builds use Google's test unit, release
-builds `AdMobAds.LiveUnit` (TestFlight builds are release builds: don't tap real adverts while testing).
+`Assets/GoogleMobileAds/Resources/GoogleMobileAdsSettings.asset`; development and TestFlight builds use Google's test unit
+(`Plugins/iOS/IronhorseEnv.mm`), App Store builds `AdMobAds.LiveUnit`. The Watch buttons are always drawn
+(`IAds.Available`); `IAds.Loaded` says whether an advert can play this moment.
 
 ## Wear and wrenches
 
