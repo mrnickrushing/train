@@ -170,7 +170,7 @@ namespace Ironhorse.Core
         /// <summary>Seconds on the road from fresh to worn out, for a level 1 engine or truck.</summary>
         public const double WearSeconds = 6 * 3600;
         /// <summary>Seconds for time alone to mend a worn-out engine or truck completely.</summary>
-        public const double WearMendSeconds = 48 * 3600;
+        public const double WearMendSeconds = 12 * 3600;
         public const float WornAt = 0.5f;
         public const double WornSlow = 1.3;
         public const int WearFromLevel = 4, WrenchNuggets = 10, WrenchesHeld = 30, LevelUpWrenches = 1;
