@@ -184,8 +184,9 @@ namespace Ironhorse.Core
         public int uid;
         public string defId;
         public int level = 1;
-        /// <summary>0 fresh .. 1 worn out (GameSession.Wear).</summary>
+        /// <summary>0 fresh .. 1 worn out, as it stood at <see cref="wearAt"/> (GameSession.Wear: time mends it).</summary>
         public float wear;
+        public double wearAt;
         public string nickname;
         /// <summary>Empty when idle at the station.</summary>
         public string destinationId = "";
@@ -219,8 +220,9 @@ namespace Ironhorse.Core
         public int uid;
         public string defId;
         public int level = 1;
-        /// <summary>0 fresh .. 1 worn out (GameSession.Wear).</summary>
+        /// <summary>0 fresh .. 1 worn out, as it stood at <see cref="wearAt"/> (GameSession.Wear: time mends it).</summary>
         public float wear;
+        public double wearAt;
         /// <summary>Garage bay it parks in (0..bays-1).</summary>
         public int bay;
         /// <summary>The delivery it's out on; uid 0 when it's in the garage (JsonUtility never leaves it null).</summary>
@@ -290,8 +292,9 @@ namespace Ironhorse.Core
         public int uid;
         public string defId;
         public int level = 1;
-        /// <summary>0 fresh .. 1 worn out (GameSession.Wear).</summary>
+        /// <summary>0 fresh .. 1 worn out, as it stood at <see cref="wearAt"/> (GameSession.Wear: time mends it).</summary>
         public float wear;
+        public double wearAt;
         /// <summary>Project the current load is bound for (empty when the vehicle is in the yard).</summary>
         public string projectId = "";
         public string resourceId = "";
