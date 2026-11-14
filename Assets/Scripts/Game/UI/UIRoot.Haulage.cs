@@ -796,8 +796,9 @@ namespace Ironhorse.Game
             var stats = HBox(card.transform, 8, 0, TextAnchor.MiddleLeft, -1, 52);
             Pill(stats.transform, tr => UIKit.Icon(tr, "crate", 34), S.HaulCapacity(h) + " per trip", 26, null, BTile);
             Pill(stats.transform, null, d.Speed.ToString("0.0") + " m/s", 26, null, BTile);
-            Flex(card.transform);
             int uid = h.uid;
+            ConditionRow(card.transform, h.wear, () => S.RepairHauler(uid), 170, 24);
+            Flex(card.transform);
             if (h.level < Haulage.MaxLevel)
             {
                 var need = HBox(card.transform, 8, 0, TextAnchor.MiddleLeft, -1, 84);

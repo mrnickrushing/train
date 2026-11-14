@@ -3,7 +3,7 @@ using System;
 namespace Ironhorse.Core
 {
     /// <summary>
-    /// Wear: engines and trucks wear with every trip. Past half worn they run slower (up to three tenths longer on
+    /// Wear: engines, trucks and haulers (wagons, boats, work trains) wear with every trip. Past half worn they run slower (up to three tenths longer on
     /// the road when worn out) but never refuse to go. A wrench puts one right. Wrenches come with each new level,
     /// for nuggets, or one for a watched advert; a higher-level engine or truck is built to last longer.
     /// </summary>
@@ -50,6 +50,12 @@ namespace Ironhorse.Core
         {
             var t = Truck(truckUid);
             return t == null ? ActionResult.Fail("Unknown truck") : Mend(ref t.wear, TruckName(t));
+        }
+
+        public ActionResult RepairHauler(int haulerUid)
+        {
+            var h = Hauler(haulerUid);
+            return h == null ? ActionResult.Fail("Unknown hauler") : Mend(ref h.wear, Haulage.Hauler(h.defId).Name);
         }
 
         public void AddWrenches(int n) { State.wrenches = Math.Min(Balance.WrenchesHeld, State.wrenches + n); }
