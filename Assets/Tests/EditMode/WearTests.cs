@@ -71,6 +71,19 @@ namespace Ironhorse.Tests
         }
 
         [Test]
+        public void TimeMendsLittleByLittle()
+        {
+            _s.State.level = Balance.WearFromLevel;
+            Assert.IsTrue(_s.Dispatch(Starter.uid, "pinecrest").Ok);
+            Starter.wear = 0.8f;                                   // as it stood when it left
+            _clock.Advance(Balance.WearMendSeconds / 4);
+            Assert.AreEqual(0.55f, _s.WearOf(Starter), 0.01f, "a quarter of the way mended");
+            _clock.Advance(Balance.WearMendSeconds);
+            Assert.AreEqual(0, _s.WearOf(Starter), 1e-6, "never below fresh");
+            Assert.IsFalse(_s.RepairTrain(Starter.uid).Ok, "nothing left for a wrench to do");
+        }
+
+        [Test]
         public void AHigherLevelLastsLonger()
         {
             Assert.AreEqual(1, Balance.Durability(1), 1e-9);
