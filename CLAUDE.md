@@ -162,7 +162,7 @@ builds `AdMobAds.LiveUnit` (TestFlight builds are release builds: don't tap real
 
 `Core/GameSession.Wear.cs`, `Game/UI/UIRoot.Wear.cs`. From player level 4 (`Balance.WearFromLevel`) every trip wears
 the engine, truck or hauler (wagon, boat, work train) that made it (`wear` 0..1; six hours on the road from fresh to worn out at level 1, 15% longer per
-level: `Balance.Durability`). Past half worn, trips take longer, up to 30% (`WearSlow`); nothing ever refuses to go. Time mends by itself, a worn-out vehicle fully in 48 hours
+level: `Balance.Durability`). Past half worn, trips take longer, up to 30% (`WearSlow`); nothing ever refuses to go. Time mends by itself, a worn-out vehicle fully in 12 hours
 (`Balance.WearMendSeconds`, read through `WearOf`); a wrench does it at once.
 `ConditionRow` on the engine, truck and hauler cards shows the bar and Repair (one wrench). Wrenches
 (`State.wrenches`, three to start): one per level gained, 10 nuggets, or one per watched advert (`AdReward.Wrench`,
