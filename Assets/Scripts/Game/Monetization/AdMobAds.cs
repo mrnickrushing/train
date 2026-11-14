@@ -24,6 +24,7 @@ namespace Ironhorse.Game
         {
             MobileAds.RaiseAdEventsOnUnityMainThread = true;
             MobileAds.SetiOSAppPauseOnBackground(true);
+            MobileAds.SetRequestConfiguration(new RequestConfiguration { MaxAdContentRating = MaxAdContentRating.G });      // family-safe adverts only
             MobileAds.Initialize(_ => Load());
         }
 

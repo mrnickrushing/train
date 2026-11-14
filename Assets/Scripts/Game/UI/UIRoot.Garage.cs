@@ -190,6 +190,7 @@ namespace Ironhorse.Game
             var art = ModelIcons.Image(card.transform, ModelIcons.Truck(d), 420, 200);
             UIKit.Size(art.gameObject, -1, 200);
             T1(card.transform, "Carries " + S.TruckLoad(t) + " · speed " + Mathf.RoundToInt(d.Speed * Motor.SpeedMultiplier(t.level)), 28, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
+            ConditionRow(card.transform, t.wear, () => S.RepairTruck(uid), 200, 26);
 
             if (S.TruckBack(t))
                 Big(card.transform, "Collect " + Fmt.Num(t.job.rewardCoins), UIKit.Gold, () => CollectTruck(uid), -1, 80, true, 36);

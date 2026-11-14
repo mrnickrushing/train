@@ -275,6 +275,7 @@ namespace Ironhorse.Core
                 // Level-up perk: the tender is refilled.
                 if (State.fuel < MaxFuel) { State.fuel = MaxFuel; State.fuelAt = Now; }
                 State.nuggets += Balance.LevelUpNuggets(State.level);
+                AddWrenches(Balance.LevelUpWrenches);
                 EarnCoins(Balance.LevelUpCoins(State.level));
                 LeveledUp?.Invoke(State.level);
             }
