@@ -457,6 +457,119 @@ workflows:
         submit_to_testflight: false
         submit_to_app_store: false
 
+  # Reel Empire (github.com/mrnickrushing/reelempire) runs here too, for the same reason: the App Store Connect key.
+  reelempire-setup:
+    name: Reel Empire - App Store Connect setup (capabilities, purchases, Game Center, listing)
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_credentials
+    scripts:
+      - name: Reel Empire Tools/appstore scripts (nothing is submitted for review)
+        script: |
+          set -uo pipefail
+          python3 -m venv /tmp/asc && /tmp/asc/bin/pip install -q pyjwt cryptography
+          # REELEMPIRE_REF (a reelempire branch, default main) and REELEMPIRE_STEPS can be set when starting the build.
+          REF="${REELEMPIRE_REF:-main}"
+          STEPS="${REELEMPIRE_STEPS:-capabilities iap gamecenter listing}"
+          export LISTING_BASE="https://raw.githubusercontent.com/mrnickrushing/reelempire/$REF/"
+          export IAP_SCREENSHOT="${LISTING_BASE}docs/appstore/iap_review.png"
+          mkdir -p /tmp/cw
+          for f in iap.py capabilities.py gamecenter.py listing.py; do
+            curl -fsSL -o /tmp/cw/$f "${LISTING_BASE}Tools/appstore/$f" || { echo "could not download $f"; exit 1; }
+          done
+          failed=""
+          for s in $STEPS; do
+            echo "######## $s"
+            /tmp/asc/bin/python /tmp/cw/$s.py || failed="$failed $s"
+          done
+          if [ -n "$failed" ]; then echo "SETUP FAILED:$failed"; exit 1; fi
+          echo "SETUP done: $STEPS"
+
+  reelempire-testflight:
+    name: Reel Empire - iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_credentials
+      vars:
+        BUNDLE_ID: com.rushingtech.reel
+        APPLE_TEAM_ID: PH4AKDQ4Q7
+        XCODE_PROJECT: ios/Unity-iPhone.xcodeproj
+        XCODE_SCHEME: Unity-iPhone
+      xcode: latest
+    scripts:
+      - name: Download the exported Xcode project
+        script: |
+          set -euo pipefail
+          curl -fL --retry 3 -o /tmp/ios-xcode.zip "https://github.com/mrnickrushing/reelempire/releases/download/ios-latest/ios-xcode.zip"
+          rm -rf ios && unzip -q /tmp/ios-xcode.zip -d .
+      - name: Build number after the latest one on App Store Connect
+        script: |
+          set -euo pipefail
+          APP_ID=$(app-store-connect apps list --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier --json | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_ID" --all-versions 2>/dev/null || echo 0)
+          echo "Apple ID $APP_ID, latest TestFlight build $LATEST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $((LATEST + 1))" ios/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/Info.plist 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/Info.plist
+      - name: Archive and export a signed .ipa
+        script: |
+          set -euo pipefail
+          KEY="/tmp/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
+          printf "%b" "$APP_STORE_CONNECT_PRIVATE_KEY" > "$KEY"
+          chmod 600 "$KEY"
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY"
+                -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID")
+          xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Release \
+            -destination "generic/platform=iOS" -archivePath /tmp/ReelEmpire.xcarchive \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            "${AUTH[@]}" archive > /tmp/xcodebuild_archive.log 2>&1 \
+            || { grep -E "error:|error -|Error Domain|No profiles|No signing|failed" /tmp/xcodebuild_archive.log | sort -u | tail -40; exit 1; }
+          # The archive is unsigned, so it carries no entitlements and the export would drop them (Sign in
+          # with Apple, iCloud key-value storage, Game Center). An ad-hoc signature stamps them on; export re-signs for the
+          # App Store and keeps what the App Store profile allows. (reelempire Editor/IosCapabilities.cs writes the
+          # file with the team and bundle spelled out: an ad-hoc signature doesn't expand $(TeamIdentifierPrefix).)
+          if [ -f ios/ReelEmpire.entitlements ]; then
+            APP=$(ls -d /tmp/ReelEmpire.xcarchive/Products/Applications/*.app)
+            for f in "$APP"/Frameworks/*.framework "$APP"/Frameworks/*.dylib; do [ -e "$f" ] && codesign --force --sign - "$f"; done
+            plutil -convert xml1 -o /tmp/app.entitlements ios/ReelEmpire.entitlements
+            codesign --force --sign - --entitlements /tmp/app.entitlements "$APP"
+          fi
+          cat > /tmp/export_options.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>method</key><string>app-store-connect</string>
+              <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+              <key>signingStyle</key><string>automatic</string>
+              <key>destination</key><string>export</string>
+            </dict>
+          </plist>
+          PLIST
+          mkdir -p build/ios/ipa
+          xcodebuild -exportArchive -archivePath /tmp/ReelEmpire.xcarchive -exportPath build/ios/ipa \
+            -exportOptionsPlist /tmp/export_options.plist "${AUTH[@]}" > /tmp/xcodebuild_export.log 2>&1 \
+            || { grep -E "error|Error" /tmp/xcodebuild_export.log | tail -30; exit 1; }
+          rm -rf /tmp/ipa && unzip -q -o build/ios/ipa/*.ipa -d /tmp/ipa
+          echo "Signed entitlements:"; codesign -d --entitlements - --xml /tmp/ipa/Payload/*.app 2>/dev/null | plutil -p - || true
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/ReelEmpire.xcarchive/dSYMs/*.dSYM
+      - /tmp/xcodebuild_*.log
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        # Upload only: internal testers get the build. Nothing is sent to beta review or App Review.
+        submit_to_testflight: false
+        submit_to_app_store: false
+
   lasttide-expire:
     name: Last Tide - expire TestFlight builds
     max_build_duration: 10
