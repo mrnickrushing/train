@@ -167,15 +167,11 @@ namespace Ironhorse.Core
         // ---------------------------------------------------------------- Ads
 
         // ---- wear (GameSession.Wear)
-        /// <summary>Seconds on the road from fresh to worn out, for a level 1 engine or truck.</summary>
-        public const double WearSeconds = 6 * 3600;
+        /// <summary>Trips a fresh engine or truck makes before it is worn out: six, and one more for each level past the first.</summary>
+        public static int WearTrips(int level) { return 6 + Math.Max(0, level - 1); }
         /// <summary>Seconds for time alone to mend a worn-out engine or truck completely.</summary>
         public const double WearMendSeconds = 12 * 3600;
-        public const float WornAt = 0.5f;
-        public const double WornSlow = 1.3;
         public const int WearFromLevel = 4, WrenchNuggets = 10, WrenchesHeld = 30, LevelUpWrenches = 1;
-        /// <summary>A higher level is built to last: 15% longer for each level past the first.</summary>
-        public static double Durability(int level) { return 1 + 0.15 * (Math.Max(1, level) - 1); }
 
         public static int AdDailyLimit(AdReward r)
         {

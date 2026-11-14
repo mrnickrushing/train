@@ -49,7 +49,7 @@ namespace Ironhorse.Core
         {
             var d = Motor.Truck(t.defId);
             double speed = d.Speed * Motor.SpeedMultiplier(t.level);
-            return Math.Max(10, c.Seconds * Balance.ReferenceSpeed / speed * WearSlow(WearOf(t)));
+            return Math.Max(10, c.Seconds * Balance.ReferenceSpeed / speed);
         }
 
         /// <summary>Why this truck can't take this order right now, or success.</summary>
@@ -58,6 +58,7 @@ namespace Ironhorse.Core
             if (t == null || job == null) return ActionResult.Fail("Unknown truck or order");
             if (t.OnJob) return ActionResult.Fail(TruckBack(t) ? "Collect its pay first" : "Out on a delivery");
             if (!HasGarage) return ActionResult.Fail("Build a Motor Garage first");
+            if (WornOut(WearOf(t), t.level, TruckName(t)) != null) return ActionResult.Fail(WornOut(WearOf(t), t.level, TruckName(t)));
             if (TruckLoad(t) < job.amount) return ActionResult.Fail("Carries " + TruckLoad(t) + ", order is " + job.amount);
             int have = Amount(job.resourceId);
             if (have < job.amount) return ActionResult.Fail("Need " + (job.amount - have) + " more " + GameDatabase.Resource(job.resourceId).Name);
@@ -76,7 +77,7 @@ namespace Ironhorse.Core
             t.job = job;
             t.departedAt = Now;
             t.returnsAt = Now + TruckTripSeconds(t, c);
-            WearTrip(ref t.wear, ref t.wearAt, t.returnsAt - Now, t.level);
+            WearTrip(ref t.wear, ref t.wearAt, t.level);
             _truckSeen.Remove(t.uid);
             // An empty slot fills again soon.
             State.nextDeliveryAt = Math.Min(State.nextDeliveryAt, Now + 15);

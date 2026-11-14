@@ -93,6 +93,7 @@ namespace Ironhorse.Core
 
             if (!IsDestinationUnlocked(d)) p.Reason = "Unlocks at level " + d.UnlockLevel;
             else if (!t.IsIdle) p.Reason = "Train is busy";
+            else if (WornOut(WearOf(t), t.level, Name(t)) != null) p.Reason = WornOut(WearOf(t), t.level, Name(t));
             else if (capacity == 0) p.Reason = "Needs a " + CargoWagonName(res.Cargo);
             else if (Fuel < p.Fuel) p.Reason = "Needs " + p.Fuel + " fuel (have " + Fuel + ")";
             else p.Possible = true;
@@ -117,7 +118,7 @@ namespace Ironhorse.Core
         {
             var loco = GameDatabase.Locomotive(t.defId);
             double speed = loco.Speed * Balance.LocoSpeedMultiplier(t.level) * (1 + CivicBonus(CivicEffect.TrainSpeed) + EngineerValue(t, EngineerPerk.Speed));
-            return Math.Max(10, d.BaseSeconds * Balance.ReferenceSpeed / speed * WearSlow(WearOf(t)));
+            return Math.Max(10, d.BaseSeconds * Balance.ReferenceSpeed / speed);
         }
 
         public ActionResult Dispatch(int trainUid, string destinationId)
@@ -134,7 +135,7 @@ namespace Ironhorse.Core
             t.destinationId = d.Id;
             t.departedAt = Now;
             t.arrivesAt = Now + p.Seconds;
-            WearTrip(ref t.wear, ref t.wearAt, p.Seconds, t.level);
+            WearTrip(ref t.wear, ref t.wearAt, t.level);
             t.cargoId = d.ResourceId;
             t.cargoAmount = p.Amount;
             t.xpCargo = p.BaseAmount;

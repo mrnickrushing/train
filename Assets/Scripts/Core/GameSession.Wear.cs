@@ -3,9 +3,10 @@ using System;
 namespace Ironhorse.Core
 {
     /// <summary>
-    /// Wear: engines, trucks and haulers (wagons, boats, work trains) wear with every trip. Past half worn they run slower (up to three tenths longer on
-    /// the road when worn out) but never refuse to go. Time mends a little by itself; a wrench puts one right at once. Wrenches come with each new level,
-    /// for nuggets, or one for a watched advert; a higher-level engine or truck is built to last longer.
+    /// Wear: engines, trucks and haulers (wagons, boats, work trains) wear with every trip. A fresh one makes six
+    /// trips (one more for each level past the first); worn out, it stays home until it is repaired with a wrench or
+    /// has rested: time mends it by itself, all the way in twelve hours. Wrenches come with each new level, for
+    /// nuggets, or one for a watched advert.
     /// </summary>
     public sealed partial class GameSession
     {
@@ -13,17 +14,8 @@ namespace Ironhorse.Core
         public bool WearOn { get { return State.level >= Balance.WearFromLevel; } }
         public int Wrenches { get { return State.wrenches; } }
 
-        public static bool Worn(float wear) { return wear > Balance.WornAt; }
-
-        /// <summary>How much longer a trip takes at this wear: 1 up to half worn, then up to <see cref="Balance.WornSlow"/>.</summary>
-        public static double WearSlow(float wear)
-        {
-            if (wear <= Balance.WornAt) return 1;
-            return 1 + (Balance.WornSlow - 1) * Math.Min(1, (wear - Balance.WornAt) / (1 - Balance.WornAt));
-        }
-
-        /// <summary>Condition as the player reads it: 100 fresh, 0 worn out.</summary>
-        public static int Condition(float wear) { return (int)Math.Round((1 - Math.Max(0, Math.Min(1, wear))) * 100); }
+        /// <summary>Trips a fresh engine or truck of this level makes before it is worn out.</summary>
+        public static int TripsWhenFresh(int level) { return Balance.WearTrips(level); }
 
         /// <summary>Wear as it stands now: time mends a little by itself, all the way in <see cref="Balance.WearMendSeconds"/>.</summary>
         float Eased(float wear, double wearAt)
@@ -36,11 +28,42 @@ namespace Ironhorse.Core
         public float WearOf(TruckState t) { return Eased(t.wear, t.wearAt); }
         public float WearOf(HaulerState h) { return Eased(h.wear, h.wearAt); }
 
-        /// <summary>Folds the mending done by time into the stored wear, then adds a trip's worth.</summary>
-        void WearTrip(ref float wear, ref double wearAt, double tripSeconds, int level)
+        /// <summary>Trips left at this wear before it has to be repaired or rested.</summary>
+        public int TripsLeft(float wear, int level)
+        {
+            int trips = TripsWhenFresh(level);
+            return WearOn ? Math.Max(0, (int)Math.Floor((1 - wear) * trips + 1e-3)) : trips;
+        }
+
+        public int TripsLeft(TrainState t) { return TripsLeft(WearOf(t), t.level); }
+        public int TripsLeft(TruckState t) { return TripsLeft(WearOf(t), t.level); }
+        public int TripsLeft(HaulerState h) { return TripsLeft(WearOf(h), h.level); }
+
+        /// <summary>Seconds of rest until it can make one more trip (0: it can go now).</summary>
+        public double RestNeeded(float wear, int level)
+        {
+            if (TripsLeft(wear, level) > 0) return 0;
+            return Math.Max(1, (wear - (1 - 1.0 / TripsWhenFresh(level))) * Balance.WearMendSeconds);
+        }
+
+        /// <summary>Why it can't go out (worn out), or null.</summary>
+        string WornOut(float wear, int level, string name)
+        {
+            if (TripsLeft(wear, level) > 0) return null;
+            return name + " is worn out: repair it with a wrench, or rest it " + RestText(RestNeeded(wear, level));
+        }
+
+        static string RestText(double seconds)
+        {
+            int m = (int)Math.Ceiling(seconds / 60);
+            return m >= 60 ? (m / 60) + "h " + (m % 60).ToString("00") + "m" : m + "m";
+        }
+
+        /// <summary>Folds the mending done by time into the stored wear, then adds one trip's worth.</summary>
+        void WearTrip(ref float wear, ref double wearAt, int level)
         {
             wear = Eased(wear, wearAt); wearAt = Now;
-            if (WearOn) wear = (float)Math.Min(1, wear + tripSeconds / (Balance.WearSeconds * Balance.Durability(level)));
+            if (WearOn) wear = (float)Math.Min(1, wear + 1.0 / TripsWhenFresh(level));
         }
 
         ActionResult Mend(ref float wear, ref double wearAt, string name)

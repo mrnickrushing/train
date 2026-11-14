@@ -162,7 +162,7 @@ namespace Ironhorse.Game
             Pill(stats.transform, null, Mathf.RoundToInt(d.Speed * Balance.LocoSpeedMultiplier(t.level)) + " mph", 30);
             Pill(stats.transform, null, "Level " + t.level, 30);
             int wearUid = t.uid;
-            ConditionRow(card.transform, S.WearOf(t), () => S.RepairTrain(wearUid));
+            ConditionRow(card.transform, S.WearOf(t), t.level, () => S.RepairTrain(wearUid));
 
             var wagons = S.WagonsOf(t);
             T(card.transform, "Wagons  " + wagons.Count + " / " + d.Power, 32, BLabel, TextAnchor.MiddleLeft, false, UIKit.Heading);
