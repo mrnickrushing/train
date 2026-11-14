@@ -244,6 +244,26 @@ workflows:
           done
           /tmp/asc/bin/python /tmp/lt/listing.py
 
+  asc-release:
+    name: App Store - prepare an update (and submit it when asked)
+    max_build_duration: 20
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_credentials
+    scripts:
+      - name: Version, What's New, build, review (castaway Tools/appstore/release.py)
+        script: |
+          set -euo pipefail
+          # Set when starting the build: RELEASE_BUNDLE_ID, RELEASE_VERSION, RELEASE_NOTES, and RELEASE_SUBMIT=1 to
+          # send the version to App Review (without it nothing is submitted).
+          python3 -m venv /tmp/asc && /tmp/asc/bin/pip install -q pyjwt cryptography
+          mkdir -p /tmp/lt
+          for f in iap.py release.py; do
+            curl -fsSL -o /tmp/lt/$f "https://raw.githubusercontent.com/mrnickrushing/castaway/main/Tools/appstore/$f"
+          done
+          /tmp/asc/bin/python /tmp/lt/release.py
+
   lasttide-capabilities:
     name: Last Tide - App ID capabilities
     max_build_duration: 10
