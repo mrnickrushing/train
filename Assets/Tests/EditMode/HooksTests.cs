@@ -282,6 +282,7 @@ namespace Ironhorse.Tests
             for (int i = 0; i < 12; i++)
             {
                 _s.State.fuel = 999;
+                t.wear = 0; // twelve trips in a row: this test is about bandits, not wear
                 Assert.IsTrue(_s.PreviewDispatch(t, GameDatabase.Destination("pinecrest")).Bandits);
                 Assert.IsTrue(_s.Dispatch(t.uid, "pinecrest").Ok);
                 if (t.robbed > 0) robbed++;

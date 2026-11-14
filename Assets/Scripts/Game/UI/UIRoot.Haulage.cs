@@ -797,7 +797,7 @@ namespace Ironhorse.Game
             Pill(stats.transform, tr => UIKit.Icon(tr, "crate", 34), S.HaulCapacity(h) + " per trip", 26, null, BTile);
             Pill(stats.transform, null, d.Speed.ToString("0.0") + " m/s", 26, null, BTile);
             int uid = h.uid;
-            ConditionRow(card.transform, S.WearOf(h), () => S.RepairHauler(uid), 170, 24);
+            ConditionRow(card.transform, S.WearOf(h), h.durability, () => S.RepairHauler(uid), () => S.ToughenHauler(uid), 170, 24);
             Flex(card.transform);
             if (h.level < Haulage.MaxLevel)
             {
