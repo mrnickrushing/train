@@ -148,3 +148,12 @@ the Codemagic variable group `ios_credentials` and uploads to TestFlight. See RE
 - `MeshBuilder` picks a surface detail layer from the palette color (`Surfaces.Classify`); set
   `mb.Surf` to override it.
 - Drop-in 3D models: `docs/ART_PIPELINE.md`. Fonts are Barlow (OFL) in `Assets/Resources/Fonts`.
+
+## Rewarded adverts
+
+`Game/Monetization/AdService.cs` (`IAds`, `Ads.Watch`) with `AdMobAds.cs` on the phone (Google AdMob through
+`com.google.ads.mobile`, added to the Xcode project as a Swift package by the dependency manager) and the simulated
+advert in the Editor. Rewarded only, never shown unasked; requests are non-personalised (`npa`). The rules and daily
+limits are `GameSession.RewardAd` / `Balance.AdDailyLimit`. The App ID is in
+`Assets/GoogleMobileAds/Resources/GoogleMobileAdsSettings.asset`; `AdMobAds.RewardedUnit` is Google's test unit until
+the real one is put in.
