@@ -93,7 +93,7 @@ namespace Ironhorse.Core
 
             if (!IsDestinationUnlocked(d)) p.Reason = "Unlocks at level " + d.UnlockLevel;
             else if (!t.IsIdle) p.Reason = "Train is busy";
-            else if (WornOut(WearOf(t), t.level, Name(t)) != null) p.Reason = WornOut(WearOf(t), t.level, Name(t));
+            else if (WornOut(WearOf(t), t.durability, Name(t)) != null) p.Reason = WornOut(WearOf(t), t.durability, Name(t));
             else if (capacity == 0) p.Reason = "Needs a " + CargoWagonName(res.Cargo);
             else if (Fuel < p.Fuel) p.Reason = "Needs " + p.Fuel + " fuel (have " + Fuel + ")";
             else p.Possible = true;
@@ -135,7 +135,7 @@ namespace Ironhorse.Core
             t.destinationId = d.Id;
             t.departedAt = Now;
             t.arrivesAt = Now + p.Seconds;
-            WearTrip(ref t.wear, ref t.wearAt, t.level);
+            WearTrip(ref t.wear, ref t.wearAt, t.durability);
             t.cargoId = d.ResourceId;
             t.cargoAmount = p.Amount;
             t.xpCargo = p.BaseAmount;

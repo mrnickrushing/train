@@ -160,11 +160,11 @@ builds `AdMobAds.LiveUnit` (TestFlight builds are release builds: don't tap real
 
 ## Wear and wrenches
 
-`Core/GameSession.Wear.cs`, `Game/UI/UIRoot.Wear.cs`. From player level 4 (`Balance.WearFromLevel`) every trip wears
-the engine, truck or hauler (wagon, boat, work train) that made it: a fresh one makes six trips, one more for each
-level past the first (`Balance.WearTrips`). Worn out, it can't be sent (`WornOut` in `PreviewDispatch`, `CanSendTruck`,
-`CantHaul`) until it is repaired with a wrench or has rested: time mends by itself, fully in 12 hours
-(`Balance.WearMendSeconds`, read through `WearOf`), so one trip comes back every two hours at level 1. `ConditionRow`
-on the engine, truck and hauler cards shows "Trips left n / m", or "Worn out, rested in ..." and the button that fits.
-Wrenches (`State.wrenches`, three to start): one per level gained, 10 nuggets, or one per watched advert
-(`AdReward.Wrench`, five a day), offered on the card when the toolbox is empty.
+`Core/GameSession.Wear.cs`, `Game/UI/UIRoot.Wear.cs`. Every engine, truck and hauler (wagon, boat, work train) has a
+durability rating, 100 when fresh (`Rating`; stored as `wear` 0..1). From player level 4 (`Balance.WearFromLevel`) a
+trip takes 25 of it, and less with each durability upgrade bought for coins on the card (`durability` 0..6: 25, 21, 18,
+15, 13, 11, 9; `Balance.WearTripCost`, `DurabilityCoins`). Without a trip's worth left it can't be sent (`WornOut` in
+`PreviewDispatch`, `CanSendTruck`, `CantHaul`) until a wrench puts it back to 100 or it has rested: time mends by
+itself, 0 to 100 in 12 hours (`Balance.WearMendSeconds`, read through `WearOf`). `ConditionRow` shows "Durability
+58 / 100", what a trip takes, and the button that fits. Wrenches (`State.wrenches`, three to start): one per level
+gained, 10 nuggets, or one per watched advert (`AdReward.Wrench`, five a day), offered when the toolbox is empty.

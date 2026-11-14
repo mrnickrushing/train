@@ -24,46 +24,49 @@ namespace Ironhorse.Tests
             Assert.IsTrue(_s.Dispatch(Starter.uid, "pinecrest").Ok);
             Assert.AreEqual(0, Starter.wear);
             Starter.wear = 1;
-            Assert.AreEqual(GameSession.TripsWhenFresh(Starter.level), _s.TripsLeft(Starter), "wear means nothing before it begins");
+            Assert.AreEqual(4, _s.TripsLeft(Starter), "wear means nothing before it begins");
         }
 
         [Test]
-        public void SixTripsThenWornOut()
+        public void ATripTakesTwentyFiveOfTheHundred()
         {
             _s.State.level = Balance.WearFromLevel;
-            Assert.AreEqual(6, GameSession.TripsWhenFresh(1));
+            Assert.AreEqual(25, GameSession.TripCost(0));
             var d = GameDatabase.Destination("pinecrest");
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 4; i++)
             {
-                Assert.AreEqual(6 - i, _s.TripsLeft(Starter));
+                Assert.AreEqual(100 - 25 * i, GameSession.Rating(_s.WearOf(Starter)));
                 _s.State.fuel = _s.MaxFuel;
                 Assert.IsTrue(_s.Dispatch(Starter.uid, "pinecrest").Ok, "trip " + (i + 1));
                 Starter.arrivesAt = _clock.Now;             // home at once: no time for it to mend
                 Assert.IsTrue(_s.Unload(Starter.uid).Ok);
             }
+            Assert.AreEqual(0, GameSession.Rating(_s.WearOf(Starter)));
             Assert.AreEqual(0, _s.TripsLeft(Starter));
             _s.State.fuel = _s.MaxFuel;
             var p = _s.PreviewDispatch(Starter, d);
             Assert.IsFalse(p.Possible);
-            StringAssert.Contains("worn out", p.Reason);
+            StringAssert.Contains("worn down", p.Reason);
             Assert.IsFalse(_s.Dispatch(Starter.uid, "pinecrest").Ok);
         }
 
         [Test]
-        public void AWornOutEngineGoesAgainAfterAWrenchOrARest()
+        public void WornDownItGoesAgainAfterAWrenchOrARest()
         {
             _s.State.level = Balance.WearFromLevel;
             Starter.wear = 1; Starter.wearAt = _clock.Now;
             Assert.AreEqual(0, _s.TripsLeft(Starter));
-            Assert.AreEqual(Balance.WearMendSeconds / 6, _s.RestNeeded(_s.WearOf(Starter), Starter.level), 1, "one trip's worth of rest");
-            _clock.Advance(Balance.WearMendSeconds / 6 + 5);
+            Assert.AreEqual(Balance.WearMendSeconds / 4, _s.RestNeeded(_s.WearOf(Starter), Starter.durability), 1, "25 points of rest: a quarter of twelve hours");
+            _clock.Advance(Balance.WearMendSeconds / 4 - 600);
+            Assert.AreEqual(0, _s.TripsLeft(Starter), "not quite enough yet");
+            _clock.Advance(700);
             Assert.AreEqual(1, _s.TripsLeft(Starter), "rested enough for one trip");
             Assert.IsTrue(_s.Dispatch(Starter.uid, "pinecrest").Ok);
 
             Starter.wear = 1; Starter.wearAt = _clock.Now;
             int had = _s.Wrenches;
             Assert.IsTrue(_s.RepairTrain(Starter.uid).Ok);
-            Assert.AreEqual(6, _s.TripsLeft(Starter));
+            Assert.AreEqual(100, GameSession.Rating(_s.WearOf(Starter)));
             Assert.AreEqual(had - 1, _s.Wrenches);
             Assert.IsFalse(_s.RepairTrain(Starter.uid).Ok, "nothing to mend");
             Starter.wear = 0.8f; _s.State.wrenches = 0;
@@ -76,9 +79,9 @@ namespace Ironhorse.Tests
             _s.State.level = Balance.WearFromLevel;
             Starter.wear = 1; Starter.wearAt = _clock.Now;
             _clock.Advance(Balance.WearMendSeconds / 2);
-            Assert.AreEqual(0.5f, _s.WearOf(Starter), 0.01f);
+            Assert.AreEqual(50, GameSession.Rating(_s.WearOf(Starter)));
             _clock.Advance(Balance.WearMendSeconds);
-            Assert.AreEqual(0, _s.WearOf(Starter), 1e-6, "never below fresh");
+            Assert.AreEqual(100, GameSession.Rating(_s.WearOf(Starter)), "never above fresh");
             Assert.AreEqual(12 * 3600, Balance.WearMendSeconds);
         }
 
@@ -93,10 +96,20 @@ namespace Ironhorse.Tests
         }
 
         [Test]
-        public void AHigherLevelMakesMoreTrips()
+        public void ADurabilityUpgradeMakesATripTakeLess()
         {
-            Assert.AreEqual(7, GameSession.TripsWhenFresh(2));
-            Assert.Greater(GameSession.TripsWhenFresh(5), GameSession.TripsWhenFresh(2));
+            _s.State.level = Balance.WearFromLevel;
+            _s.State.coins = 0;
+            Assert.IsFalse(_s.ToughenTrain(Starter.uid).Ok, "it costs coins");
+            _s.State.coins = _s.DurabilityCost(0);
+            Assert.IsTrue(_s.ToughenTrain(Starter.uid).Ok);
+            Assert.AreEqual(0, _s.State.coins);
+            Assert.AreEqual(21, GameSession.TripCost(Starter.durability));
+            Assert.IsTrue(_s.Dispatch(Starter.uid, "pinecrest").Ok);
+            Assert.AreEqual(79, GameSession.Rating(Starter.wear));
+            for (int d = 1; d <= Balance.MaxDurability; d++) Assert.Less(GameSession.TripCost(d), GameSession.TripCost(d - 1), "each upgrade takes less");
+            Starter.durability = Balance.MaxDurability; _s.State.coins = 1000000;
+            Assert.IsFalse(_s.ToughenTrain(Starter.uid).Ok, "there is a top");
         }
 
         [Test]

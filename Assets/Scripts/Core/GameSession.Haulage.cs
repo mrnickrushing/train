@@ -62,7 +62,7 @@ namespace Ironhorse.Core
             var pr = Progress(projectId);
             if (pr.done) return def.Name + " is finished";
             if (!h.IsIdle) return hd.Name + " is out on a delivery";
-            if (WornOut(WearOf(h), h.level, hd.Name) != null) return WornOut(WearOf(h), h.level, hd.Name);
+            if (WornOut(WearOf(h), h.durability, hd.Name) != null) return WornOut(WearOf(h), h.durability, hd.Name);
             var route = Haulage.Route(projectId);
             seconds = Haulage.TripSeconds(hd, route);
             if (seconds <= 0) return hd.OnWater ? def.Name + " isn't on the water: send a wagon" : hd.OnRail ? "No rails reach " + def.Name + ": send a wagon" : "No road reaches " + def.Name;
@@ -91,7 +91,7 @@ namespace Ironhorse.Core
             h.stage = pr.stage;
             h.departedAt = Now;
             h.arrivesAt = Now + seconds;
-            WearTrip(ref h.wear, ref h.wearAt, h.level);
+            WearTrip(ref h.wear, ref h.wearAt, h.durability);
             HaulerSent?.Invoke(h);
             RaiseChanged();
             return ActionResult.Success(Haulage.Hauler(h.defId).Name + " is hauling " + load + " " + GameDatabase.Resource(stage.ResourceId).Name);

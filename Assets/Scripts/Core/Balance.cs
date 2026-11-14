@@ -167,8 +167,12 @@ namespace Ironhorse.Core
         // ---------------------------------------------------------------- Ads
 
         // ---- wear (GameSession.Wear)
-        /// <summary>Trips a fresh engine or truck makes before it is worn out: six, and one more for each level past the first.</summary>
-        public static int WearTrips(int level) { return 6 + Math.Max(0, level - 1); }
+        /// <summary>Durability (out of 100) one trip takes, by durability upgrades bought: 25 with none.</summary>
+        static readonly int[] TripCosts = { 25, 21, 18, 15, 13, 11, 9 };
+        public static int WearTripCost(int durability) { return TripCosts[Math.Max(0, Math.Min(MaxDurability, durability))]; }
+        public const int MaxDurability = 6;
+        /// <summary>Coins for the next durability upgrade.</summary>
+        public static int DurabilityCoins(int durability) { return 1500 * (durability + 1); }
         /// <summary>Seconds for time alone to mend a worn-out engine or truck completely.</summary>
         public const double WearMendSeconds = 12 * 3600;
         public const int WearFromLevel = 4, WrenchNuggets = 10, WrenchesHeld = 30, LevelUpWrenches = 1;
