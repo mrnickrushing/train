@@ -61,6 +61,16 @@ namespace Ironhorse.Tests
         }
 
         [Test]
+        public void HaulersWearAndAreMendedToo()
+        {
+            var h = new HaulerState { uid = 9001, defId = Haulage.Haulers[0].Id, wear = 0.9f };
+            _s.State.haulers.Add(h);
+            Assert.IsTrue(_s.RepairHauler(h.uid).Ok);
+            Assert.AreEqual(0, h.wear);
+            Assert.IsFalse(_s.RepairHauler(h.uid).Ok);
+        }
+
+        [Test]
         public void AHigherLevelLastsLonger()
         {
             Assert.AreEqual(1, Balance.Durability(1), 1e-9);

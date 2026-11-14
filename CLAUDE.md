@@ -161,8 +161,8 @@ the real one is put in.
 ## Wear and wrenches
 
 `Core/GameSession.Wear.cs`, `Game/UI/UIRoot.Wear.cs`. From player level 4 (`Balance.WearFromLevel`) every trip wears
-the engine or truck that made it (`wear` 0..1; six hours on the road from fresh to worn out at level 1, 15% longer per
+the engine, truck or hauler (wagon, boat, work train) that made it (`wear` 0..1; six hours on the road from fresh to worn out at level 1, 15% longer per
 level: `Balance.Durability`). Past half worn, trips take longer, up to 30% (`WearSlow`); nothing ever refuses to go.
-`ConditionRow` on the engine's and the truck's card shows the bar and Repair (one wrench). Wrenches
+`ConditionRow` on the engine, truck and hauler cards shows the bar and Repair (one wrench). Wrenches
 (`State.wrenches`, three to start): one per level gained, 2 nuggets, or one per watched advert (`AdReward.Wrench`,
 five a day), offered on the card when the toolbox is empty.

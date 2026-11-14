@@ -290,6 +290,8 @@ namespace Ironhorse.Core
         public int uid;
         public string defId;
         public int level = 1;
+        /// <summary>0 fresh .. 1 worn out (GameSession.Wear).</summary>
+        public float wear;
         /// <summary>Project the current load is bound for (empty when the vehicle is in the yard).</summary>
         public string projectId = "";
         public string resourceId = "";
