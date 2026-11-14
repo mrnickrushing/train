@@ -17,6 +17,8 @@ namespace Ironhorse.Core
         public List<string> chaptersClaimed = new List<string>();
         public int coins;
         public int nuggets;
+        /// <summary>Wrenches in the toolbox: one mends an engine or a truck (GameSession.Wear).</summary>
+        public int wrenches = 3;
         public int xp;
         public int level = 1;
         public int warehouseLevel = 1;
@@ -182,6 +184,8 @@ namespace Ironhorse.Core
         public int uid;
         public string defId;
         public int level = 1;
+        /// <summary>0 fresh .. 1 worn out (GameSession.Wear).</summary>
+        public float wear;
         public string nickname;
         /// <summary>Empty when idle at the station.</summary>
         public string destinationId = "";
@@ -215,6 +219,8 @@ namespace Ironhorse.Core
         public int uid;
         public string defId;
         public int level = 1;
+        /// <summary>0 fresh .. 1 worn out (GameSession.Wear).</summary>
+        public float wear;
         /// <summary>Garage bay it parks in (0..bays-1).</summary>
         public int bay;
         /// <summary>The delivery it's out on; uid 0 when it's in the garage (JsonUtility never leaves it null).</summary>
@@ -345,6 +351,7 @@ namespace Ironhorse.Core
         public int eventsDone;
         public int rentCollections;
         public int truckDeliveries;
+        public int repairs;
         public List<ResourceAmount> collected = new List<ResourceAmount>();
         public List<ResourceAmount> produced = new List<ResourceAmount>();
     }

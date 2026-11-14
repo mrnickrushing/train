@@ -117,7 +117,7 @@ namespace Ironhorse.Core
         {
             var loco = GameDatabase.Locomotive(t.defId);
             double speed = loco.Speed * Balance.LocoSpeedMultiplier(t.level) * (1 + CivicBonus(CivicEffect.TrainSpeed) + EngineerValue(t, EngineerPerk.Speed));
-            return Math.Max(10, d.BaseSeconds * Balance.ReferenceSpeed / speed);
+            return Math.Max(10, d.BaseSeconds * Balance.ReferenceSpeed / speed * WearSlow(t.wear));
         }
 
         public ActionResult Dispatch(int trainUid, string destinationId)
@@ -134,6 +134,7 @@ namespace Ironhorse.Core
             t.destinationId = d.Id;
             t.departedAt = Now;
             t.arrivesAt = Now + p.Seconds;
+            t.wear = Worn(t.wear, p.Seconds, t.level);
             t.cargoId = d.ResourceId;
             t.cargoAmount = p.Amount;
             t.xpCargo = p.BaseAmount;

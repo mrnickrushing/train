@@ -333,6 +333,11 @@ namespace Ironhorse.Core
                     State.nuggets += Balance.AdNuggets;
                     msg = "+" + Balance.AdNuggets + " nuggets";
                     break;
+                case AdReward.Wrench:
+                    if (State.wrenches >= Balance.WrenchesHeld) return ActionResult.Fail("The toolbox is full");
+                    AddWrenches(1);
+                    msg = "+1 wrench";
+                    break;
                 default:
                     var t = Train(trainUid);
                     if (t == null || !IsEnRoute(t)) return ActionResult.Fail("That train isn't on a trip");

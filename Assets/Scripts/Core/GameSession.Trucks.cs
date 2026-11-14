@@ -49,7 +49,7 @@ namespace Ironhorse.Core
         {
             var d = Motor.Truck(t.defId);
             double speed = d.Speed * Motor.SpeedMultiplier(t.level);
-            return Math.Max(10, c.Seconds * Balance.ReferenceSpeed / speed);
+            return Math.Max(10, c.Seconds * Balance.ReferenceSpeed / speed * WearSlow(t.wear));
         }
 
         /// <summary>Why this truck can't take this order right now, or success.</summary>
@@ -76,6 +76,7 @@ namespace Ironhorse.Core
             t.job = job;
             t.departedAt = Now;
             t.returnsAt = Now + TruckTripSeconds(t, c);
+            t.wear = Worn(t.wear, t.returnsAt - Now, t.level);
             _truckSeen.Remove(t.uid);
             // An empty slot fills again soon.
             State.nextDeliveryAt = Math.Min(State.nextDeliveryAt, Now + 15);

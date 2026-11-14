@@ -60,7 +60,7 @@ namespace Ironhorse.Core
         public Grant Grant;           // nugget offers only; IAP offers grant via their product
     }
 
-    public enum AdReward { Fuel, Nuggets, RushTrain }
+    public enum AdReward { Fuel, Nuggets, RushTrain, Wrench }
 
     public sealed class PassTier
     {
