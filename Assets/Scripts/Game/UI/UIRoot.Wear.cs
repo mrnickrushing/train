@@ -16,23 +16,30 @@ namespace Ironhorse.Game
             if (!S.WearOn) return;
             int rating = GameSession.Rating(wear), cost = GameSession.TripCost(durability);
             bool out_ = S.TripsLeft(wear, durability) <= 0;
-            var row = HBox(p, 10, 0, TextAnchor.MiddleLeft, -1, 88);
-            var col = VBox(row.transform, 4, 0, TextAnchor.MiddleLeft, -1, -1, 1);
-            T(col.transform, "Durability " + rating + " / 100", 26, out_ ? BBad : BLabel, TextAnchor.MiddleLeft, true, UIKit.Heading);
-            var bar = Track(col.transform, 14, out_ ? BBad : rating < cost * 2 ? BGold : BGood);
+            // One compact block: the rating and what a trip takes, the bar, then the two buttons side by side.
+            var box = VBox(p, 5, 0, TextAnchor.UpperLeft, -1, 110);
+            var head = HBox(box.transform, 8, 0, TextAnchor.MiddleLeft, -1, 28);
+            UIKit.Size(T(head.transform, "Durability " + rating + " / 100", 26, out_ ? BBad : BLabel, TextAnchor.MiddleLeft, true, UIKit.Heading).gameObject, -1, -1, 1);
+            T(head.transform, out_ ? "rested in " + Fmt.Time(S.RestNeeded(wear, durability)) : "a trip takes " + cost, 22, out_ ? BBad : BLabel, TextAnchor.MiddleRight, true, UIKit.Heading);
+            var bar = Track(box.transform, 12, out_ ? BBad : rating < cost * 2 ? BGold : BGood);
             UIKit.SetBar(bar, Mathf.Max(0.04f, 1 - wear));
-            T(col.transform, out_ ? "Needs " + cost + ": rested in " + Fmt.Time(S.RestNeeded(wear, durability)) : "A trip takes " + cost, 22, out_ ? BBad : BLabel, TextAnchor.MiddleLeft, true, UIKit.Heading);
+            var row = HBox(box.transform, 8, 0, TextAnchor.MiddleLeft, -1, 58);
+            bool tough = durability < Balance.MaxDurability;
+            float w = tough ? -1 : buttonW;
+            Button fix;
             if (S.Wrenches > 0 || wear < 0.02f)
-                Big(row.transform, wear < 0.02f ? "Fine" : "Repair (" + S.Wrenches + ")", UIKit.Green, () => Result(repair(), Sfx.Build), buttonW, 66, wear >= 0.02f, px);
+                fix = Big(row.transform, wear < 0.02f ? "Fine" : "Repair (" + S.Wrenches + ")", UIKit.Green, () => Result(repair(), Sfx.Build), w, 58, wear >= 0.02f, px - 4);
             else if (S.AdsLeft(AdReward.Wrench) > 0 && Ads.Current.Available)
-                Big(row.transform, "Wrench: Ad", UIKit.Green, () => Ads.Watch(AdReward.Wrench, 0, r => Result(r, Sfx.Coin)), buttonW, 66, true, px);
+                fix = Big(row.transform, "Wrench: Ad", UIKit.Green, () => Ads.Watch(AdReward.Wrench, 0, r => Result(r, Sfx.Coin)), w, 58, true, px - 4);
             else
-                PriceBtn(row.transform, "Wrench", Premium, tr => UIKit.NuggetIcon(tr, 36), Balance.WrenchNuggets.ToString(), () => Result(S.BuyWrench(), Sfx.Coin), buttonW, 66, S.Nuggets >= Balance.WrenchNuggets, px);
-            // Durability is its own upgrade: one more trip before it is worn out, for coins.
-            if (durability < Balance.MaxDurability)
+                fix = PriceBtn(row.transform, "Wrench", Premium, tr => UIKit.NuggetIcon(tr, 32), Balance.WrenchNuggets.ToString(), () => Result(S.BuyWrench(), Sfx.Coin), w, 58, S.Nuggets >= Balance.WrenchNuggets, px - 4);
+            // Durability is its own upgrade: a trip takes less of the hundred, for coins.
+            if (tough)
             {
+                UIKit.Size(fix.gameObject, -1, 58, 1);
                 int coins = S.DurabilityCost(durability);
-                PriceBtn(p, "Tougher: " + GameSession.TripCost(durability + 1) + " a trip", UIKit.Green, tr => UIKit.CoinIcon(tr, 36), Fmt.Num(coins), () => Result(toughen(), Sfx.Build), -1, 62, S.Coins >= coins, px - 4);
+                var up = PriceBtn(row.transform, "Tougher", UIKit.Blue, tr => UIKit.CoinIcon(tr, 32), Fmt.Num(coins), () => Result(toughen(), Sfx.Build), -1, 58, S.Coins >= coins, px - 4);
+                UIKit.Size(up.gameObject, -1, 58, 1);
             }
         }
     }
