@@ -171,7 +171,7 @@ namespace Ironhorse.Core
         public const double WearSeconds = 6 * 3600;
         public const float WornAt = 0.5f;
         public const double WornSlow = 1.3;
-        public const int WearFromLevel = 4, WrenchNuggets = 2, WrenchesHeld = 30, LevelUpWrenches = 1;
+        public const int WearFromLevel = 4, WrenchNuggets = 10, WrenchesHeld = 30, LevelUpWrenches = 1;
         /// <summary>A higher level is built to last: 15% longer for each level past the first.</summary>
         public static double Durability(int level) { return 1 + 0.15 * (Math.Max(1, level) - 1); }
 
