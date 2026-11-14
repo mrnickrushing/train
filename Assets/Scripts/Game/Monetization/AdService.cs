@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Ironhorse.Game
 {
-    /// <summary>Rewarded-video abstraction. Plug an ad network (Unity LevelPlay, AdMob) in here.</summary>
+    /// <summary>Rewarded-video abstraction: Google AdMob on the phone (<c>AdMobAds</c>), a simulated advert in the Editor.</summary>
     public interface IAds
     {
         bool Available { get; }
@@ -15,7 +15,19 @@ namespace Ironhorse.Game
     public static class Ads
     {
         static IAds _ads;
-        public static IAds Current { get { return _ads ?? (_ads = new TestAds()); } }
+        public static IAds Current
+        {
+            get
+            {
+                if (_ads != null) return _ads;
+#if UNITY_IOS && !UNITY_EDITOR
+                _ads = new AdMobAds();
+#else
+                _ads = new TestAds();
+#endif
+                return _ads;
+            }
+        }
 
         /// <summary>Shows an ad and, if completed, grants the reward through the simulation.</summary>
         public static void Watch(AdReward reward, int trainUid = 0, Action<ActionResult> done = null)
@@ -33,7 +45,7 @@ namespace Ironhorse.Game
         }
     }
 
-    /// <summary>Simulated 3-second "ad" in the editor and development builds; unavailable in release.</summary>
+    /// <summary>Simulated 3-second "ad" in the editor and development builds.</summary>
     public sealed class TestAds : IAds
     {
         public bool Available { get { return Application.isEditor || Debug.isDebugBuild; } }
