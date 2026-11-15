@@ -171,7 +171,7 @@ namespace Ironhorse.Game
                 bool ad = S.AdsLeft(AdReward.Nuggets) > 0 && Ads.Current.Available;
                 // No video ads ship yet: the free-nuggets card only appears where ads can play.
                 if (Ads.Current.Available) InCell(ct, t => ShopCard(t, "Free Nuggets", "FREE", UIKit.Blue, null, null, x => Art(x, "shop_nuggets_1", 190), null, new Grant { Nuggets = Balance.AdNuggets },
-                    S.AdsLeft(AdReward.Nuggets) + " left today", "Watch", UIKit.Green, ad ? (Action)(() => Ads.Watch(AdReward.Nuggets, 0, r => { Result(r, Sfx.Coin); RebuildWindow(); })) : null));
+                    S.AdsLeft(AdReward.Nuggets) + " left today", "Watch", UIKit.Green, ad ? (Action)(() => Ads.Watch(AdReward.Nuggets, 0, r => AdDone(AdReward.Nuggets, r, RebuildWindow))) : null));
             }
             else if (_shopTab == "supplies")
             {
@@ -481,13 +481,55 @@ namespace Ironhorse.Game
             });
         }
 
+        /// <summary>
+        /// After a watched advert: what it paid, on a card of its own with confetti, so the reward is seen (a toast
+        /// at the edge of the screen was easy to miss). A failed advert still only toasts why.
+        /// </summary>
+        void AdDone(AdReward reward, ActionResult r, Action after = null)
+        {
+            if (!r.Ok) { Result(r); after?.Invoke(); return; }
+            AudioManager.Play(Sfx.LevelUp);
+            foreach (Transform old in _popupLayer) if (old.name == "AdReward") Destroy(old.gameObject);
+            var dim = UIKit.Panel(_popupLayer, UIKit.Dim, "AdReward");
+            dim.sprite = null;
+            UIKit.Stretch(dim.gameObject);
+            var stack = UIKit.Node("Stack", dim.transform);
+            UIKit.Place(stack, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 640));
+            UIKit.VStack(stack, 0, 0, TextAnchor.UpperCenter).childForceExpandWidth = false;
+            stack.AddComponent<WindowIntro>();
+            UIDeco.Ribbon(stack.transform, "Reward!", Palette.Hex(0x2E7D32), 640, 110);
+            var card = UIKit.Panel(stack.transform, new Color(0.13f, 0.09f, 0.06f, 0.92f), "Card", null, true);
+            UIKit.Size(card.gameObject, 700, 480);
+            card.gameObject.AddComponent<Outline>().effectColor = UIKit.Brass;
+            var v = UIKit.Node("V", card.transform);
+            UIKit.Stretch(v, 30);
+            UIKit.VStack(v, 14, 0, TextAnchor.UpperCenter);
+            var art = UIKit.Row(v.transform, 210, 0, TextAnchor.MiddleCenter);
+            switch (reward)
+            {
+                case AdReward.Nuggets: Ico("shop_nuggets_1", 210)(art.transform); break;
+                case AdReward.Fuel: Ico("shop_fuel", 210)(art.transform); break;
+                case AdReward.Wrench: Ico("tools", 190)(art.transform); break;
+                default: Ico("nav_trains", 190)(art.transform); break;
+            }
+            var what = UIKit.Label(v.transform, r.Message, 52, UIKit.Gold, TextAnchor.MiddleCenter, true, FontStyle.Bold);
+            UIKit.OneLine(what, 30);
+            int left = S.AdsLeft(reward);
+            var more = UIKit.Label(v.transform, left > 0 ? "Thanks for watching! " + left + " more today." : "Thanks for watching! That's all for today.", 24, UIKit.Cream, TextAnchor.MiddleCenter);
+            UIKit.Size(more.gameObject, -1, 34);
+            var go = dim.gameObject;
+            var row = UIKit.Row(v.transform, 96, 0, TextAnchor.MiddleCenter);
+            UIKit.Btn(row.transform, "Collect", UIKit.Green, () => { AudioManager.Play(Sfx.Coin); Destroy(go); after?.Invoke(); }, 36, 320, 88);
+            Celebrations.Instance.Confetti(dim.transform, 80);
+        }
+
         void WatchAdCard(Transform content, AdReward reward, string title, string desc, int trainUid = 0)
         {
             var c = Card(content, 96, Palette.Hex(0xDCE8C0));
             var col = Col(c.transform);
             Line(col.transform, title, 24, UIKit.Ink, true);
             Line(col.transform, desc + " · " + S.AdsLeft(reward) + " left today", 20, UIKit.InkSoft);
-            UIKit.Btn(c.transform, "Watch", UIKit.Green, () => Ads.Watch(reward, trainUid, r => Result(r, Sfx.Coin)), 24, 170, 62, S.AdsLeft(reward) > 0 && Ads.Current.Available);
+            UIKit.Btn(c.transform, "Watch", UIKit.Green, () => Ads.Watch(reward, trainUid, r => AdDone(reward, r)), 24, 170, 62, S.AdsLeft(reward) > 0 && Ads.Current.Available);
         }
 
         // ================================================================ Featured offer popup
@@ -603,7 +645,7 @@ namespace Ironhorse.Game
             if (Ads.Current.Available)
             {
                 var ad = FuelOption(panel.transform, Ico("shop_fuel", 80), "Free coal", "+" + Balance.AdFuel + " fuel for a short video · " + ads + " left today");
-                Big(ad, "Watch", UIKit.Green, () => Ads.Watch(AdReward.Fuel, 0, r => Result(r, Sfx.Coin)), 280, 84, ads > 0, 36);
+                Big(ad, "Watch", UIKit.Green, () => Ads.Watch(AdReward.Fuel, 0, r => AdDone(AdReward.Fuel, r)), 280, 84, ads > 0, 36);
             }
 
             var supply = Catalog.Offer("n_coal");
