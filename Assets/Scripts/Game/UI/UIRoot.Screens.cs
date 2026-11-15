@@ -440,7 +440,7 @@ namespace Ironhorse.Game
             live(); Live(live);
             PriceBtn(bar.transform, "Speed up", BBlue, tr => UIKit.NuggetIcon(tr, 50), S.TrainRushCost(t).ToString(), () => Result(S.RushTrain(uid)), 360, 100, S.Nuggets >= S.TrainRushCost(t));
             if (S.AdsLeft(AdReward.RushTrain) > 0 && Ads.Current.Available)
-                Big(bar.transform, "Ad: -30m", UIKit.Green, () => Ads.Watch(AdReward.RushTrain, uid, r => Result(r, Sfx.Bell)), 210, 100, true, 34);
+                Big(bar.transform, "Ad: -30m", UIKit.Green, () => Ads.Watch(AdReward.RushTrain, uid, r => AdDone(AdReward.RushTrain, r)), 210, 100, true, 34);
         }
 
         void ArrivedPanel(Transform col, TrainState t, LocomotiveDef d)

@@ -30,7 +30,7 @@ namespace Ironhorse.Game
             if (S.Wrenches > 0 || wear < 0.02f)
                 fix = Big(row.transform, wear < 0.02f ? "Fine" : "Repair (" + S.Wrenches + ")", UIKit.Green, () => Result(repair(), Sfx.Build), w, 58, wear >= 0.02f, px - 4);
             else if (S.AdsLeft(AdReward.Wrench) > 0 && Ads.Current.Available)
-                fix = Big(row.transform, "Wrench: Ad", UIKit.Green, () => Ads.Watch(AdReward.Wrench, 0, r => Result(r, Sfx.Coin)), w, 58, true, px - 4);
+                fix = Big(row.transform, "Wrench: Ad", UIKit.Green, () => Ads.Watch(AdReward.Wrench, 0, r => AdDone(AdReward.Wrench, r)), w, 58, true, px - 4);
             else
                 fix = PriceBtn(row.transform, "Wrench", Premium, tr => UIKit.NuggetIcon(tr, 32), Balance.WrenchNuggets.ToString(), () => Result(S.BuyWrench(), Sfx.Coin), w, 58, S.Nuggets >= Balance.WrenchNuggets, px - 4);
             // Durability is its own upgrade: a trip takes less of the hundred, for coins.
